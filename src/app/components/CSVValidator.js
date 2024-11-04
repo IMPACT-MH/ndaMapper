@@ -376,7 +376,11 @@ const CSVValidator = ({ dataElements }) => {
                                     ({ field, similarFields }) => (
                                         <div
                                             key={field}
-                                            className="bg-blue-100 p-3 rounded"
+                                            className="bg-blue-100 p-3 rounded cursor-pointer" // Add cursor-pointer
+                                            onClick={() =>
+                                                onStructureSelect &&
+                                                onStructureSelect(field)
+                                            } // Add click handler
                                         >
                                             <p className="text-blue-800 font-mono mb-1">
                                                 {field}

@@ -121,9 +121,10 @@ const DataStructureSearch = ({
                                 <div className="mt-8 pt-8 border-t">
                                     <CSVValidator
                                         dataElements={dataElements}
-                                        onStructureSearch={
-                                            handleStructureSearch
-                                        }
+                                        onStructureSelect={(field) => {
+                                            setSearchTerm(field);
+                                            handleStructureSearch(field);
+                                        }}
                                     />
                                 </div>
                                 <div>

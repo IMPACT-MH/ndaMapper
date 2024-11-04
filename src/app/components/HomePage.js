@@ -163,9 +163,31 @@ const HomePage = () => {
                     </div>
 
                     <CSVHeaderAnalyzer
-                        onStructureSelect={(shortName) => {
+                        onStructureSelect={async (shortName) => {
                             setSearchTerm(shortName);
                             setActiveTab(Tabs.STRUCTURE_SEARCH);
+
+                            // Fetch the structure details first
+                            try {
+                                const response = await fetch(
+                                    `https://nda.nih.gov/api/datadictionary/v2/datastructure?searchTerm=${shortName}`
+                                );
+                                if (!response.ok)
+                                    throw new Error("Failed to fetch data");
+                                const data = await response.json();
+
+                                // Find the exact match
+                                const structure = data.find(
+                                    (s) => s.shortName === shortName
+                                );
+                                if (structure) {
+                                    handleStructureSelect(structure);
+                                }
+                            } catch (err) {
+                                setError(
+                                    "Error fetching structure: " + err.message
+                                );
+                            }
                         }}
                     />
                 </>

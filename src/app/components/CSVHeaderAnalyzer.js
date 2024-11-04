@@ -29,26 +29,27 @@ const CSVHeaderAnalyzer = ({ onStructureSelect }) => {
                 setHeaders(headers);
 
                 // Search for structures containing each header
-                const searchPromises = headers.map((header) =>
-                    fetch(
-                        `https://nda.nih.gov/api/datadictionary/datastructure/dataElement/${header}`
-                    )
-                        .then((res) => {
-                            if (!res.ok) return [];
-                            return res.json();
-                        })
-                        .then((structures) => {
-                            // API returns array directly
-                            return Array.isArray(structures) ? structures : [];
-                        })
-                        .catch((error) => {
-                            console.error(
-                                `Error fetching data for ${header}:`,
-                                error
+                const searchPromises = headers.map(async (header) => {
+                    try {
+                        const response = await fetch(
+                            `https://nda.nih.gov/api/datadictionary/datastructure/dataElement/${header}`
+                        );
+                        if (!response.ok) {
+                            console.log(
+                                `No matches found for field: ${header}`
                             );
                             return [];
-                        })
-                );
+                        }
+                        const data = await response.json();
+                        return Array.isArray(data) ? data : [];
+                    } catch (error) {
+                        console.log(
+                            `Error fetching matches for field: ${header}`,
+                            error
+                        );
+                        return [];
+                    }
+                });
 
                 const headerResults = await Promise.all(searchPromises);
 
