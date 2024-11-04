@@ -4,10 +4,72 @@ import { useState } from "react";
 import { Upload, CheckCircle, XCircle, AlertCircle } from "lucide-react";
 
 const CSVValidator = ({ dataElements, onStructureSelect }) => {
-    const [validationResults, setValidationResults] = useState(null);
     const [isValidating, setIsValidating] = useState(false);
     const [isSearching, setIsSearching] = useState(false);
     const [structureSuggestions, setStructureSuggestions] = useState(null);
+    const [selectedMappings, setSelectedMappings] = useState({});
+    const [ignoredFields, setIgnoredFields] = useState(new Set());
+    const [validationResults, setValidationResults] = useState(false);
+    const [csvContent, setCsvContent] = useState("");
+
+    // Update handleMappingChange to remove from unknown fields
+    const handleMappingChange = (originalField, mappedField) => {
+        setSelectedMappings((prev) => {
+            const newMappings = { ...prev };
+            if (mappedField) {
+                newMappings[originalField] = mappedField;
+            } else {
+                delete newMappings[originalField];
+            }
+            return newMappings;
+        });
+
+        // Update validation results to reflect the new mapping
+        setValidationResults((prev) => ({
+            ...prev,
+            validFields: prev.validFields + (mappedField ? 1 : -1),
+            unknownFields: prev.unknownFields.filter(
+                (f) => f !== originalField
+            ),
+        }));
+    };
+
+    // Add handler for toggling ignored fields
+    const handleIgnoreField = (field) => {
+        setIgnoredFields((prev) => {
+            const newIgnored = new Set(prev);
+            if (newIgnored.has(field)) {
+                newIgnored.delete(field);
+            } else {
+                newIgnored.add(field);
+            }
+            return newIgnored;
+        });
+
+        // Update validation results
+        setValidationResults((prev) => ({
+            ...prev,
+            validFields: prev.validFields + (ignoredFields.has(field) ? -1 : 1),
+        }));
+    };
+
+    const downloadMappedCSV = () => {
+        const originalHeaders = csvContent[0];
+        const mappedHeaders = originalHeaders.map(
+            (header) => selectedMappings[header] || header
+        );
+
+        const newCSV = [mappedHeaders, ...csvContent.slice(1)]
+            .map((row) => row.join(","))
+            .join("\n");
+
+        const blob = new Blob([newCSV], { type: "text/csv" });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "mapped_data.csv";
+        a.click();
+    };
 
     // Calculate similarity between two strings (Levenshtein distance)
     const calculateSimilarity = (str1, str2) => {
@@ -65,6 +127,74 @@ const CSVValidator = ({ dataElements, onStructureSelect }) => {
             .slice(0, 3);
 
         return similarities;
+    };
+
+    const validateValues = (headers, rows, dataElements) => {
+        const valueRanges = {};
+        const validationErrors = [];
+
+        // Create map of field value ranges
+        dataElements.forEach((element) => {
+            if (element.valueRange) {
+                valueRanges[element.name] = parseValueRange(element.valueRange);
+            }
+        });
+
+        // Validate each cell
+        rows.forEach((row, rowIndex) => {
+            headers.forEach((header, colIndex) => {
+                const value = row[colIndex];
+                const range = valueRanges[header];
+
+                if (range && !isValueInRange(value, range)) {
+                    validationErrors.push({
+                        row: rowIndex + 1,
+                        column: header,
+                        value,
+                        expectedRange: range.original,
+                    });
+                }
+            });
+        });
+
+        return validationErrors;
+    };
+
+    const parseValueRange = (rangeStr) => {
+        // Handle different range formats
+        // Examples: "0::100", "1;2;3", "M;F;O", "-777;-999"
+        const original = rangeStr;
+
+        if (rangeStr.includes("::")) {
+            // Numeric range
+            const [min, max] = rangeStr.split("::").map(Number);
+            return { type: "range", min, max, original };
+        }
+
+        if (rangeStr.includes(";")) {
+            // Enumerated values
+            const values = rangeStr.split(";").map((v) => v.trim());
+            return { type: "enum", values, original };
+        }
+
+        return { type: "unknown", original };
+    };
+
+    const isValueInRange = (value, range) => {
+        if (range.type === "range") {
+            const numValue = Number(value);
+            return (
+                !isNaN(numValue) &&
+                numValue >= range.min &&
+                numValue <= range.max
+            );
+        }
+
+        if (range.type === "enum") {
+            return range.values.includes(value);
+        }
+
+        return true; // Unknown range type
     };
 
     const validateCSV = async (file) => {
@@ -414,6 +544,108 @@ const CSVValidator = ({ dataElements, onStructureSelect }) => {
                             </div>
                         )}
 
+                        {validationResults.suggestions?.length > 0 && (
+                            <div className="bg-blue-50 p-4 rounded">
+                                <h4 className="font-medium text-blue-800 mb-2">
+                                    Suggested Field Mappings
+                                </h4>
+                                <div className="space-y-2">
+                                    {validationResults.suggestions
+                                        .filter(
+                                            ({ field }) =>
+                                                !ignoredFields.has(field)
+                                        )
+                                        .map(({ field, similarFields }) => (
+                                            <div
+                                                key={field}
+                                                className="bg-blue-100 p-3 rounded"
+                                            >
+                                                <p className="text-blue-800 font-mono mb-1">
+                                                    {field}
+                                                </p>
+                                                <div className="pl-4 space-y-1">
+                                                    {similarFields.map(
+                                                        (similar) => (
+                                                            <div
+                                                                key={
+                                                                    similar.name
+                                                                }
+                                                                className="flex items-center justify-between"
+                                                            >
+                                                                <div className="flex items-center">
+                                                                    <input
+                                                                        type="radio"
+                                                                        name={`mapping-${field}`}
+                                                                        id={`map-${field}-${similar.name}`}
+                                                                        checked={
+                                                                            selectedMappings[
+                                                                                field
+                                                                            ] ===
+                                                                            similar.name
+                                                                        }
+                                                                        onChange={() =>
+                                                                            handleMappingChange(
+                                                                                field,
+                                                                                similar.name
+                                                                            )
+                                                                        }
+                                                                        className="mr-2"
+                                                                    />
+                                                                    <label
+                                                                        htmlFor={`map-${field}-${similar.name}`}
+                                                                        className="flex items-center"
+                                                                    >
+                                                                        <span className="text-blue-600 font-mono">
+                                                                            →{" "}
+                                                                            {
+                                                                                similar.name
+                                                                            }
+                                                                        </span>
+                                                                        <span className="text-blue-500 text-sm ml-2">
+                                                                            (
+                                                                            {Math.round(
+                                                                                similar.similarity *
+                                                                                    100
+                                                                            )}
+                                                                            %
+                                                                            match)
+                                                                        </span>
+                                                                    </label>
+                                                                </div>
+                                                            </div>
+                                                        )
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {validationResults.valueErrors?.length > 0 && (
+                            <div className="bg-orange-50 p-4 rounded">
+                                <h4 className="font-medium text-orange-800 mb-2">
+                                    Value Range Violations
+                                </h4>
+                                <div className="space-y-2">
+                                    {validationResults.valueErrors.map(
+                                        (error, index) => (
+                                            <div
+                                                key={index}
+                                                className="bg-orange-100 p-2 rounded text-sm"
+                                            >
+                                                Row {error.row}, Column "
+                                                {error.column}": Value "
+                                                {error.value}" is outside
+                                                expected range (
+                                                {error.expectedRange})
+                                            </div>
+                                        )
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
                         {/* Missing Recommended Fields */}
                         {validationResults.missingRecommended.length > 0 && (
                             <div className="bg-yellow-50 p-4 rounded">
@@ -442,16 +674,34 @@ const CSVValidator = ({ dataElements, onStructureSelect }) => {
                                     Unknown Fields
                                 </h4>
                                 <div className="flex flex-wrap gap-2">
-                                    {validationResults.unknownFields.map(
-                                        (field) => (
+                                    {validationResults.unknownFields
+                                        .filter(
+                                            (field) => !selectedMappings[field]
+                                        )
+                                        .map((field) => (
                                             <span
                                                 key={field}
-                                                className="bg-gray-100 text-gray-800 text-sm px-2 py-1 rounded"
+                                                className={`
+                                        bg-gray-100 text-gray-800 text-sm px-2 py-1 rounded
+                                        cursor-pointer transition-colors
+                                        ${
+                                            ignoredFields.has(field)
+                                                ? "opacity-50 line-through"
+                                                : ""
+                                        }
+                                    `}
+                                                onClick={() =>
+                                                    handleIgnoreField(field)
+                                                }
+                                                title={
+                                                    ignoredFields.has(field)
+                                                        ? "Click to un-ignore"
+                                                        : "Click to ignore"
+                                                }
                                             >
                                                 {field}
                                             </span>
-                                        )
-                                    )}
+                                        ))}
                                 </div>
                             </div>
                         )}
@@ -459,55 +709,33 @@ const CSVValidator = ({ dataElements, onStructureSelect }) => {
                 </div>
             )}
 
-            {validationResults.suggestions?.length > 0 && (
-                <div className="bg-blue-50 p-4 rounded">
-                    <h4 className="font-medium text-blue-800 mb-2">
-                        Suggested Field Mappings
-                    </h4>
-                    <div className="space-y-2">
-                        {validationResults.suggestions.map(
-                            ({ field, similarFields }) => (
-                                <div
-                                    key={field}
-                                    className="bg-blue-100 p-3 rounded"
-                                >
-                                    <p className="text-blue-800 font-mono mb-1">
-                                        {field}
-                                    </p>
-                                    <div className="pl-4 space-y-1">
-                                        {similarFields.map((similar) => (
-                                            <div
-                                                key={similar.name}
-                                                className="flex items-center"
-                                            >
-                                                <span className="text-blue-600 font-mono">
-                                                    → {similar.name}
-                                                </span>
-                                                <span className="text-blue-500 text-sm ml-2">
-                                                    (
-                                                    {Math.round(
-                                                        similar.similarity * 100
-                                                    )}
-                                                    % match)
-                                                </span>
-                                                {similar.aliases.length > 0 && (
-                                                    <span className="text-blue-400 text-sm ml-2">
-                                                        (alias:{" "}
-                                                        {similar.aliases.join(
-                                                            ", "
-                                                        )}
-                                                        )
-                                                    </span>
-                                                )}
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )
-                        )}
-                    </div>
-                </div>
-            )}
+            {/* Download button moved under unknown fields */}
+            <div className="mt-4 pt-4 border-t">
+                <button
+                    onClick={downloadMappedCSV}
+                    disabled={
+                        validationResults.validFields !==
+                        validationResults.totalFields
+                    }
+                    className={`
+                        px-4 py-2 rounded text-white
+                        ${
+                            validationResults.validFields ===
+                            validationResults.totalFields
+                                ? "bg-blue-500 hover:bg-blue-600"
+                                : "bg-gray-300 cursor-not-allowed"
+                        }
+                    `}
+                >
+                    {validationResults.validFields ===
+                    validationResults.totalFields
+                        ? "Download Mapped CSV"
+                        : `Still Missing ${
+                              validationResults.totalFields -
+                              validationResults.validFields
+                          } Fields`}
+                </button>
+            </div>
 
             {/* Error State */}
             {validationResults?.error && (
