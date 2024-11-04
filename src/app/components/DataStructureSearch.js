@@ -1,106 +1,29 @@
-"use client";
-
-import { useState, useEffect } from "react";
 import { Search } from "lucide-react";
-import CSVValidator from "./CSVValidator"; // Add this line
+import CSVValidator from "./CSVValidator";
 
-const DataDictionarySearch = () => {
-    const [searchTerm, setSearchTerm] = useState("");
-    const [structures, setStructures] = useState([]);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
-    const [selectedStructure, setSelectedStructure] = useState(null);
-    const [dataElements, setDataElements] = useState([]);
-    const [loadingElements, setLoadingElements] = useState(false);
-    const [isSearchFocused, setIsSearchFocused] = useState(false);
-
-    useEffect(() => {
-        if (searchTerm) {
-            const debounceTimer = setTimeout(() => {
-                fetchData();
-            }, 300);
-            return () => clearTimeout(debounceTimer);
-        } else {
-            setStructures([]);
-        }
-    }, [searchTerm]);
-
-    const fetchData = async () => {
-        setLoading(true);
-        setError(null);
-        try {
-            const response = await fetch(
-                `https://nda.nih.gov/api/datadictionary/v2/datastructure?searchTerm=${searchTerm}`
-            );
-            if (!response.ok) throw new Error("Failed to fetch data");
-            const data = await response.json();
-
-            const sortedData = data.sort((a, b) => {
-                const aTitle = a.title?.toLowerCase() || "";
-                const bTitle = b.title?.toLowerCase() || "";
-                const searchLower = searchTerm.toLowerCase();
-
-                if (a.shortName.toLowerCase() === searchLower) return -1;
-                if (b.shortName.toLowerCase() === searchLower) return 1;
-
-                const aContainsSearch = aTitle.includes(searchLower);
-                const bContainsSearch = bTitle.includes(searchLower);
-
-                if (aContainsSearch && !bContainsSearch) return -1;
-                if (!aContainsSearch && bContainsSearch) return 1;
-
-                return 0;
-            });
-
-            setStructures(sortedData);
-        } catch (err) {
-            setError("Error fetching data: " + err.message);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const fetchDataElements = async (shortName) => {
-        setLoadingElements(true);
-        try {
-            const response = await fetch(
-                `https://nda.nih.gov/api/datadictionary/datastructure/${shortName}`
-            );
-            if (!response.ok) throw new Error("Failed to fetch data elements");
-            const data = await response.json();
-
-            // The data.dataElements array is already in the format we need
-            const sortedElements = data.dataElements.sort(
-                (a, b) => a.position - b.position
-            );
-
-            setDataElements(sortedElements);
-        } catch (err) {
-            console.error("Parsing error:", err);
-            setError("Error fetching data elements: " + err.message);
-        } finally {
-            setLoadingElements(false);
-        }
-    };
-
-    const handleStructureSelect = (structure) => {
-        setSelectedStructure(structure);
-        setIsSearchFocused(false);
-        fetchDataElements(structure.shortName);
-    };
-
+const DataStructureSearch = ({
+    searchTerm,
+    setSearchTerm,
+    structures,
+    loading,
+    error,
+    selectedStructure,
+    handleStructureSelect,
+    dataElements,
+    loadingElements,
+    handleStructureSearch,
+}) => {
     return (
-        <div className="container mx-auto p-4 max-w-7xl">
+        <>
             <div className="mb-8">
                 <h1 className="text-3xl font-bold mb-4">
-                    NIH Data Dictionary Search
+                    Search NDA Data Dictionary
                 </h1>
-
                 <div className="relative">
                     <input
                         type="text"
                         className="w-full p-4 pl-12 border rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Search by name or description..."
+                        placeholder="Search for a data structure..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
@@ -196,7 +119,12 @@ const DataDictionarySearch = () => {
                                     </span>
                                 </div>
                                 <div className="mt-8 pt-8 border-t">
-                                    <CSVValidator dataElements={dataElements} />
+                                    <CSVValidator
+                                        dataElements={dataElements}
+                                        onStructureSearch={
+                                            handleStructureSearch
+                                        }
+                                    />
                                 </div>
                                 <div>
                                     <h3 className="font-medium text-gray-700 mb-4">
@@ -262,7 +190,7 @@ const DataDictionarySearch = () => {
                                                                         className={`px-2 py-1 rounded-full text-xs ${
                                                                             element.required ===
                                                                             "Required"
-                                                                                ? "bg-blue-100 text-blue-800"
+                                                                                ? "bg-red-100 text-red-800"
                                                                                 : "bg-gray-100 text-gray-800"
                                                                         }`}
                                                                     >
@@ -301,8 +229,8 @@ const DataDictionarySearch = () => {
                     </div>
                 </div>
             </div>
-        </div>
+        </>
     );
 };
 
-export default DataDictionarySearch;
+export default DataStructureSearch;

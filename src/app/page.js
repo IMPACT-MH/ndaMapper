@@ -1,5 +1,5 @@
-import DataDictionarySearch from "../app/components/DataDictionarySearch";
+import HomePage from "../app/components/HomePage";
 
 export default function Home() {
-    return <DataDictionarySearch />;
+    return <HomePage />;
 }
