@@ -38,7 +38,6 @@ const CSVValidator = ({
             return newMappings;
         });
 
-        // Update validation results to reflect the new mapping
         setValidationResults((prev) => ({
             ...prev,
             validFields: prev.validFields + (mappedField ? 1 : -1),
@@ -60,7 +59,6 @@ const CSVValidator = ({
             return newIgnored;
         });
 
-        // Update validation results
         setValidationResults((prev) => ({
             ...prev,
             validFields: prev.validFields + (ignoredFields.has(field) ? -1 : 1),
@@ -68,21 +66,31 @@ const CSVValidator = ({
     };
 
     const downloadMappedCSV = () => {
+        if (!csvContent) return;
+
+        // Get the original headers
         const originalHeaders = csvContent[0];
+
+        // Create mapped headers using selected mappings
         const mappedHeaders = originalHeaders.map(
             (header) => selectedMappings[header] || header
         );
 
+        // Create the new CSV content with mapped headers
         const newCSV = [mappedHeaders, ...csvContent.slice(1)]
             .map((row) => row.join(","))
             .join("\n");
 
+        // Create and trigger download
         const blob = new Blob([newCSV], { type: "text/csv" });
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
         a.download = "mapped_data.csv";
+        document.body.appendChild(a);
         a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
     };
 
     // Calculate similarity between two strings (Levenshtein distance)
@@ -218,41 +226,19 @@ const CSVValidator = ({
         reader.onload = async (e) => {
             try {
                 const text = e.target.result;
-                const headers = text
-                    .split("\n")[0]
-                    .trim()
-                    .split(",")
-                    .map((h) => h.trim());
+                const rows = text.split("\n").map((row) =>
+                    row
+                        .trim()
+                        .split(",")
+                        .map((cell) => cell.trim())
+                );
 
-                // First, check for structural matches if onStructureSelect is provided
-                if (!dataElements && onStructureSelect) {
-                    // Search for structures containing each header
-                    const searchPromises = headers.map(async (header) => {
-                        try {
-                            const response = await fetch(
-                                `https://nda.nih.gov/api/datadictionary/datastructure/dataElement/${header}`
-                            );
-                            if (!response.ok) {
-                                console.log(
-                                    `No matches found for field: ${header}`
-                                );
-                                return [];
-                            }
-                            const data = await response.json();
-                            return Array.isArray(data) ? data : [];
-                        } catch (error) {
-                            console.log(
-                                `Error fetching matches for field: ${header}`,
-                                error
-                            );
-                            return [];
-                        }
-                    });
+                // Store the CSV content for later use
+                setCsvContent(rows);
 
-                    const headerResults = await Promise.all(searchPromises);
-                }
-                // If dataElements is provided, perform validation
-                else if (dataElements) {
+                const headers = rows[0];
+
+                if (dataElements) {
                     const requiredFields = dataElements
                         .filter((el) => el.required === "Required")
                         .map((el) => el.name);
@@ -279,7 +265,6 @@ const CSVValidator = ({
                         similarFields: findSimilarFields(field),
                     }));
 
-                    // Create validation results with updated isValid logic
                     const results = {
                         totalFields: headers.length,
                         validFields: headers.filter(
@@ -320,6 +305,7 @@ const CSVValidator = ({
 
         reader.readAsText(file);
     };
+
     const findMatchingStructures = async (headers) => {
         setIsSearching(true);
         try {
@@ -738,31 +724,23 @@ const CSVValidator = ({
             )}
 
             {/* Download button moved under unknown fields */}
-            {validationResults && !validationResults.error && (
+            {validationResults && !validationResults.error && csvContent && (
                 <div className="mt-4 pt-4 border-t">
                     <button
                         onClick={downloadMappedCSV}
-                        disabled={
-                            validationResults.validFields !==
-                            validationResults.totalFields
-                        }
+                        disabled={Object.keys(selectedMappings).length === 0}
                         className={`
-                px-4 py-2 rounded text-white
-                ${
-                    validationResults.validFields ===
-                    validationResults.totalFields
-                        ? "bg-blue-500 hover:bg-blue-600"
-                        : "bg-gray-300 cursor-not-allowed"
-                }
-            `}
+                            px-4 py-2 rounded text-white
+                            ${
+                                Object.keys(selectedMappings).length > 0
+                                    ? "bg-blue-500 hover:bg-blue-600"
+                                    : "bg-gray-300 cursor-not-allowed"
+                            }
+                        `}
                     >
-                        {validationResults.validFields ===
-                        validationResults.totalFields
+                        {Object.keys(selectedMappings).length > 0
                             ? "Download Mapped CSV"
-                            : `Still Missing ${
-                                  validationResults.totalFields -
-                                  validationResults.validFields
-                              } Fields`}
+                            : "Select field mappings to download"}
                     </button>
                 </div>
             )}
