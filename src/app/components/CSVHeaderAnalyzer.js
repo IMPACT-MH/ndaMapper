@@ -33,15 +33,30 @@ const CSVHeaderAnalyzer = ({ onStructureSelect }) => {
                 // Search for structures containing each header
                 const searchPromises = headers.map(async (header) => {
                     try {
-                        const response = await fetch(
+                        // Normalize the header by removing special characters
+                        const normalizedHeader = header
+                            .toLowerCase()
+                            .replace(/[_-]/g, "");
+
+                        // First try with original header
+                        let response = await fetch(
                             `https://nda.nih.gov/api/datadictionary/datastructure/dataElement/${header}`
                         );
+
+                        // If not found, try with normalized header
+                        if (!response.ok) {
+                            response = await fetch(
+                                `https://nda.nih.gov/api/datadictionary/datastructure/dataElement/${normalizedHeader}`
+                            );
+                        }
+
                         if (!response.ok) {
                             console.log(
-                                `No matches found for field: ${header}`
+                                `No matches found for field: ${header} (normalized: ${normalizedHeader})`
                             );
                             return [];
                         }
+
                         const data = await response.json();
                         return Array.isArray(data) ? data : [];
                     } catch (error) {

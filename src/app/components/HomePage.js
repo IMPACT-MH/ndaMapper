@@ -29,6 +29,12 @@ const HomePage = () => {
         setActiveTab(Tabs.STRUCTURE_SEARCH);
     };
 
+    const handleClearSearch = () => {
+        setSearchTerm("");
+        setCsvFile(null); // Clear the CSV file
+        setSelectedStructure(null); // Optional: also clear selected structure
+    };
+
     useEffect(() => {
         if (searchTerm) {
             const debounceTimer = setTimeout(() => {
@@ -50,19 +56,37 @@ const HomePage = () => {
             if (!response.ok) throw new Error("Failed to fetch data");
             const data = await response.json();
 
+            const searchLower = searchTerm.toLowerCase();
+            // Normalize search term by removing special characters
+            const normalizedSearch = searchLower.replace(/[_-]/g, "");
+
             const sortedData = data.sort((a, b) => {
                 const aTitle = a.title?.toLowerCase() || "";
                 const bTitle = b.title?.toLowerCase() || "";
-                const searchLower = searchTerm.toLowerCase();
+                // Normalize shortNames by removing special characters
+                const aShortName = a.shortName
+                    .toLowerCase()
+                    .replace(/[_-]/g, "");
+                const bShortName = b.shortName
+                    .toLowerCase()
+                    .replace(/[_-]/g, "");
 
-                if (a.shortName.toLowerCase() === searchLower) return -1;
-                if (b.shortName.toLowerCase() === searchLower) return 1;
+                // Check for exact matches first (ignoring special characters)
+                if (aShortName === normalizedSearch) return -1;
+                if (bShortName === normalizedSearch) return 1;
 
-                const aContainsSearch = aTitle.includes(searchLower);
-                const bContainsSearch = bTitle.includes(searchLower);
+                // Check if shortName contains the search term
+                const aContainsSearch = aShortName.includes(normalizedSearch);
+                const bContainsSearch = bShortName.includes(normalizedSearch);
+
+                // Then check title matches
+                const aContainsTitle = aTitle.includes(searchLower);
+                const bContainsTitle = bTitle.includes(searchLower);
 
                 if (aContainsSearch && !bContainsSearch) return -1;
                 if (!aContainsSearch && bContainsSearch) return 1;
+                if (aContainsTitle && !bContainsTitle) return -1;
+                if (!aContainsTitle && bContainsTitle) return 1;
 
                 return 0;
             });
@@ -157,7 +181,8 @@ const HomePage = () => {
                     dataElements={dataElements}
                     loadingElements={loadingElements}
                     handleStructureSearch={handleStructureSearch}
-                    initialCsvFile={csvFile} // Pass it through
+                    initialCsvFile={csvFile}
+                    onClear={handleClearSearch}
                 />
             ) : (
                 // Reverse Lookup Content

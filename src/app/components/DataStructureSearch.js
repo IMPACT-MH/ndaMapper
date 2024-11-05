@@ -13,6 +13,7 @@ const DataStructureSearch = ({
     loadingElements,
     handleStructureSearch,
     initialCsvFile,
+    onClear,
 }) => {
     return (
         <>
@@ -32,12 +33,13 @@ const DataStructureSearch = ({
                         className="absolute left-4 top-4 text-gray-400"
                         size={20}
                     />
-                    {searchTerm && ( // Only show X when there's text
+                    {searchTerm && (
                         <button
-                            onClick={() => setSearchTerm("")}
+                            onClick={onClear} // Use the new handler instead of just setSearchTerm('')
                             className="absolute right-4 top-4 text-gray-400 hover:text-gray-600"
+                            aria-label="Clear search"
                         >
-                            <X size={20} />
+                            <X size={16} />
                         </button>
                     )}
                 </div>
