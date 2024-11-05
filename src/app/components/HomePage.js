@@ -19,6 +19,15 @@ const HomePage = () => {
     const [loadingElements, setLoadingElements] = useState(false);
     const [isSearchFocused, setIsSearchFocused] = useState(false);
     const [activeTab, setActiveTab] = useState(Tabs.STRUCTURE_SEARCH);
+    const [csvFile, setCsvFile] = useState(null);
+    const [csvHeaders, setCsvHeaders] = useState(null);
+
+    const handleCsvAnalyzerResult = (shortName, file, headers) => {
+        setSearchTerm(shortName);
+        setCsvFile(file);
+        setCsvHeaders(headers);
+        setActiveTab(Tabs.STRUCTURE_SEARCH);
+    };
 
     useEffect(() => {
         if (searchTerm) {
@@ -148,6 +157,7 @@ const HomePage = () => {
                     dataElements={dataElements}
                     loadingElements={loadingElements}
                     handleStructureSearch={handleStructureSearch}
+                    initialCsvFile={csvFile} // Pass it through
                 />
             ) : (
                 // Reverse Lookup Content
@@ -163,6 +173,14 @@ const HomePage = () => {
                     </div>
 
                     <CSVHeaderAnalyzer
+                        onStructureSelect={(shortName, file) => {
+                            setSearchTerm(shortName);
+                            setCsvFile(file); // Store the file
+                            setActiveTab(Tabs.STRUCTURE_SEARCH);
+                        }}
+                    />
+
+                    {/* <CSVHeaderAnalyzer
                         onStructureSelect={async (shortName) => {
                             setSearchTerm(shortName);
                             setActiveTab(Tabs.STRUCTURE_SEARCH);
@@ -189,7 +207,7 @@ const HomePage = () => {
                                 );
                             }
                         }}
-                    />
+                    /> */}
                 </>
             )}
         </div>

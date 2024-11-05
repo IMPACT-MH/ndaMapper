@@ -1,16 +1,30 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Upload, CheckCircle, XCircle, AlertCircle } from "lucide-react";
 
-const CSVValidator = ({ dataElements, onStructureSelect }) => {
+const CSVValidator = ({
+    dataElements,
+    onStructureSelect,
+    initialCsvFile = null,
+    initialHeaders = null,
+}) => {
+    const [validationResults, setValidationResults] = useState(null);
     const [isValidating, setIsValidating] = useState(false);
+    const [currentFile, setCurrentFile] = useState(initialCsvFile); // Track current file
     const [isSearching, setIsSearching] = useState(false);
     const [structureSuggestions, setStructureSuggestions] = useState(null);
     const [selectedMappings, setSelectedMappings] = useState({});
     const [ignoredFields, setIgnoredFields] = useState(new Set());
-    const [validationResults, setValidationResults] = useState(false);
     const [csvContent, setCsvContent] = useState("");
+
+    // Effect to handle initial CSV validation
+    useEffect(() => {
+        if (initialCsvFile && dataElements) {
+            validateCSV(initialCsvFile);
+            setCurrentFile(initialCsvFile);
+        }
+    }, [initialCsvFile, dataElements]);
 
     // Update handleMappingChange to remove from unknown fields
     const handleMappingChange = (originalField, mappedField) => {
@@ -446,13 +460,27 @@ const CSVValidator = ({ dataElements, onStructureSelect }) => {
                     htmlFor="csv-upload"
                     className="cursor-pointer flex flex-col items-center space-y-2"
                 >
-                    <Upload className="w-8 h-8 text-gray-400" />
-                    <span className="text-sm text-gray-600">
-                        Click to upload or drag and drop your CSV file
-                    </span>
-                    <span className="text-xs text-gray-500">
-                        CSV files only
-                    </span>
+                    {currentFile ? (
+                        <>
+                            <div className="flex items-center text-blue-600">
+                                <CheckCircle className="w-6 h-6 mr-2" />
+                                <span>{currentFile.name}</span>
+                            </div>
+                            <span className="text-sm text-gray-500">
+                                Click to upload a different file
+                            </span>
+                        </>
+                    ) : (
+                        <>
+                            <Upload className="w-8 h-8 text-gray-400" />
+                            <span className="text-sm text-gray-600">
+                                Click to upload or drag and drop your CSV file
+                            </span>
+                            <span className="text-xs text-gray-500">
+                                CSV files only
+                            </span>
+                        </>
+                    )}
                 </label>
             </div>
 
@@ -710,32 +738,34 @@ const CSVValidator = ({ dataElements, onStructureSelect }) => {
             )}
 
             {/* Download button moved under unknown fields */}
-            <div className="mt-4 pt-4 border-t">
-                <button
-                    onClick={downloadMappedCSV}
-                    disabled={
-                        validationResults.validFields !==
-                        validationResults.totalFields
-                    }
-                    className={`
-                        px-4 py-2 rounded text-white
-                        ${
-                            validationResults.validFields ===
+            {validationResults && !validationResults.error && (
+                <div className="mt-4 pt-4 border-t">
+                    <button
+                        onClick={downloadMappedCSV}
+                        disabled={
+                            validationResults.validFields !==
                             validationResults.totalFields
-                                ? "bg-blue-500 hover:bg-blue-600"
-                                : "bg-gray-300 cursor-not-allowed"
                         }
-                    `}
-                >
-                    {validationResults.validFields ===
+                        className={`
+                px-4 py-2 rounded text-white
+                ${
+                    validationResults.validFields ===
                     validationResults.totalFields
-                        ? "Download Mapped CSV"
-                        : `Still Missing ${
-                              validationResults.totalFields -
-                              validationResults.validFields
-                          } Fields`}
-                </button>
-            </div>
+                        ? "bg-blue-500 hover:bg-blue-600"
+                        : "bg-gray-300 cursor-not-allowed"
+                }
+            `}
+                    >
+                        {validationResults.validFields ===
+                        validationResults.totalFields
+                            ? "Download Mapped CSV"
+                            : `Still Missing ${
+                                  validationResults.totalFields -
+                                  validationResults.validFields
+                              } Fields`}
+                    </button>
+                </div>
+            )}
 
             {/* Error State */}
             {validationResults?.error && (
