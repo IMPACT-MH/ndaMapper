@@ -1,4 +1,4 @@
-import { Search } from "lucide-react";
+import { Search, X } from "lucide-react";
 import CSVValidator from "./CSVValidator";
 
 const DataStructureSearch = ({
@@ -32,6 +32,14 @@ const DataStructureSearch = ({
                         className="absolute left-4 top-4 text-gray-400"
                         size={20}
                     />
+                    {searchTerm && ( // Only show X when there's text
+                        <button
+                            onClick={() => setSearchTerm("")}
+                            className="absolute right-4 top-4 text-gray-400 hover:text-gray-600"
+                        >
+                            <X size={20} />
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -48,8 +56,14 @@ const DataStructureSearch = ({
             )}
 
             <div className="flex gap-4">
-                {/* Search Results - Fixed width */}
-                <div className="w-96 shrink-0">
+                {/* Search Results - Dynamic width based on selection */}
+                <div
+                    className={`${
+                        selectedStructure
+                            ? "w-72 transition-all duration-300" // Shrunk width when structure selected
+                            : "w-96 transition-all duration-300" // Original width
+                    } shrink-0`}
+                >
                     <div className="bg-white p-4 rounded-lg shadow">
                         <h2 className="text-xl font-semibold mb-4">Results</h2>
                         <div className="space-y-2">
@@ -88,8 +102,12 @@ const DataStructureSearch = ({
                     </div>
                 </div>
 
-                {/* Details - Fills remaining space */}
-                <div className="flex-grow">
+                {/* Details - Grows to fill space */}
+                <div
+                    className={`flex-grow transition-all duration-300 ${
+                        selectedStructure ? "w-4/5" : "w-3/5" // Adjust these ratios as needed
+                    }`}
+                >
                     <div className="bg-white p-4 rounded-lg shadow">
                         <h2 className="text-xl font-semibold mb-4">Details</h2>
                         {selectedStructure ? (
