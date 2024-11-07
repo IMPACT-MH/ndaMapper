@@ -1,3 +1,25 @@
+# Getting Started
+
+```
+
+cd ~/ndaValidator
+
+npm run dev
+
+if npm is not installed:
+first install brew
+after brew is installed
+
+brew install node
+npm install next
+
+
+```
+
+
+
+
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
 
 ## Getting Started
