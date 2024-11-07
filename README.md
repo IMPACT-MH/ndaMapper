@@ -1,5 +1,22 @@
 # Getting Started
 
+First, make sure that you have added your public SSH key to GitHub:
+
+to check for keys on your machine:
+
+`cat ~/.ssh/id_rsa.pub`
+
+if you see a key, add it to SSH and GPG keys in GitHub settings
+
+if not, run
+
+`ssh-keygen -t rsa`
+
+This will generate keys, then add to github.
+
+Now, you can clone to home folder:
+`git clone git@github.com:IMPACT-MH/ndaValidator.git`
+
 ```
 
 cd ~/ndaValidator
