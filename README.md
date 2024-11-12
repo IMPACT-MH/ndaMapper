@@ -1,17 +1,17 @@
-# NDA Data Dictionary Explorer 🔍
+# NDA Data Structure Validator 🔍
 
-A friendly web application for exploring and validating NIH National Data Archive (NDA) data structures and CSV files.
+A friendly web application for exploring and validating NIH National Data Archive (NDA) data structures and CSV files. This tool connects directly to the NDA API, ensuring all data structure definitions and validations are current with NDA's latest requirements.
 
 ## ✨ Features
 
 ### 🔎 Structure Search
-- Search through NDA data structures
-- View field requirements and data formats
-- Get detailed info about each data structure
+- Real-time search through current NDA data structures
+- View up-to-date field requirements and data formats
+- Access the latest structure definitions directly from NDA
 
 ### 📊 CSV Validation
 - Upload your CSV files
-- Get instant validation against NDA requirements
+- Validate against current NDA requirements
 - Smart header matching and suggestions
 - Download corrected CSV files
 
@@ -20,38 +20,53 @@ A friendly web application for exploring and validating NIH National Data Archiv
 - See which structures contain your variables
 - Get instant matches and compatibility scores
 
-## 🚀 Getting Started
+## 🛠️ Development Guide
 
-First, make sure that you have added your public SSH key to GitHub:
+### Prerequisites
+- GitHub account with SSH access
+- Node.js and npm
+- Homebrew (for macOS users)
 
-To check for keys on your machine:
+### Setting up SSH for GitHub
+
+Check for existing SSH keys:
 ```bash
 cat ~/.ssh/id_rsa.pub
 ```
 
-If you see a key, add it to SSH and GPG keys in GitHub settings.
-If not, run:
+If no key exists, generate one:
 ```bash
 ssh-keygen -t rsa
 ```
-This will generate keys, then add to github.
 
-Now, you can clone to your computer:
+Add the key to your GitHub account:
+1. Copy your public key (the output of `cat ~/.ssh/id_rsa.pub`)
+2. Go to GitHub → Settings → SSH and GPG keys
+3. Click "New SSH key" and paste your key
+
+### Installing Dependencies
+
+If you don't have Homebrew installed (macOS):
 ```bash
-git clone git@github.com:IMPACT-MH/ndaValidator.git
-cd ndaValidator
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 ```
 
-If npm is not installed:
+Install Node.js if needed:
 ```bash
-# First install brew
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-
-# After brew is installed
 brew install node
+```
 
-# Install Next.js
-npm install next
+### Setting up the Project
+
+Clone the repository:
+```bash
+git clone git@github.com:IMPACT-MH/ndaValidator.git
+cd ~/ndaValidator
+```
+
+Install project dependencies:
+```bash
+npm install
 ```
 
 Start the development server:
@@ -59,7 +74,16 @@ Start the development server:
 npm run dev
 ```
 
-Visit [http://localhost:3000](http://localhost:3000) to start exploring! 🎉
+Visit [http://localhost:3000](http://localhost:3000) to start developing! 🎉
+
+### 🔌 API Integration
+
+This application integrates with the following NDA API endpoints:
+- Structure Search: `/api/datadictionary/v2/datastructure`
+- Structure Details: `/api/datadictionary/datastructure/{shortName}`
+- Field Lookup: `/api/datadictionary/datastructure/dataElement/{field}`
+
+All data is fetched in real-time, ensuring validations always match current NDA requirements.
 
 ## 💡 Quick Usage
 
