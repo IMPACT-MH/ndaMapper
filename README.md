@@ -1,6 +1,6 @@
 # NDA Data Structure Validator 🔍
 
-A friendly web application for exploring and validating NIH National Data Archive (NDA) data structures and CSV files. This tool connects directly to the NDA API, ensuring all data structure definitions and validations are current with NDA's latest requirements.
+A friendly web application for exploring NIMH Data Archive (NDA) Data Structures and validating CSV files against the Data Dictionary. This tool connects directly to the NDA API, ensuring all data structure definitions and validations are current with NDA's latest requirements.
 
 ## ✨ Features
 
