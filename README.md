@@ -95,7 +95,3 @@ All data is fetched in real-time, ensuring validations always match current NDA 
 ## 🤝 Contributing
 
 Contributions welcome! Feel free to open issues and submit PRs.
-
-## 📝 License
-
-[Add appropriate license information]
