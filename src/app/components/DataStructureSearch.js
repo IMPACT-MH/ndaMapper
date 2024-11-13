@@ -98,7 +98,7 @@ const DataStructureSearch = ({
                         </div>
                         {structures.length === 0 && !loading && searchTerm && (
                             <p className="text-gray-500 text-center py-4">
-                                No results found for "{searchTerm}"
+                                No results found for &quot;{searchTerm}&quot;
                             </p>
                         )}
                     </div>

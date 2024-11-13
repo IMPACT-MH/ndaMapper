@@ -575,15 +575,15 @@ const CSVValidator = ({
                                         className="bg-orange-100 p-3 rounded text-sm"
                                     >
                                         <div className="font-medium text-orange-900">
-                                            Row {error.row}, Column "
-                                            {error.column}"
+                                            Row {error.row}, Column &quot;
+                                            {error.column}&quot;
                                             {error.mappedField !==
                                                 error.column &&
                                                 ` (mapped to "${error.mappedField}")`}
                                         </div>
                                         <div className="text-orange-800">
-                                            Value "{error.value}" is outside
-                                            expected range:{" "}
+                                            Value &quot;{error.value}&quot; is
+                                            outside expected range:{" "}
                                             {error.expectedRange}
                                         </div>
                                     </div>
@@ -617,7 +617,7 @@ const CSVValidator = ({
                         </button>
                         {valueErrors.length > 0 && (
                             <p className="mt-2 text-sm text-orange-600">
-                                Warning: The CSV contains values that don't
+                                Warning: The CSV contains values that don&apos;t
                                 match the expected ranges.
                             </p>
                         )}

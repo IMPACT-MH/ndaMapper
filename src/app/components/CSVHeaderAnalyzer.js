@@ -140,8 +140,8 @@ const CSVHeaderAnalyzer = ({ onStructureSelect }) => {
                             Upload your CSV file
                         </span>
                         <span className="text-sm text-gray-500 block">
-                            We'll analyze your column headers and find matching
-                            structures
+                            We&apos;ll analyze your column headers and find
+                            matching structures
                         </span>
                     </div>
                 </label>
