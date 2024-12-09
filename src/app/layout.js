@@ -13,8 +13,8 @@ const geistMono = localFont({
 });
 
 export const metadata = {
-    title: "IMPACT-MH Data Validator Client",
-    description: "IMPACT-MH Data Validator Client",
+    title: "IMPACT-MH Data Validator",
+    description: "IMPACT-MH NDA Data Validator Client",
 };
 
 export default function RootLayout({ children }) {
