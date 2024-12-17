@@ -45,6 +45,7 @@ const CSVValidator = ({
     onStructureSearch,
     initialCsvFile = null,
     initialHeaders = null,
+    structureShortName = null,
 }) => {
     const [validationResults, setValidationResults] = useState(null);
     const [isValidating, setIsValidating] = useState(false);
@@ -333,15 +334,18 @@ const CSVValidator = ({
             row.filter((_, index) => !ignoredFields.has(csvContent[0][index]))
         );
 
-        const newCSV = [validHeaders, ...validData.slice(1)]
-            .map((row) => row.join(","))
-            .join("\n");
+        // Create CSV with single shortName in first row, then headers, then data
+        const newCSV = [
+            structureShortName || "", // Single value in first row
+            validHeaders.join(","), // Headers as second row
+            ...validData.slice(1).map((row) => row.join(",")), // Data rows
+        ].join("\n");
 
         const blob = new Blob([newCSV], { type: "text/csv" });
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = "mapped_data.csv";
+        a.download = `${structureShortName}_template.csv`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);

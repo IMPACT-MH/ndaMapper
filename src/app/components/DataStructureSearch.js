@@ -140,13 +140,18 @@ const DataStructureSearch = ({
                                     </span>
                                 </div>
                                 <div className="mt-8 pt-8 border-t">
-                                    <CSVValidator
-                                        dataElements={dataElements}
-                                        onStructureSearch={
-                                            handleStructureSearch
-                                        }
-                                        initialCsvFile={initialCsvFile}
-                                    />
+                                    <div className="mt-8 pt-8 border-t">
+                                        <CSVValidator
+                                            dataElements={dataElements}
+                                            onStructureSearch={
+                                                handleStructureSearch
+                                            }
+                                            initialCsvFile={initialCsvFile}
+                                            structureShortName={
+                                                selectedStructure?.shortName
+                                            } // Pass the shortName
+                                        />
+                                    </div>
                                 </div>
                                 <div>
                                     <h3 className="font-medium text-gray-700 mb-4">
