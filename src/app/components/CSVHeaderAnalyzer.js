@@ -26,7 +26,7 @@ const CSVHeaderAnalyzer = ({ onStructureSelect }) => {
                     .split("\n")[0]
                     .trim()
                     .split(",")
-                    .map((h) => h.trim());
+                    .map((h) => h.trim().replace(/^"(.*)"$/, "$1"));
 
                 setHeaders(headers);
 
