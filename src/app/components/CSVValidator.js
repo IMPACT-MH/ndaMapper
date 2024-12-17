@@ -3,6 +3,43 @@
 import { useState, useEffect } from "react";
 import { Upload, CheckCircle, XCircle, AlertCircle } from "lucide-react";
 
+// Helper function to standardize handedness values
+const standardizeHandedness = (value) => {
+    const handednessMap = {
+        left: "L",
+        l: "L",
+        right: "R",
+        r: "R",
+        both: "B",
+        ambidextrous: "B",
+    };
+
+    // Convert to lowercase for consistent matching
+    const lowerValue = value?.toString().toLowerCase();
+    return handednessMap[lowerValue] || value;
+};
+
+// Helper function to standardize boolean values to numeric
+const standardizeBinary = (value) => {
+    const binaryMap = {
+        true: "1",
+        false: "0",
+        t: "1",
+        f: "0",
+        TRUE: "1",
+        FALSE: "0",
+        True: "1",
+        False: "0",
+    };
+
+    // Try direct match first
+    if (value in binaryMap) return binaryMap[value];
+
+    // Try lowercase match
+    const lowerValue = value?.toString().toLowerCase();
+    return binaryMap[lowerValue] || value;
+};
+
 const CSVValidator = ({
     dataElements,
     onStructureSearch,
@@ -16,6 +53,47 @@ const CSVValidator = ({
     const [ignoredFields, setIgnoredFields] = useState(new Set());
     const [csvContent, setCsvContent] = useState(null);
     const [valueErrors, setValueErrors] = useState([]);
+    const [transformationCounts, setTransformationCounts] = useState({
+        handedness: 0,
+        binary: 0,
+    });
+
+    // Initial standardization before validation
+    const standardizeValues = (headers, rows) => {
+        let handednessCount = 0;
+        let binaryCount = 0;
+
+        const standardizedRows = rows.map((row, rowIndex) => {
+            if (rowIndex === 0) return row; // Skip header row
+
+            return row.map((value, colIndex) => {
+                const header = headers[colIndex];
+
+                // Always standardize handedness
+                if (header === "handedness") {
+                    const standardized = standardizeHandedness(value);
+                    if (standardized !== value) handednessCount++;
+                    return standardized;
+                }
+
+                // For boolean/binary fields
+                if (header.endsWith("_flag") || header.includes("boolean")) {
+                    const standardized = standardizeBinary(value);
+                    if (standardized !== value) binaryCount++;
+                    return standardized;
+                }
+
+                return value;
+            });
+        });
+
+        setTransformationCounts({
+            handedness: handednessCount,
+            binary: binaryCount,
+        });
+
+        return standardizedRows;
+    };
 
     useEffect(() => {
         if (initialCsvFile && dataElements) {
@@ -56,19 +134,25 @@ const CSVValidator = ({
             aliases: el.aliases || [],
         }));
 
-        const similarities = allFields
+        // First do exact matches with 100% similarity
+        const exactMatches = allFields
+            .filter((el) => el.name === field || el.aliases.includes(field))
+            .map((el) => ({
+                name: el.name,
+                similarity: 1,
+                aliases: el.aliases,
+            }));
+
+        if (exactMatches.length > 0) return exactMatches;
+
+        // Only if no exact matches, try Levenshtein
+        return allFields
             .map((el) => ({
                 name: el.name,
                 similarity: Math.max(
-                    calculateSimilarity(
-                        field.toLowerCase(),
-                        el.name.toLowerCase()
-                    ),
+                    calculateSimilarity(field, el.name),
                     ...el.aliases.map((alias) =>
-                        calculateSimilarity(
-                            field.toLowerCase(),
-                            alias.toLowerCase()
-                        )
+                        calculateSimilarity(field, alias)
                     )
                 ),
                 aliases: el.aliases,
@@ -76,24 +160,36 @@ const CSVValidator = ({
             .filter((item) => item.similarity > 0.6 && item.name !== field)
             .sort((a, b) => b.similarity - a.similarity)
             .slice(0, 3);
-
-        return similarities;
     };
 
     const parseValueRange = (rangeStr) => {
         if (!rangeStr) return null;
 
+        // Handle numeric ranges (e.g., "0::1440")
         if (rangeStr.includes("::")) {
             const [min, max] = rangeStr.split("::").map(Number);
-            return { type: "range", min, max, original: rangeStr };
+            return {
+                type: "range",
+                min,
+                max,
+                original: rangeStr,
+            };
         }
 
+        // Handle categorical values (e.g., "Y;N")
         if (rangeStr.includes(";")) {
             const values = rangeStr.split(";").map((v) => v.trim());
-            return { type: "enum", values, original: rangeStr };
+            return {
+                type: "enum",
+                values,
+                original: rangeStr,
+            };
         }
 
-        return { type: "unknown", original: rangeStr };
+        return {
+            type: "unknown",
+            original: rangeStr,
+        };
     };
 
     const isValueInRange = (value, range) => {
@@ -101,13 +197,14 @@ const CSVValidator = ({
         if (!value || value.toString().trim() === "") return true;
 
         switch (range.type) {
-            case "range":
+            case "range": {
                 const numValue = Number(value);
                 return (
                     !isNaN(numValue) &&
                     numValue >= range.min &&
                     numValue <= range.max
                 );
+            }
             case "enum":
                 return range.values.includes(value.toString().trim());
             default:
@@ -119,13 +216,40 @@ const CSVValidator = ({
         const errors = [];
         const valueRanges = {};
 
+        // Pre-process all value ranges
         dataElements.forEach((element) => {
             if (element.valueRange) {
                 valueRanges[element.name] = parseValueRange(element.valueRange);
             }
         });
 
-        rows.slice(1).forEach((row, rowIndex) => {
+        // First standardize the values
+        let standardizedRows = rows.map((row, rowIndex) => {
+            if (rowIndex === 0) return row; // Skip header
+            return row.map((value, colIndex) => {
+                const header = headers[colIndex];
+                const mappedField = mappings[header] || header;
+                const range = valueRanges[mappedField];
+
+                // Standardize based on field type
+                if (
+                    range?.values?.includes("R") &&
+                    range?.values?.includes("L")
+                ) {
+                    return standardizeHandedness(value);
+                }
+                if (
+                    range?.values?.includes("0") &&
+                    range?.values?.includes("1")
+                ) {
+                    return standardizeBinary(value);
+                }
+                return value;
+            });
+        });
+
+        // Then validate
+        standardizedRows.slice(1).forEach((row, rowIndex) => {
             headers.forEach((header, colIndex) => {
                 const value = row[colIndex];
                 const mappedField = mappings[header] || header;
@@ -183,6 +307,7 @@ const CSVValidator = ({
         }));
     };
 
+    // Modify downloadMappedCSV to use standardized values
     const downloadMappedCSV = () => {
         if (!csvContent) return;
 
@@ -216,10 +341,17 @@ const CSVValidator = ({
                 const rows = text
                     .split("\n")
                     .filter((row) => row.trim())
-                    .map((row) => row.split(",").map((cell) => cell.trim()));
-
-                setCsvContent(rows);
+                    .map((row) =>
+                        row.split(",").map((cell) =>
+                            // Remove quotes and trim whitespace
+                            cell.trim().replace(/^"(.*)"$/, "$1")
+                        )
+                    );
                 const headers = rows[0];
+
+                // Standardize values before validation
+                const standardizedRows = standardizeValues(headers, rows);
+                setCsvContent(standardizedRows);
 
                 if (dataElements) {
                     const requiredFields = dataElements
@@ -272,6 +404,7 @@ const CSVValidator = ({
                             unknownFields.length === 0,
                         headers,
                         valueErrors: valueValidationErrors,
+                        transformations: transformationCounts,
                     };
 
                     setValidationResults(results);
@@ -309,6 +442,35 @@ const CSVValidator = ({
             );
         }
     }, [selectedMappings]);
+
+    const renderTransformationSummary = () => {
+        if (!validationResults?.transformations) return null;
+
+        const { handedness, binary } = validationResults.transformations;
+
+        if (handedness === 0 && binary === 0) return null;
+
+        return (
+            <div className="bg-green-50 p-4 rounded">
+                <h4 className="font-medium text-green-800 mb-2">
+                    Value Standardization Summary
+                </h4>
+                <div className="space-y-1">
+                    {handedness > 0 && (
+                        <p className="text-green-700">
+                            Standardized {handedness} handedness values to NDA
+                            format
+                        </p>
+                    )}
+                    {binary > 0 && (
+                        <p className="text-green-700">
+                            Converted {binary} boolean values to 0/1 format
+                        </p>
+                    )}
+                </div>
+            </div>
+        );
+    };
 
     return (
         <div className="space-y-4">
@@ -387,6 +549,8 @@ const CSVValidator = ({
                                 : "CSV is missing required fields."}
                         </span>
                     </div>
+                    {renderTransformationSummary()}
+
                     <div className="grid grid-cols-3 gap-4">
                         <div className="bg-gray-50 p-4 rounded">
                             <div className="text-sm text-gray-600">
