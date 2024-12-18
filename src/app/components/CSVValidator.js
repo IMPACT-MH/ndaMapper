@@ -353,7 +353,7 @@ const CSVValidator = ({
     };
 
     const validateCSV = async (file) => {
-        setCurrentFile(file); // Add this line
+        setCurrentFile(file);
         setIsValidating(true);
         const reader = new FileReader();
 
@@ -369,10 +369,37 @@ const CSVValidator = ({
                             cell.trim().replace(/^"(.*)"$/, "$1")
                         )
                     );
-                const headers = rows[0];
+
+                // Check if first row is a shortname (single value, no commas)
+                const firstRow = rows[0];
+                const isSubmissionTemplate = firstRow.length === 1;
+
+                // Get the actual headers row based on file format
+                const headers = isSubmissionTemplate ? rows[1] : rows[0];
+
+                // If this is a submission template and we have an expected shortname
+                if (
+                    isSubmissionTemplate &&
+                    structureShortName &&
+                    firstRow[0] !== structureShortName
+                ) {
+                    setValidationResults({
+                        error: `Unexpected structure shortname. Found "${firstRow[0]}", expected "${structureShortName}"`,
+                    });
+                    setIsValidating(false);
+                    return;
+                }
+
+                // For submission templates, exclude the shortname row from data rows
+                const dataRows = isSubmissionTemplate
+                    ? rows.slice(2)
+                    : rows.slice(1);
 
                 // Standardize values before validation
-                const standardizedRows = standardizeValues(headers, rows);
+                const standardizedRows = standardizeValues(headers, [
+                    headers,
+                    ...dataRows,
+                ]);
                 setCsvContent(standardizedRows);
 
                 if (dataElements) {
@@ -398,7 +425,7 @@ const CSVValidator = ({
 
                     const valueValidationErrors = validateValues(
                         headers,
-                        rows,
+                        [headers, ...dataRows],
                         selectedMappings
                     );
                     setValueErrors(valueValidationErrors);
@@ -432,6 +459,10 @@ const CSVValidator = ({
                         headers,
                         valueErrors: valueValidationErrors,
                         transformations: transformationCounts,
+                        isSubmissionTemplate,
+                        detectedShortname: isSubmissionTemplate
+                            ? firstRow[0]
+                            : null,
                     };
 
                     setValidationResults(results);
@@ -535,16 +566,32 @@ const CSVValidator = ({
         <div className="space-y-4">
             <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold">Validate CSV</h3>
-                <div className="flex items-center space-x-2 text-sm text-gray-600">
-                    <span className="flex items-center">
-                        <CheckCircle className="w-4 h-4 mr-1 text-green-500" />
-                        Required
-                    </span>
-                    <span className="flex items-center">
-                        <AlertCircle className="w-4 h-4 mr-1 text-yellow-500" />
-                        Recommended
-                    </span>
-                </div>
+                {validationResults && !validationResults.error && (
+                    <div className="flex items-center space-x-2">
+                        {validationResults.hasAllRequiredFields &&
+                        validationResults.hasValidRanges &&
+                        validationResults.totalFields ===
+                            validationResults.validFields ? (
+                            <div className="flex items-center text-green-600">
+                                <CheckCircle className="w-5 h-5 mr-2" />
+                                <span className="font-medium">
+                                    CSV is valid!
+                                </span>
+                            </div>
+                        ) : (
+                            <div className="flex items-center text-red-600">
+                                <XCircle className="w-5 h-5 mr-2" />
+                                <span className="font-medium">
+                                    {validationResults.unknownFields.length > 0
+                                        ? "Unknown fields need mapping"
+                                        : !validationResults.hasValidRanges
+                                        ? "Invalid values detected"
+                                        : "Missing required fields"}
+                                </span>
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
 
             <div className="border-2 border-dashed rounded-lg p-8 text-center">
@@ -585,6 +632,23 @@ const CSVValidator = ({
                 </label>
             </div>
 
+            {validationResults?.isSubmissionTemplate && (
+                <div className="bg-blue-50 p-4 rounded-lg flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-blue-500 mt-0.5 flex-shrink-0" />
+                    <div>
+                        <h4 className="font-medium text-blue-700">
+                            Submission Template Detected
+                        </h4>
+                        <p className="text-blue-600 text-sm mt-1">
+                            Found structure shortname in first row:{" "}
+                            <span className="font-mono">
+                                {validationResults.detectedShortname}
+                            </span>
+                        </p>
+                    </div>
+                </div>
+            )}
+
             {isValidating && (
                 <div className="text-center py-4">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
@@ -596,7 +660,7 @@ const CSVValidator = ({
 
             {validationResults && !validationResults.error && (
                 <div className="space-y-4">
-                    <div className="flex items-center space-x-2">
+                    {/* <div className="flex items-center space-x-2">
                         {validationResults.hasAllRequiredFields &&
                         validationResults.hasValidRanges &&
                         validationResults.totalFields ===
@@ -617,7 +681,7 @@ const CSVValidator = ({
                                 ? "CSV contains values outside allowed ranges."
                                 : "CSV is missing required fields."}
                         </span>
-                    </div>
+                    </div> */}
 
                     <div className="grid grid-cols-3 gap-4">
                         <div className="bg-gray-50 p-4 rounded">
@@ -651,26 +715,6 @@ const CSVValidator = ({
                     </div>
 
                     {renderTransformationSummary()}
-
-                    {/* Download button */}
-                    <div className="mt-4 pt-4 border-t">
-                        <button
-                            onClick={downloadSubmissionTemplate}
-                            disabled={false} // Remove mapping check since ignored fields are valid
-                            className="px-4 py-2 rounded text-white bg-blue-500 hover:bg-blue-600"
-                        >
-                            Download Submission Template{" "}
-                            {valueErrors.length > 0
-                                ? `(${valueErrors.length} value errors)`
-                                : ""}
-                        </button>
-                        {valueErrors.length > 0 && (
-                            <p className="mt-2 text-sm text-orange-600">
-                                Warning: The CSV contains values that don&apos;t
-                                match the expected ranges.
-                            </p>
-                        )}
-                    </div>
 
                     {valueErrors.length > 0 && (
                         <div className="bg-orange-50 p-4 rounded">
@@ -838,6 +882,26 @@ const CSVValidator = ({
                             </div>
                         </div>
                     )}
+
+                    {/* Download button */}
+                    <div className="mt-4 pt-4 border-t">
+                        <button
+                            onClick={downloadSubmissionTemplate}
+                            disabled={false} // Remove mapping check since ignored fields are valid
+                            className="px-4 py-2 rounded text-white bg-blue-500 hover:bg-blue-600"
+                        >
+                            Download Submission Template{" "}
+                            {valueErrors.length > 0
+                                ? `(${valueErrors.length} value errors)`
+                                : ""}
+                        </button>
+                        {valueErrors.length > 0 && (
+                            <p className="mt-2 text-sm text-orange-600">
+                                Warning: The CSV contains values that don&apos;t
+                                match the expected ranges.
+                            </p>
+                        )}
+                    </div>
 
                     {/* {validationResults.missingRecommended.length > 0 && (
                         <div className="bg-yellow-50 p-4 rounded">

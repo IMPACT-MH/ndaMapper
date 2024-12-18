@@ -1,49 +1,90 @@
 "use client";
 
 import { useState } from "react";
-import { Upload } from "lucide-react";
+import { Upload, AlertCircle, XCircle } from "lucide-react";
 
-const CSVHeaderAnalyzer = ({ onStructureSelect }) => {
+const CSVHeaderAnalyzer = ({
+    onStructureSelect,
+    structureShortName = null,
+}) => {
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [error, setError] = useState(null);
     const [results, setResults] = useState(null);
     const [headers, setHeaders] = useState(null);
     const [currentFile, setCurrentFile] = useState(null);
+    const [detectedShortname, setDetectedShortname] = useState(null);
+    const [shortnameError, setShortnameError] = useState(null);
 
     const analyzeCSV = async (file) => {
-        setCurrentFile(file); // Store the file
+        setCurrentFile(file);
         setIsAnalyzing(true);
         setError(null);
+        setShortnameError(null);
 
         const reader = new FileReader();
         reader.onload = async (e) => {
-            // Inside analyzeCSV function
-            // NOTE: This returns an array rather than JSON...lol NDA API
             try {
-                // Parse CSV headers
                 const text = e.target.result;
-                const headers = text
-                    .split("\n")[0]
-                    .trim()
+                const lines = text.split("\n").filter((line) => line.trim());
+
+                // Check first line for shortname
+                const firstLine = lines[0].trim().replace(/^"(.*)"$/, "$1");
+                const potentialShortname = firstLine.includes(",")
+                    ? null
+                    : firstLine;
+
+                // Validate shortname if provided
+                if (structureShortName) {
+                    if (!potentialShortname) {
+                        setShortnameError(
+                            "Expected structure shortname in first row"
+                        );
+                        setIsAnalyzing(false);
+                        return;
+                    }
+                    if (potentialShortname !== structureShortName) {
+                        setShortnameError(
+                            `Expected shortname "${structureShortName}" but found "${potentialShortname}"`
+                        );
+                        setIsAnalyzing(false);
+                        return;
+                    }
+                }
+
+                // If first line is a single value, treat it as shortname and use second line for headers
+                const headerLine = potentialShortname ? lines[1] : lines[0];
+
+                if (!headerLine) {
+                    setError("No headers found in CSV file");
+                    setIsAnalyzing(false);
+                    return;
+                }
+
+                const headers = headerLine
                     .split(",")
-                    .map((h) => h.trim().replace(/^"(.*)"$/, "$1"));
+                    .map((h) => h.trim().replace(/^"(.*)"$/, "$1"))
+                    .filter(Boolean);
+
+                if (headers.length === 0) {
+                    setError("No valid headers found in CSV file");
+                    setIsAnalyzing(false);
+                    return;
+                }
 
                 setHeaders(headers);
+                setDetectedShortname(potentialShortname);
 
                 // Search for structures containing each header
                 const searchPromises = headers.map(async (header) => {
                     try {
-                        // Normalize the header by removing special characters
                         const normalizedHeader = header
                             .toLowerCase()
                             .replace(/[_-]/g, "");
 
-                        // First try with original header
                         let response = await fetch(
                             `https://nda.nih.gov/api/datadictionary/datastructure/dataElement/${header}`
                         );
 
-                        // If not found, try with normalized header
                         if (!response.ok) {
                             response = await fetch(
                                 `https://nda.nih.gov/api/datadictionary/datastructure/dataElement/${normalizedHeader}`
@@ -51,9 +92,6 @@ const CSVHeaderAnalyzer = ({ onStructureSelect }) => {
                         }
 
                         if (!response.ok) {
-                            console.log(
-                                `No matches found for field: ${header} (normalized: ${normalizedHeader})`
-                            );
                             return [];
                         }
 
@@ -73,7 +111,6 @@ const CSVHeaderAnalyzer = ({ onStructureSelect }) => {
                 // Count matches for each structure
                 const structureCounts = {};
                 headerResults.forEach((structures, index) => {
-                    // Since `structures` is an array of strings, iterate directly over them
                     structures.forEach((structureName) => {
                         if (!structureCounts[structureName]) {
                             structureCounts[structureName] = {
@@ -89,7 +126,6 @@ const CSVHeaderAnalyzer = ({ onStructureSelect }) => {
                     });
                 });
 
-                // Sort by number of matching fields
                 const sortedResults = Object.values(structureCounts)
                     .sort((a, b) => b.matchCount - a.matchCount)
                     .map((result) => ({
@@ -98,9 +134,7 @@ const CSVHeaderAnalyzer = ({ onStructureSelect }) => {
                             (result.matchCount / headers.length) * 100,
                     }));
 
-                setResults(sortedResults.length > 0 ? sortedResults : null);
-
-                setResults(Array.isArray(sortedResults) ? sortedResults : []);
+                setResults(sortedResults.length > 0 ? sortedResults : []);
             } catch (err) {
                 console.error("Full error:", err);
                 setError("Error analyzing CSV: " + err.message);
@@ -119,7 +153,6 @@ const CSVHeaderAnalyzer = ({ onStructureSelect }) => {
 
     return (
         <div className="space-y-4">
-            {/* File Upload */}
             <div className="border-2 border-dashed rounded-lg p-8 text-center">
                 <input
                     type="file"
@@ -134,20 +167,35 @@ const CSVHeaderAnalyzer = ({ onStructureSelect }) => {
                     htmlFor="csv-upload"
                     className="cursor-pointer flex flex-col items-center space-y-2"
                 >
-                    <Upload className="w-12 h-12 text-gray-400" />
-                    <div>
-                        <span className="text-base text-gray-600">
-                            Upload your CSV file
-                        </span>
-                        <span className="text-sm text-gray-500 block">
-                            We&apos;ll analyze your column headers and find
-                            matching structures
-                        </span>
-                    </div>
+                    {currentFile ? (
+                        <>
+                            <div className="flex items-center text-blue-600">
+                                <span className="font-medium">
+                                    {currentFile.name}
+                                </span>
+                            </div>
+                            <span className="text-sm text-gray-500">
+                                Click to upload a different file
+                            </span>
+                        </>
+                    ) : (
+                        <>
+                            <Upload className="w-12 h-12 text-gray-400" />
+                            <div>
+                                <span className="text-base text-gray-600">
+                                    Upload your CSV file
+                                </span>
+                                <span className="text-sm text-gray-500 block">
+                                    {structureShortName
+                                        ? `Expecting "${structureShortName}" structure`
+                                        : "We'll analyze your column headers and find matching structures"}
+                                </span>
+                            </div>
+                        </>
+                    )}
                 </label>
             </div>
 
-            {/* Loading State */}
             {isAnalyzing && (
                 <div className="text-center py-4">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
@@ -157,16 +205,45 @@ const CSVHeaderAnalyzer = ({ onStructureSelect }) => {
                 </div>
             )}
 
-            {/* Error State */}
+            {shortnameError && (
+                <div className="bg-red-50 p-4 rounded-lg flex items-start gap-3">
+                    <XCircle className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" />
+                    <div>
+                        <h4 className="font-medium text-red-700">
+                            Structure Shortname Error
+                        </h4>
+                        <p className="text-red-600 text-sm mt-1">
+                            {shortnameError}
+                        </p>
+                    </div>
+                </div>
+            )}
+
             {error && (
                 <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
                     {error}
                 </div>
             )}
 
-            {/* Results */}
-            {results && headers && (
+            {results && headers && !shortnameError && (
                 <div className="space-y-4">
+                    {detectedShortname && (
+                        <div className="bg-blue-50 p-4 rounded-lg flex items-start gap-3">
+                            <AlertCircle className="w-5 h-5 text-blue-500 mt-0.5 flex-shrink-0" />
+                            <div>
+                                <h4 className="font-medium text-blue-700">
+                                    Submission Template Detected
+                                </h4>
+                                <p className="text-blue-600 text-sm mt-1">
+                                    Found data structure shortname in first row:{" "}
+                                    <span className="font-mono">
+                                        {detectedShortname}
+                                    </span>
+                                </p>
+                            </div>
+                        </div>
+                    )}
+
                     <div className="bg-white p-4 rounded-lg shadow">
                         <h3 className="font-medium text-gray-700 mb-2">
                             Detected Headers
@@ -188,16 +265,15 @@ const CSVHeaderAnalyzer = ({ onStructureSelect }) => {
                             Matching Structures
                         </h3>
                         <div className="space-y-4">
-                            {results && results.length > 0 ? (
+                            {results.length > 0 ? (
                                 results.map((result) => (
-                                    // In CSVHeaderAnalyzer.js
                                     <div
                                         key={result.name}
                                         className="p-4 border rounded hover:bg-gray-50 cursor-pointer"
                                         onClick={() =>
                                             onStructureSelect(
                                                 result.name,
-                                                currentFile // Pass the actual file object
+                                                currentFile
                                             )
                                         }
                                     >
