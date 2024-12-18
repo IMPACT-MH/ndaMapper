@@ -142,8 +142,17 @@ const HomePage = () => {
         fetchDataElements(structure.shortName);
     };
 
+    const resetValidationState = () => {
+        setSelectedMappings({});
+        setIgnoredFields(new Set());
+        setValidationResults(null);
+        setValueErrors([]);
+        setTransformationCounts({ handedness: 0, binary: 0 });
+    };
+
     const handleCsvFileChange = (file) => {
         setCsvFile(file);
+        resetValidationState(); // Reset all validation state when a new file is uploaded
     };
 
     return (
@@ -225,6 +234,7 @@ const HomePage = () => {
 
                     <CSVHeaderAnalyzer
                         onStructureSelect={async (shortName, file) => {
+                            resetValidationState(); // Reset state before setting new file
                             setSearchTerm(shortName);
                             setCsvFile(file);
 
