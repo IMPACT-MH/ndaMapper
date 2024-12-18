@@ -173,17 +173,25 @@ const CSVValidator = ({
             .sort((a, b) => b.similarity - a.similarity)
             .slice(0, 3);
     };
-
     const parseValueRange = (rangeStr) => {
         if (!rangeStr) return null;
 
-        // Handle numeric ranges (e.g., "0::1440")
+        // Handle numeric ranges with special values (e.g., "0::9999; -777; -999")
         if (rangeStr.includes("::")) {
-            const [min, max] = rangeStr.split("::").map(Number);
+            const parts = rangeStr.split(";").map((p) => p.trim());
+            const rangePart = parts.find((p) => p.includes("::"));
+            const [min, max] = rangePart.split("::").map(Number);
+
+            // Get any special values
+            const specialValues = parts
+                .filter((p) => !p.includes("::"))
+                .map((p) => p.trim());
+
             return {
                 type: "range",
                 min,
                 max,
+                values: specialValues.length > 0 ? specialValues : null,
                 original: rangeStr,
             };
         }
@@ -208,9 +216,23 @@ const CSVValidator = ({
         if (!range) return true;
         if (!value || value.toString().trim() === "") return true;
 
+        // Convert value to string for initial processing
+        const strValue = value.toString().trim();
+
         switch (range.type) {
             case "range": {
-                const numValue = Number(value);
+                // Convert special values to numbers for comparison
+                const numValue = Number(strValue);
+
+                // Special values check first (-777, -999 etc)
+                if (range.values) {
+                    const specialNums = range.values.map((v) => Number(v));
+                    if (specialNums.includes(numValue)) {
+                        return true;
+                    }
+                }
+
+                // Then check numeric range
                 return (
                     !isNaN(numValue) &&
                     numValue >= range.min &&
@@ -218,7 +240,7 @@ const CSVValidator = ({
                 );
             }
             case "enum":
-                return range.values.includes(value.toString().trim());
+                return range.values.includes(strValue);
             default:
                 return true;
         }
@@ -352,6 +374,43 @@ const CSVValidator = ({
         window.URL.revokeObjectURL(url);
     };
 
+    // Helper function to parse CSV lines properly handling quotes
+    const parseCSVLine = (line) => {
+        const cells = [];
+        let currentCell = "";
+        let isInQuotes = false;
+
+        for (let i = 0; i < line.length; i++) {
+            const char = line[i];
+
+            if (char === '"') {
+                // If we see a quote right after a quote, it's an escaped quote
+                if (i + 1 < line.length && line[i + 1] === '"') {
+                    currentCell += '"';
+                    i++; // Skip next quote
+                    continue;
+                }
+                // Toggle quote state
+                isInQuotes = !isInQuotes;
+                continue;
+            }
+
+            if (char === "," && !isInQuotes) {
+                // End of cell
+                cells.push(currentCell.trim());
+                currentCell = "";
+                continue;
+            }
+
+            currentCell += char;
+        }
+
+        // Push the last cell
+        cells.push(currentCell.trim());
+
+        return cells;
+    };
+
     const validateCSV = async (file) => {
         setCurrentFile(file);
         setIsValidating(true);
@@ -360,15 +419,10 @@ const CSVValidator = ({
         reader.onload = async (e) => {
             try {
                 const text = e.target.result;
-                const rows = text
-                    .split("\n")
-                    .filter((row) => row.trim())
-                    .map((row) =>
-                        row.split(",").map((cell) =>
-                            // Remove quotes and trim whitespace
-                            cell.trim().replace(/^"(.*)"$/, "$1")
-                        )
-                    );
+                const lines = text.split("\n").filter((line) => line.trim());
+
+                // Parse each line properly handling quotes
+                const rows = lines.map((line) => parseCSVLine(line));
 
                 // Check if first row is a shortname (single value, no commas)
                 const firstRow = rows[0];
