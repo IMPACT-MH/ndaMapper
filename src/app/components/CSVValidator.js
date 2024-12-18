@@ -46,6 +46,7 @@ const CSVValidator = ({
     initialCsvFile = null,
     initialHeaders = null,
     structureShortName = null,
+    onHeadersChange = null, // CSV headers from validation get passed to the table
 }) => {
     const [validationResults, setValidationResults] = useState(null);
     const [isValidating, setIsValidating] = useState(false);
@@ -430,6 +431,11 @@ const CSVValidator = ({
 
                 // Get the actual headers row based on file format
                 const headers = isSubmissionTemplate ? rows[1] : rows[0];
+
+                // Call the callback with the headers
+                if (onHeadersChange) {
+                    onHeadersChange(headers);
+                }
 
                 // If this is a submission template and we have an expected shortname
                 if (
