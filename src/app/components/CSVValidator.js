@@ -60,6 +60,7 @@ const CSVValidator = ({
         transformationCounts: { handedness: 0, binary: 0 },
         setTransformationCounts: () => {},
     },
+    onFileChange, // New prop to handle file changes
 }) => {
     const [isValidating, setIsValidating] = useState(false);
     const [currentFile, setCurrentFile] = useState(initialCsvFile);
@@ -433,6 +434,9 @@ const CSVValidator = ({
 
     const validateCSV = async (file) => {
         setCurrentFile(file);
+        if (onFileChange) {
+            onFileChange(file); // Propagate file change up
+        }
         setIsValidating(true);
         const reader = new FileReader();
 

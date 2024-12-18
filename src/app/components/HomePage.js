@@ -142,6 +142,10 @@ const HomePage = () => {
         fetchDataElements(structure.shortName);
     };
 
+    const handleCsvFileChange = (file) => {
+        setCsvFile(file);
+    };
+
     return (
         <div className="container mx-auto p-4 max-w-7xl">
             {/* Tabs */}
@@ -191,6 +195,7 @@ const HomePage = () => {
                     loadingElements={loadingElements}
                     handleStructureSearch={handleStructureSearch}
                     initialCsvFile={csvFile}
+                    onFileChange={handleCsvFileChange}
                     onClear={handleClearSearch}
                     // Pass down CSV validator state
                     validatorState={{

@@ -15,6 +15,7 @@ const DataStructureSearch = ({
     loadingElements,
     handleStructureSearch,
     initialCsvFile,
+    onFileChange, // New prop to pass changes up
     onClear,
     validatorState, // New prop
 }) => {
@@ -194,7 +195,8 @@ const DataStructureSearch = ({
                                                     selectedStructure?.shortName
                                                 }
                                                 onHeadersChange={setHeaders}
-                                                validatorState={validatorState} // Pass the state through
+                                                validatorState={validatorState}
+                                                onFileChange={onFileChange} // Pass the handler
                                             />
                                         </div>
                                         <div>
