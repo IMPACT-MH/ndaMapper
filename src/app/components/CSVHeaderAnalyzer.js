@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Upload, AlertCircle, XCircle } from "lucide-react";
+import { Upload, AlertCircle, XCircle, CheckCircle } from "lucide-react";
 
 const CSVHeaderAnalyzer = ({
     onStructureSelect,
@@ -170,6 +170,8 @@ const CSVHeaderAnalyzer = ({
                     {currentFile ? (
                         <>
                             <div className="flex items-center text-blue-600">
+                                <CheckCircle className="w-6 h-6 mr-2" />
+
                                 <span className="font-medium">
                                     {currentFile.name}
                                 </span>

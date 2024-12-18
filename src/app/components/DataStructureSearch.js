@@ -76,7 +76,7 @@ const DataStructureSearch = ({
 
             <div className="flex gap-4 relative">
                 {/* Results column - shrinks but stays visible */}
-                {searchTerm && (
+                {searchTerm && structures.length > 0 && (
                     <div
                         className={`transition-all duration-300 ease-in-out shrink-0 ${
                             isExpanded
