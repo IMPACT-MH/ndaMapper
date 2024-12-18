@@ -16,6 +16,7 @@ const DataStructureSearch = ({
     handleStructureSearch,
     initialCsvFile,
     onClear,
+    validatorState, // New prop
 }) => {
     const [headers, setHeaders] = useState([]);
     const [isExpanded, setIsExpanded] = useState(false);
@@ -192,7 +193,8 @@ const DataStructureSearch = ({
                                                 structureShortName={
                                                     selectedStructure?.shortName
                                                 }
-                                                onHeadersChange={setHeaders} // This will update our headers state
+                                                onHeadersChange={setHeaders}
+                                                validatorState={validatorState} // Pass the state through
                                             />
                                         </div>
                                         <div>

@@ -47,18 +47,37 @@ const CSVValidator = ({
     initialHeaders = null,
     structureShortName = null,
     onHeadersChange = null, // CSV headers from validation get passed to the table
+    // New state props
+    validatorState = {
+        selectedMappings: {},
+        setSelectedMappings: () => {},
+        ignoredFields: new Set(),
+        setIgnoredFields: () => {},
+        validationResults: null,
+        setValidationResults: () => {},
+        valueErrors: [],
+        setValueErrors: () => {},
+        transformationCounts: { handedness: 0, binary: 0 },
+        setTransformationCounts: () => {},
+    },
 }) => {
-    const [validationResults, setValidationResults] = useState(null);
     const [isValidating, setIsValidating] = useState(false);
     const [currentFile, setCurrentFile] = useState(initialCsvFile);
-    const [selectedMappings, setSelectedMappings] = useState({});
-    const [ignoredFields, setIgnoredFields] = useState(new Set());
     const [csvContent, setCsvContent] = useState(null);
-    const [valueErrors, setValueErrors] = useState([]);
-    const [transformationCounts, setTransformationCounts] = useState({
-        handedness: 0,
-        binary: 0,
-    });
+
+    // Use state from props instead of local state
+    const {
+        selectedMappings,
+        setSelectedMappings,
+        ignoredFields,
+        setIgnoredFields,
+        validationResults,
+        setValidationResults,
+        valueErrors,
+        setValueErrors,
+        transformationCounts,
+        setTransformationCounts,
+    } = validatorState;
 
     // Initial standardization before validation
     const standardizeValues = (headers, rows) => {

@@ -22,6 +22,16 @@ const HomePage = () => {
     const [csvFile, setCsvFile] = useState(null);
     const [csvHeaders, setCsvHeaders] = useState(null);
 
+    // New state for CSVValidator
+    const [selectedMappings, setSelectedMappings] = useState({});
+    const [ignoredFields, setIgnoredFields] = useState(new Set());
+    const [validationResults, setValidationResults] = useState(null);
+    const [valueErrors, setValueErrors] = useState([]);
+    const [transformationCounts, setTransformationCounts] = useState({
+        handedness: 0,
+        binary: 0,
+    });
+
     const handleCsvAnalyzerResult = (shortName, file, headers) => {
         setSearchTerm(shortName);
         setCsvFile(file);
@@ -129,7 +139,6 @@ const HomePage = () => {
 
     const handleStructureSelect = (structure) => {
         setSelectedStructure(structure);
-        setIsSearchFocused(false);
         fetchDataElements(structure.shortName);
     };
 
@@ -153,11 +162,11 @@ const HomePage = () => {
                             Data Structure Search
                         </button>
                         <button
-                            onClick={() => setActiveTab(Tabs.REVERSE_LOOKUP)}
+                            onClick={() => setActiveTab(Tabs.FIELD_SEARCH)}
                             className={`
                                 whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm
                                 ${
-                                    activeTab === Tabs.REVERSE_LOOKUP
+                                    activeTab === Tabs.FIELD_SEARCH
                                         ? "border-blue-500 text-blue-600"
                                         : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                                 }
@@ -183,9 +192,21 @@ const HomePage = () => {
                     handleStructureSearch={handleStructureSearch}
                     initialCsvFile={csvFile}
                     onClear={handleClearSearch}
+                    // Pass down CSV validator state
+                    validatorState={{
+                        selectedMappings,
+                        setSelectedMappings,
+                        ignoredFields,
+                        setIgnoredFields,
+                        validationResults,
+                        setValidationResults,
+                        valueErrors,
+                        setValueErrors,
+                        transformationCounts,
+                        setTransformationCounts,
+                    }}
                 />
             ) : (
-                // Reverse Lookup Content
                 <>
                     <div className="mb-8">
                         <h1 className="text-3xl font-bold mb-4">
@@ -199,11 +220,9 @@ const HomePage = () => {
 
                     <CSVHeaderAnalyzer
                         onStructureSelect={async (shortName, file) => {
-                            // First set these to handle the CSV part
                             setSearchTerm(shortName);
                             setCsvFile(file);
 
-                            // Fetch the structure details and then select it
                             try {
                                 const response = await fetch(
                                     `https://nda.nih.gov/api/datadictionary/v2/datastructure?searchTerm=${shortName}`
@@ -212,39 +231,6 @@ const HomePage = () => {
                                     throw new Error("Failed to fetch data");
                                 const data = await response.json();
 
-                                // Find the exact match
-                                const structure = data.find(
-                                    (s) => s.shortName === shortName
-                                );
-                                if (structure) {
-                                    handleStructureSelect(structure); // This will fetch the data elements too
-                                }
-                            } catch (err) {
-                                setError(
-                                    "Error fetching structure: " + err.message
-                                );
-                            }
-
-                            // Finally switch the tab
-                            setActiveTab(Tabs.STRUCTURE_SEARCH);
-                        }}
-                    />
-
-                    {/* <CSVHeaderAnalyzer
-                        onStructureSelect={async (shortName) => {
-                            setSearchTerm(shortName);
-                            setActiveTab(Tabs.STRUCTURE_SEARCH);
-
-                            // Fetch the structure details first
-                            try {
-                                const response = await fetch(
-                                    `https://nda.nih.gov/api/datadictionary/v2/datastructure?searchTerm=${shortName}`
-                                );
-                                if (!response.ok)
-                                    throw new Error("Failed to fetch data");
-                                const data = await response.json();
-
-                                // Find the exact match
                                 const structure = data.find(
                                     (s) => s.shortName === shortName
                                 );
@@ -256,8 +242,10 @@ const HomePage = () => {
                                     "Error fetching structure: " + err.message
                                 );
                             }
+
+                            setActiveTab(Tabs.STRUCTURE_SEARCH);
                         }}
-                    /> */}
+                    />
                 </>
             )}
         </div>
