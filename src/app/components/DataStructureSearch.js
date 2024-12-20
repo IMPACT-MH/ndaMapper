@@ -210,7 +210,8 @@ const DataStructureSearch = ({
                                             {/* Details content */}
                                             <div className="bg-white p-6 rounded-lg shadow">
                                                 <h1 className="text-2xl font-semibold mb-8">
-                                                    Data Structure
+                                                    {/* Data Structure */}
+                                                    {selectedStructure.title}
                                                 </h1>
                                                 {selectedStructure ? (
                                                     <div className="space-y-8">
@@ -236,13 +237,17 @@ const DataStructureSearch = ({
 
                                                             <div>
                                                                 <h3 className="font-medium text-gray-600 mb-2">
-                                                                    Title
+                                                                    Status
                                                                 </h3>
-                                                                <p className="text-lg text-gray-900">
+                                                                {/* <p className="text-lg text-gray-900">
+                                                                    Data
+                                                                    Structure
+                                                                </p> */}
+                                                                <span className="px-3 py-1 rounded-full text-sm bg-green-100 text-green-700">
                                                                     {
-                                                                        selectedStructure.title
+                                                                        selectedStructure.status
                                                                     }
-                                                                </p>
+                                                                </span>
                                                             </div>
                                                         </div>
 
@@ -291,17 +296,6 @@ const DataStructureSearch = ({
 
                                                         {/* Status & Downloads Section */}
                                                         <div className="bg-gray-50 rounded-lg p-6">
-                                                            <div className="flex items-center gap-2 mb-6">
-                                                                <h3 className="font-medium text-gray-700">
-                                                                    Status
-                                                                </h3>
-                                                                <span className="px-3 py-1 rounded-full text-sm bg-green-100 text-green-700">
-                                                                    {
-                                                                        selectedStructure.status
-                                                                    }
-                                                                </span>
-                                                            </div>
-
                                                             <div className="space-y-4">
                                                                 <h3 className="font-medium text-gray-700">
                                                                     Downloads
