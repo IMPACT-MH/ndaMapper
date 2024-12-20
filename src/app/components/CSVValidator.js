@@ -379,8 +379,10 @@ const CSVValidator = ({
 
         // Create CSV with single shortName in first row, then headers, then data
         const newCSV = [
-            structureShortName || "", // Single value in first row
-            validHeaders.join(","), // Headers as second row
+            `${(structureShortName || "").slice(0, -2)},${(
+                structureShortName || ""
+            ).slice(-2)}`, // Submission template header
+            validHeaders.join(","), // Data Structure headers as second row
             ...validData.slice(1).map((row) => row.join(",")), // Data rows
         ].join("\n");
 
