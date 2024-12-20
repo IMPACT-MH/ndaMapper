@@ -1,7 +1,16 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Search, X, CheckCircle, ChevronLeft } from "lucide-react";
+import {
+    Search,
+    X,
+    CheckCircle,
+    ChevronLeft,
+    FileText,
+    Table,
+} from "lucide-react";
 import CSVValidator from "./CSVValidator";
+import DownloadStructureButton from "./DownloadStructureButton";
+import DownloadTemplateButton from "./DownloadTemplateButton";
 
 const DataStructureSearch = ({
     searchTerm,
@@ -153,38 +162,109 @@ const DataStructureSearch = ({
                             }
                         >
                             {/* Details content */}
-                            <div className="bg-white p-4 rounded-lg shadow">
-                                <h2 className="text-xl font-semibold mb-4">
-                                    Details
-                                </h2>
+                            <div className="bg-white p-6 rounded-lg shadow">
+                                <h1 className="text-2xl font-semibold mb-8">
+                                    Data Structure
+                                </h1>
                                 {selectedStructure ? (
-                                    <div className="space-y-6">
-                                        <div>
-                                            <h3 className="font-medium text-gray-700">
-                                                Short Name
-                                            </h3>
-                                            <p className="text-lg font-mono font-semibold">
-                                                {selectedStructure.shortName}
-                                            </p>
-                                        </div>
-                                        <div>
-                                            <h3 className="font-medium text-gray-700">
-                                                Title
-                                            </h3>
-                                            <p className="text-lg">
-                                                {selectedStructure.title}
-                                            </p>
-                                        </div>
-                                        <div>
-                                            <h3 className="font-medium text-gray-700">
-                                                Status
-                                            </h3>
+                                    <div className="space-y-8">
+                                        {/* Basic Info Section */}
+                                        <div className="grid grid-cols-2 gap-x-24">
+                                            <div>
+                                                <h3 className="font-medium text-gray-600 mb-2">
+                                                    Short Name
+                                                </h3>
+                                                <div className="flex items-center gap-3">
+                                                    <p className="text-lg font-mono font-medium text-blue-600">
+                                                        {
+                                                            selectedStructure.shortName
+                                                        }
+                                                    </p>
+                                                    <span className="px-3 py-1 rounded-full text-sm bg-gray-100 text-black-700">
+                                                        v
+                                                        {selectedStructure.version ||
+                                                            "1.0"}
+                                                    </span>
+                                                </div>
+                                            </div>
 
-                                            <span className="inline-block px-3 py-1 rounded-full text-sm bg-green-100 text-green-800">
-                                                {selectedStructure.status}
-                                            </span>
+                                            <div>
+                                                <h3 className="font-medium text-gray-600 mb-2">
+                                                    Title
+                                                </h3>
+                                                <p className="text-lg text-gray-900">
+                                                    {selectedStructure.title}
+                                                </p>
+                                            </div>
                                         </div>
-                                        <div className="mt-8 pt-8 border-t">
+
+                                        {/* Extended Info Section */}
+                                        <div className="grid grid-cols-2 gap-x-24">
+                                            <div>
+                                                <h3 className="font-medium text-gray-600 mb-2">
+                                                    Data Type
+                                                </h3>
+                                                <p className="text-gray-900">
+                                                    {selectedStructure.dataType ||
+                                                        "Not specified"}
+                                                </p>
+                                            </div>
+                                            <div>
+                                                <h3 className="font-medium text-gray-600 mb-2">
+                                                    Categories
+                                                </h3>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {selectedStructure.categories?.map(
+                                                        (category, index) => (
+                                                            <span
+                                                                key={index}
+                                                                className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm"
+                                                            >
+                                                                {category}
+                                                            </span>
+                                                        )
+                                                    ) || (
+                                                        <span className="text-gray-500">
+                                                            No categories
+                                                            specified
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Status & Downloads Section */}
+                                        <div className="bg-gray-50 rounded-lg p-6">
+                                            <div className="flex items-center gap-2 mb-6">
+                                                <h3 className="font-medium text-gray-700">
+                                                    Status
+                                                </h3>
+                                                <span className="px-3 py-1 rounded-full text-sm bg-green-100 text-green-700">
+                                                    {selectedStructure.status}
+                                                </span>
+                                            </div>
+
+                                            <div className="space-y-4">
+                                                <h3 className="font-medium text-gray-700">
+                                                    Downloads
+                                                </h3>
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <DownloadStructureButton
+                                                        shortName={
+                                                            selectedStructure.shortName
+                                                        }
+                                                    />
+                                                    <DownloadTemplateButton
+                                                        shortName={
+                                                            selectedStructure.shortName
+                                                        }
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Validator Section */}
+                                        <div className="pt-6 border-t">
                                             <CSVValidator
                                                 dataElements={dataElements}
                                                 onStructureSearch={
@@ -196,7 +276,7 @@ const DataStructureSearch = ({
                                                 }
                                                 onHeadersChange={setHeaders}
                                                 validatorState={validatorState}
-                                                onFileChange={onFileChange} // Pass the handler
+                                                onFileChange={onFileChange}
                                             />
                                         </div>
                                         <div>
