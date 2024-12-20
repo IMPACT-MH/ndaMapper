@@ -38,6 +38,13 @@ const DataStructureSearch = ({
         }
     }, [initialCsvFile]);
 
+    // Collapse details view when search term changes
+    useEffect(() => {
+        if (searchTerm && isExpanded) {
+            setIsExpanded(false);
+        }
+    }, [searchTerm]);
+
     return (
         <>
             <div className="mb-8">
