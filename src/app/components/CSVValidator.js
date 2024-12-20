@@ -450,7 +450,10 @@ const CSVValidator = ({
 
                 // Check if first row is a shortname (single value, no commas)
                 const firstRow = rows[0];
-                const isSubmissionTemplate = firstRow.length === 1;
+                // Check if first row follows shortname,version format
+                const isSubmissionTemplate =
+                    firstRow.length <= 2 &&
+                    firstRow.every((cell) => cell.trim() !== "");
 
                 // Get the actual headers row based on file format
                 const headers = isSubmissionTemplate ? rows[1] : rows[0];
@@ -461,16 +464,21 @@ const CSVValidator = ({
                 }
 
                 // If this is a submission template and we have an expected shortname
-                if (
-                    isSubmissionTemplate &&
-                    structureShortName &&
-                    firstRow[0] !== structureShortName
-                ) {
-                    setValidationResults({
-                        error: `Unexpected structure shortname. Found "${firstRow[0]}", expected "${structureShortName}"`,
-                    });
-                    setIsValidating(false);
-                    return;
+                if (isSubmissionTemplate && structureShortName) {
+                    // Convert structureShortName from "deldisk01" format to "deldisk,01" format
+                    const expectedName = structureShortName.endsWith("01")
+                        ? structureShortName.slice(0, -2) + ",01"
+                        : structureShortName;
+
+                    const actualName = `${firstRow[0]},${firstRow[1]}`;
+
+                    if (actualName !== expectedName) {
+                        setValidationResults({
+                            error: `Unexpected structure shortname. Found "${actualName}", expected "${expectedName}"`,
+                        });
+                        setIsValidating(false);
+                        return;
+                    }
                 }
 
                 // For submission templates, exclude the shortname row from data rows

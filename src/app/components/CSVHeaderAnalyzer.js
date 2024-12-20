@@ -29,9 +29,14 @@ const CSVHeaderAnalyzer = ({
 
                 // Check first line for shortname
                 const firstLine = lines[0].trim().replace(/^"(.*)"$/, "$1");
-                const potentialShortname = firstLine.includes(",")
-                    ? null
-                    : firstLine;
+                const firstLineParts = firstLine
+                    .split(",")
+                    .map((part) => part.trim());
+                const potentialShortname =
+                    firstLineParts.length === 2 &&
+                    firstLineParts.every((part) => part !== "")
+                        ? firstLineParts[0]
+                        : null;
 
                 // Validate shortname if provided
                 if (structureShortName) {
