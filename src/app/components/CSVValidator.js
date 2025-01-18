@@ -178,19 +178,37 @@ const CSVValidator = ({
 
         if (exactMatches.length > 0) return exactMatches;
 
-        // Only if no exact matches, try Levenshtein
         return allFields
-            .map((el) => ({
-                name: el.name,
-                similarity: Math.max(
-                    calculateSimilarity(field, el.name),
-                    ...el.aliases.map((alias) =>
-                        calculateSimilarity(field, alias)
-                    )
-                ),
-                aliases: el.aliases,
-            }))
-            .filter((item) => item.similarity > 0.6 && item.name !== field)
+            .map((el) => {
+                // Split target field into parts
+                const targetParts = el.name.split("_");
+
+                // For exact matches at start or end
+                if (
+                    el.name === field ||
+                    el.name.endsWith(field) ||
+                    el.name.startsWith(field)
+                ) {
+                    return {
+                        name: el.name,
+                        similarity: 1,
+                        aliases: el.aliases,
+                    };
+                }
+
+                return {
+                    name: el.name,
+                    similarity: 0, // Default to no match
+                    aliases: el.aliases,
+                };
+            })
+            .filter((item) => {
+                // Skip exact matches
+                if (item.name === field) return false;
+
+                // Only keep perfect matches
+                return item.similarity > 0.95;
+            })
             .sort((a, b) => b.similarity - a.similarity)
             .slice(0, 3);
     };
