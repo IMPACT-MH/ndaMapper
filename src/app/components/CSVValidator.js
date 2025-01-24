@@ -385,23 +385,37 @@ const CSVValidator = ({
     const downloadSubmissionTemplate = () => {
         if (!csvContent) return;
 
-        // Filter out ignored columns and get remaining headers
-        const validHeaders = csvContent[0].filter(
-            (header) => !ignoredFields.has(header)
+        // Get original headers and their indices
+        const headers = csvContent[0];
+
+        // Create a mapping of column index to mapped header name
+        const headerMapping = {};
+        headers.forEach((header, index) => {
+            // If there's a mapping for this header, use it; otherwise use original
+            headerMapping[index] = selectedMappings[header] || header;
+        });
+
+        // Filter out ignored columns and apply mappings to headers
+        const validHeaderIndices = headers
+            .map((_, index) => index)
+            .filter((index) => !ignoredFields.has(headers[index]));
+
+        const transformedHeaders = validHeaderIndices.map(
+            (index) => headerMapping[index]
         );
 
-        // For each row, only include columns that aren't ignored
-        const validData = csvContent.map((row) =>
-            row.filter((_, index) => !ignoredFields.has(csvContent[0][index]))
-        );
+        // For each data row, filter ignored columns (keeping order aligned with headers)
+        const validData = csvContent
+            .slice(1)
+            .map((row) => validHeaderIndices.map((index) => row[index]));
 
-        // Create CSV with single shortName in first row, then headers, then data
+        // Create CSV with shortName in first row, then mapped headers, then data
         const newCSV = [
             `${(structureShortName || "").slice(0, -2)},${(
                 structureShortName || ""
-            ).slice(-2)}`, // Submission template header
-            validHeaders.join(","), // Data Structure headers as second row
-            ...validData.slice(1).map((row) => row.join(",")), // Data rows
+            ).slice(-2)}`,
+            transformedHeaders.join(","),
+            ...validData.map((row) => row.join(",")),
         ].join("\n");
 
         const blob = new Blob([newCSV], { type: "text/csv" });
