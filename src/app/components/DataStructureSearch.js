@@ -144,7 +144,7 @@ const DataStructureSearch = ({
                                         }`}
                                     >
                                         <h2 className="text-xl font-semibold p-4">
-                                            Results
+                                            Results ({structures.length})
                                         </h2>
                                     </div>
                                     <div className="p-4 space-y-2">
