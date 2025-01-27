@@ -151,7 +151,10 @@ const HomePage = () => {
 
     const handleStructureSelect = (structure) => {
         setSelectedStructure(structure);
-        fetchDataElements(structure.shortName);
+        if (structure) {
+            // Only fetch elements if we have a structure
+            fetchDataElements(structure.shortName);
+        }
     };
 
     const resetValidationState = () => {
