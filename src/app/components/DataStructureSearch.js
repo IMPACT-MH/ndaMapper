@@ -52,6 +52,18 @@ const DataStructureSearch = ({
     const showResultsHeader = useScrollDirection(resultsRef);
     const showDetailsHeader = useScrollDirection(detailsRef);
 
+    const handleCategoryClick = async (category) => {
+        setSearchTerm(`category:${category}`);
+        handleStructureSelect(null); // Clear selected structure to show search results
+        setIsExpanded(false); // Collapse the expanded view
+
+        // Scroll back to top of search results
+        window.scrollTo({
+            top: 0,
+            behavior: "smooth",
+        });
+    };
+
     return (
         <>
             <div className="flex flex-col h-screen">
@@ -276,7 +288,16 @@ const DataStructureSearch = ({
                                                                                 key={
                                                                                     index
                                                                                 }
-                                                                                className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm"
+                                                                                className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm cursor-pointer hover:bg-gray-200 transition-colors"
+                                                                                onClick={(
+                                                                                    e
+                                                                                ) => {
+                                                                                    e.preventDefault();
+                                                                                    e.stopPropagation();
+                                                                                    handleCategoryClick(
+                                                                                        category
+                                                                                    );
+                                                                                }}
                                                                             >
                                                                                 {
                                                                                     category

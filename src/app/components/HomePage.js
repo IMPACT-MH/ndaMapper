@@ -60,48 +60,60 @@ const HomePage = () => {
         setLoading(true);
         setError(null);
         try {
-            const response = await fetch(
-                `https://nda.nih.gov/api/datadictionary/v2/datastructure?searchTerm=${searchTerm}`
-            );
+            // Determine if this is a category search
+            const isCategory = searchTerm.startsWith("category:");
+            const searchValue = isCategory
+                ? searchTerm.replace("category:", "")
+                : searchTerm;
+
+            // Use different API endpoints based on search type
+            const endpoint = isCategory
+                ? `https://nda.nih.gov/api/datadictionary/datastructure?category=${encodeURIComponent(
+                      searchValue
+                  )}`
+                : `https://nda.nih.gov/api/datadictionary/v2/datastructure?searchTerm=${searchValue}`;
+
+            const response = await fetch(endpoint);
             if (!response.ok) throw new Error("Failed to fetch data");
             const data = await response.json();
 
-            const searchLower = searchTerm.toLowerCase();
-            // Normalize search term by removing special characters
-            const normalizedSearch = searchLower.replace(/[_-]/g, "");
+            // Only sort if it's a regular search, not a category search
+            if (!isCategory) {
+                const searchLower = searchValue.toLowerCase();
+                const normalizedSearch = searchLower.replace(/[_-]/g, "");
 
-            const sortedData = data.sort((a, b) => {
-                const aTitle = a.title?.toLowerCase() || "";
-                const bTitle = b.title?.toLowerCase() || "";
-                // Normalize shortNames by removing special characters
-                const aShortName = a.shortName
-                    .toLowerCase()
-                    .replace(/[_-]/g, "");
-                const bShortName = b.shortName
-                    .toLowerCase()
-                    .replace(/[_-]/g, "");
+                const sortedData = data.sort((a, b) => {
+                    const aTitle = a.title?.toLowerCase() || "";
+                    const bTitle = b.title?.toLowerCase() || "";
+                    const aShortName = a.shortName
+                        .toLowerCase()
+                        .replace(/[_-]/g, "");
+                    const bShortName = b.shortName
+                        .toLowerCase()
+                        .replace(/[_-]/g, "");
 
-                // Check for exact matches first (ignoring special characters)
-                if (aShortName === normalizedSearch) return -1;
-                if (bShortName === normalizedSearch) return 1;
+                    if (aShortName === normalizedSearch) return -1;
+                    if (bShortName === normalizedSearch) return 1;
 
-                // Check if shortName contains the search term
-                const aContainsSearch = aShortName.includes(normalizedSearch);
-                const bContainsSearch = bShortName.includes(normalizedSearch);
+                    const aContainsSearch =
+                        aShortName.includes(normalizedSearch);
+                    const bContainsSearch =
+                        bShortName.includes(normalizedSearch);
 
-                // Then check title matches
-                const aContainsTitle = aTitle.includes(searchLower);
-                const bContainsTitle = bTitle.includes(searchLower);
+                    const aContainsTitle = aTitle.includes(searchLower);
+                    const bContainsTitle = bTitle.includes(searchLower);
 
-                if (aContainsSearch && !bContainsSearch) return -1;
-                if (!aContainsSearch && bContainsSearch) return 1;
-                if (aContainsTitle && !bContainsTitle) return -1;
-                if (!aContainsTitle && bContainsTitle) return 1;
+                    if (aContainsSearch && !bContainsSearch) return -1;
+                    if (!aContainsSearch && bContainsSearch) return 1;
+                    if (aContainsTitle && !bContainsTitle) return -1;
+                    if (!aContainsTitle && bContainsTitle) return 1;
 
-                return 0;
-            });
-
-            setStructures(sortedData);
+                    return 0;
+                });
+                setStructures(sortedData);
+            } else {
+                setStructures(data);
+            }
         } catch (err) {
             setError("Error fetching data: " + err.message);
         } finally {
