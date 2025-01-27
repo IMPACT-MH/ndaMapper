@@ -53,16 +53,16 @@ const DataStructureSearch = ({
     const showDetailsHeader = useScrollDirection(detailsRef);
 
     const handleCategoryClick = async (category) => {
-        // First collapse/reset view state
-        setIsExpanded(false);
+        // First collapse/reset view state if expanded
+        if (isExpanded) {
+            setIsExpanded(false);
+        }
 
         // Then trigger the category search
         setSearchTerm(`category:${category}`);
 
-        // Clear selected structure last (after view state is updated)
-        if (selectedStructure) {
-            handleStructureSelect(null);
-        }
+        // Don't clear the selected structure anymore
+        // handleStructureSelect(null);  <- Remove this
 
         // Scroll back to top of search results
         window.scrollTo({
