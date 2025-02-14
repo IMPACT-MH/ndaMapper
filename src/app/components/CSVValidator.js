@@ -499,16 +499,22 @@ const CSVValidator = ({
 
                 // If this is a submission template and we have an expected shortname
                 if (isSubmissionTemplate && structureShortName) {
-                    // Convert structureShortName from "deldisk01" format to "deldisk,01" format
-                    const expectedName = structureShortName.endsWith("01")
-                        ? structureShortName.slice(0, -2) + ",01"
-                        : structureShortName;
+                    // Get the base name (e.g., "demographics" from "demographics02")
+                    const expectedBaseName = structureShortName.replace(
+                        /\d+$/,
+                        ""
+                    );
 
-                    const actualName = `${firstRow[0]},${firstRow[1]}`;
+                    // Get the actual base name and version from the CSV
+                    const [actualBaseName, actualVersion] = firstRow;
 
-                    if (actualName !== expectedName) {
+                    // Check if the base name matches and version is a number
+                    if (
+                        !actualBaseName.startsWith(expectedBaseName) ||
+                        !/^\d+$/.test(actualVersion)
+                    ) {
                         setValidationResults({
-                            error: `Unexpected structure shortname. Found "${actualName}", expected "${expectedName}"`,
+                            error: `Invalid structure shortname. Found "${actualBaseName},${actualVersion}". Should be "${expectedBaseName}" followed by a version number`,
                         });
                         setIsValidating(false);
                         return;
