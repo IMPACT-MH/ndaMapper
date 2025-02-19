@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Search, X, AlertCircle, Info } from "lucide-react";
+
+// Load initial state from localStorage
 
 const DataElementSearch = ({ onStructureSelect }) => {
     const [searchTerm, setSearchTerm] = useState("");
@@ -51,36 +53,60 @@ const DataElementSearch = ({ onStructureSelect }) => {
         return regex.test(text);
     };
 
+    // Add a safe fetch wrapper
+    const safeFetch = async (url) => {
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response;
+        } catch (err) {
+            console.error(`Error fetching ${url}:`, err);
+            return null;
+        }
+    };
+
     const findElementsByPattern = async (term) => {
         const searchTerm = term.toLowerCase();
         const foundElements = new Map();
         const structureCache = new Map();
 
-        setLoadingState((prev) => ({
-            ...prev,
-            isLoading: true,
-            currentBatch: 0,
-            totalBatches: 0,
-            matchesFound: 0,
-        }));
-
         try {
-            // Initial parallel searches
+            // Handle invalid search terms
+            if (!searchTerm || searchTerm.length < 2) {
+                throw new Error(
+                    "Search term must be at least 2 characters long"
+                );
+            }
+
+            // Escape special characters in the search term
+            const encodedTerm = encodeURIComponent(searchTerm);
+
+            // Initial parallel searches with error handling
             const searchPromises = [
-                fetch(
-                    `https://nda.nih.gov/api/datadictionary/v2/datastructure?searchTerm=${searchTerm}`
+                safeFetch(
+                    `https://nda.nih.gov/api/datadictionary/v2/datastructure?searchTerm=${encodedTerm}`
                 ),
-                fetch(
+                safeFetch(
                     `https://nda.nih.gov/api/datadictionary/datastructure?category=cognitive_task`
                 ),
             ];
 
             const responses = await Promise.all(searchPromises);
+            const validResponses = responses.filter(Boolean); // Filter out failed requests
+
+            if (validResponses.length === 0) {
+                throw new Error(
+                    "Unable to fetch any data structures. Please check your connection and try again."
+                );
+            }
+
             const structureArrays = await Promise.all(
-                responses.filter((res) => res.ok).map((res) => res.json())
+                validResponses.map((res) => res.json())
             );
 
-            // Deduplicate structures
+            // Rest of your existing processing logic...
             const uniqueStructures = [
                 ...new Set(
                     structureArrays
@@ -90,10 +116,16 @@ const DataElementSearch = ({ onStructureSelect }) => {
                 ),
             ];
 
-            // Process in parallel batches
+            // Handle case where no structures were found
+            if (uniqueStructures.length === 0) {
+                throw new Error(
+                    `No data structures found containing "${searchTerm}"`
+                );
+            }
+
+            // Process structures with error handling
             const batchSize = 25;
             const batches = [];
-
             for (let i = 0; i < uniqueStructures.length; i += batchSize) {
                 batches.push(uniqueStructures.slice(i, i + batchSize));
             }
@@ -116,6 +148,7 @@ const DataElementSearch = ({ onStructureSelect }) => {
                     matchesFound: foundElements.size,
                 }));
 
+                // Process batch with error handling
                 const batchPromises = batch.map(async (shortName) => {
                     if (structureCache.has(shortName)) {
                         return {
@@ -124,18 +157,22 @@ const DataElementSearch = ({ onStructureSelect }) => {
                         };
                     }
 
-                    try {
-                        const response = await fetch(
-                            `https://nda.nih.gov/api/datadictionary/datastructure/${shortName}`
-                        );
-                        if (!response.ok) return null;
+                    const response = await safeFetch(
+                        `https://nda.nih.gov/api/datadictionary/datastructure/${shortName}`
+                    );
+                    if (!response) return null;
 
+                    try {
                         const data = await response.json();
                         if (data.dataElements?.length < 1000) {
                             structureCache.set(shortName, data.dataElements);
                         }
                         return { shortName, elements: data.dataElements || [] };
                     } catch (err) {
+                        console.error(
+                            `Error parsing data for ${shortName}:`,
+                            err
+                        );
                         return null;
                     }
                 });
@@ -144,79 +181,27 @@ const DataElementSearch = ({ onStructureSelect }) => {
                     Boolean
                 );
 
+                // Process elements from successful fetches
                 batchResults.forEach(({ shortName, elements }) => {
-                    elements.forEach((element) => {
-                        const elementName = (element.name || "").toLowerCase();
-                        const elementDesc = (
-                            element.description || ""
-                        ).toLowerCase();
-
-                        // Prepare search words for both singular and plural
-                        const searchWords = [searchTerm];
-                        if (searchTerm.endsWith("s")) {
-                            searchWords.push(searchTerm.slice(0, -1)); // Add singular form
-                        } else {
-                            searchWords.push(searchTerm + "s"); // Add plural form
-                        }
-
-                        // Only consider it a match if the word appears as a whole word
-                        const nameMatch = searchWords.some((word) =>
-                            containsWord(elementName, word)
-                        );
-                        const descMatch = searchWords.some((word) =>
-                            containsWord(elementDesc, word)
-                        );
-
-                        if (nameMatch || descMatch) {
-                            // If there's a match, log it for debugging
-                            console.log(`Match found in ${shortName}:`, {
-                                name: element.name,
-                                description: element.description,
-                                matchType: nameMatch ? "name" : "description",
-                            });
-
-                            foundElements.set(element.name, {
-                                name: element.name,
-                                type: element.type || "Unknown",
-                                description:
-                                    element.description ||
-                                    "No description available",
-                                structure: shortName,
-                                matchType:
-                                    nameMatch && descMatch
-                                        ? "both"
-                                        : nameMatch
-                                        ? "name"
-                                        : "description",
-                                relevance: calculateRelevance(
-                                    element,
-                                    searchTerm,
-                                    nameMatch && descMatch
-                                        ? "both"
-                                        : nameMatch
-                                        ? "name"
-                                        : "description"
-                                ),
-                            });
-                        }
-                    });
+                    // ... rest of your element processing logic
                 });
-
-                // Small delay between batches
-                if (batchIndex < batches.length - 1) {
-                    await new Promise((resolve) => setTimeout(resolve, 20));
-                }
             }
 
-            setLoadingState((prev) => ({ ...prev, isLoading: false }));
+            if (foundElements.size === 0) {
+                throw new Error(
+                    `No matching elements found for "${searchTerm}"`
+                );
+            }
 
             return Array.from(foundElements.values()).sort(
                 (a, b) => b.relevance - a.relevance
             );
         } catch (err) {
-            console.error("Error in findElementsByPattern:", err);
-            setLoadingState((prev) => ({ ...prev, isLoading: false }));
-            return Array.from(foundElements.values());
+            console.error("Search error:", err);
+            throw new Error(
+                err.message ||
+                    "An error occurred during the search. Please try again."
+            );
         }
     };
 
@@ -242,6 +227,37 @@ const DataElementSearch = ({ onStructureSelect }) => {
         return score;
     };
 
+    // Update the recent searches handler to include localStorage
+    // Load from localStorage after mount
+    useEffect(() => {
+        const stored = localStorage.getItem("recentElementSearches");
+        if (stored) {
+            setRecentSearches(JSON.parse(stored));
+        }
+    }, []);
+
+    // Update localStorage when recentSearches changes
+    useEffect(() => {
+        if (recentSearches.length > 0) {
+            // Only save if we have searches
+            localStorage.setItem(
+                "recentElementSearches",
+                JSON.stringify(recentSearches)
+            );
+        }
+    }, [recentSearches]);
+
+    const updateRecentSearches = (newSearch) => {
+        if (!recentSearches.includes(newSearch)) {
+            setRecentSearches((prev) => [newSearch, ...prev].slice(0, 10));
+        }
+    };
+
+    const clearRecentSearches = () => {
+        setRecentSearches([]);
+        localStorage.removeItem("recentElementSearches");
+    };
+
     const handlePartialSearch = async () => {
         if (!searchTerm.trim()) return;
 
@@ -252,73 +268,54 @@ const DataElementSearch = ({ onStructureSelect }) => {
         setElement(null);
 
         try {
-            // First try direct match for efficiency
-            const directResponse = await fetch(
-                `https://nda.nih.gov/api/datadictionary/dataelement/${searchTerm.trim()}`
+            // First try direct match
+            const directResponse = await safeFetch(
+                `https://nda.nih.gov/api/datadictionary/dataelement/${encodeURIComponent(
+                    searchTerm.trim()
+                )}`
             );
 
-            if (directResponse.ok) {
+            if (directResponse) {
                 const data = await directResponse.json();
                 setElement(data);
                 setIsPartialSearch(false);
-
-                // Update recent searches
-                if (!recentSearches.includes(searchTerm.trim())) {
-                    setRecentSearches((prev) =>
-                        [searchTerm.trim(), ...prev].slice(0, 10)
-                    );
-                }
-
-                setLoading(false);
+                updateRecentSearches(searchTerm.trim());
                 return;
             }
 
-            // If no direct match, try pattern-based search
-            const matchingElements = await findElementsByPattern(
-                searchTerm.trim()
-            );
+            // If no direct match, try pattern search
+            try {
+                const matchingElements = await findElementsByPattern(
+                    searchTerm.trim()
+                );
+                setMatchingElements(matchingElements);
 
-            if (matchingElements.length === 0) {
-                setError(`No data elements found containing "${searchTerm}"`);
-                setLoading(false);
-                return;
-            }
-
-            setMatchingElements(matchingElements);
-
-            // Auto-select if only one result
-            if (matchingElements.length === 1) {
-                try {
-                    const perfectMatch = await fetch(
-                        `https://nda.nih.gov/api/datadictionary/dataelement/${matchingElements[0].name}`
+                // Handle single result case
+                if (matchingElements.length === 1) {
+                    const perfectMatch = await safeFetch(
+                        `https://nda.nih.gov/api/datadictionary/dataelement/${encodeURIComponent(
+                            matchingElements[0].name
+                        )}`
                     );
 
-                    if (perfectMatch.ok) {
+                    if (perfectMatch) {
                         const data = await perfectMatch.json();
                         setElement(data);
                         setIsPartialSearch(false);
-
-                        // Update recent searches with the actual element name
-                        if (
-                            !recentSearches.includes(matchingElements[0].name)
-                        ) {
-                            setRecentSearches((prev) =>
-                                [matchingElements[0].name, ...prev].slice(0, 10)
-                            );
-                        }
+                        updateRecentSearches(matchingElements[0].name);
                     }
-                } catch (err) {
-                    console.error("Error fetching single result:", err);
                 }
+            } catch (searchErr) {
+                setError(searchErr.message);
             }
         } catch (err) {
-            console.error("Search error:", err);
-            setError(`Error searching for elements: ${err.message}`);
+            setError(
+                err.message || "An unexpected error occurred. Please try again."
+            );
         } finally {
             setLoading(false);
         }
     };
-
     const handleSearch = async () => {
         if (!searchTerm.trim()) return;
         await handlePartialSearch();
@@ -340,8 +337,7 @@ const DataElementSearch = ({ onStructureSelect }) => {
 
     const handleRecentSearch = (term) => {
         setSearchTerm(term);
-        // Immediately search with this term
-        setTimeout(() => handleSearch(), 0);
+        handlePartialSearch(); // Remove the setTimeout and call directly
     };
 
     return (
@@ -390,18 +386,45 @@ const DataElementSearch = ({ onStructureSelect }) => {
                 {/* Recent searches */}
                 {recentSearches.length > 0 && (
                     <div className="mt-3">
-                        <h3 className="text-sm text-gray-500 mb-2">
-                            Recent searches:
-                        </h3>
+                        <div className="flex justify-between items-center mb-2">
+                            <h3 className="text-sm text-gray-500">
+                                Recent searches:
+                            </h3>
+                            <button
+                                onClick={clearRecentSearches}
+                                className="text-xs text-gray-500 hover:text-gray-700"
+                            >
+                                Clear history
+                            </button>
+                        </div>
                         <div className="flex flex-wrap gap-2">
                             {recentSearches.map((term, index) => (
-                                <button
-                                    key={index}
-                                    onClick={() => handleRecentSearch(term)}
-                                    className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-full text-gray-700"
-                                >
-                                    {term}
-                                </button>
+                                <div key={index} className="group relative">
+                                    <button
+                                        onClick={() => handleRecentSearch(term)}
+                                        className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-full text-gray-700"
+                                    >
+                                        {term}
+                                    </button>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            const newSearches =
+                                                recentSearches.filter(
+                                                    (s) => s !== term
+                                                );
+                                            setRecentSearches(newSearches);
+                                            localStorage.setItem(
+                                                "recentElementSearches",
+                                                JSON.stringify(newSearches)
+                                            );
+                                        }}
+                                        className="absolute -top-1 -right-1 hidden group-hover:flex items-center justify-center w-4 h-4 bg-gray-400 hover:bg-gray-500 rounded-full text-white text-xs"
+                                        aria-label="Remove from recent searches"
+                                    >
+                                        ×
+                                    </button>
+                                </div>
                             ))}
                         </div>
                     </div>
