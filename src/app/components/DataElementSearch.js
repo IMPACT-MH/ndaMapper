@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Search, X, AlertCircle, Info } from "lucide-react";
 
-const DataElementSearch = () => {
+const DataElementSearch = ({ onStructureSelect }) => {
     const [searchTerm, setSearchTerm] = useState("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -610,7 +610,7 @@ const DataElementSearch = () => {
                             </div>
                         )}
 
-                        {/* Data Structures */}
+                        {/* Data Structures section */}
                         <div>
                             <h3 className="text-lg font-medium text-gray-800 mb-2">
                                 Used in Data Structures
@@ -623,7 +623,12 @@ const DataElementSearch = () => {
                                             (structure, index) => (
                                                 <li
                                                     key={index}
-                                                    className="font-mono text-sm hover:bg-gray-100 p-1 rounded"
+                                                    className="font-mono text-sm hover:bg-blue-50 p-1 rounded cursor-pointer text-blue-600 hover:text-blue-800 transition-colors"
+                                                    onClick={() =>
+                                                        onStructureSelect(
+                                                            structure
+                                                        )
+                                                    }
                                                 >
                                                     {structure}
                                                 </li>

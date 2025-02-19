@@ -34,6 +34,30 @@ const HomePage = () => {
         binary: 0,
     });
 
+    const handleElementStructureSelect = async (structureName) => {
+        setActiveTab(Tabs.STRUCTURE_SEARCH);
+        setSearchTerm(structureName);
+
+        // Fetch the structure details directly
+        try {
+            const response = await fetch(
+                `https://nda.nih.gov/api/datadictionary/v2/datastructure?searchTerm=${structureName}`
+            );
+            if (response.ok) {
+                const structures = await response.json();
+                // Find exact match
+                const exactMatch = structures.find(
+                    (s) => s.shortName === structureName
+                );
+                if (exactMatch) {
+                    handleStructureSelect(exactMatch);
+                }
+            }
+        } catch (err) {
+            console.error("Error fetching structure:", err);
+        }
+    };
+
     const handleCsvAnalyzerResult = (shortName, file, headers) => {
         setSearchTerm(shortName);
         setCsvFile(file);
@@ -296,7 +320,11 @@ const HomePage = () => {
                 </>
             )}
 
-            {activeTab === Tabs.ELEMENT_SEARCH && <DataElementSearch />}
+            {activeTab === Tabs.ELEMENT_SEARCH && (
+                <DataElementSearch
+                    onStructureSelect={handleElementStructureSelect}
+                />
+            )}
         </div>
     );
 };
