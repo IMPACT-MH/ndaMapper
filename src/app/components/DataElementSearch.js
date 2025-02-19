@@ -35,299 +35,205 @@ const DataElementSearch = () => {
         }
     };
 
-    // 1. First get ALL cognitive task structures - these are most likely to contain test elements like "taps"
-    const fetchCognitiveStructures = async () => {
-        try {
-            const response = await fetch(
-                `https://nda.nih.gov/api/datadictionary/datastructure?category=cognitive_task`
-            );
-
-            if (!response.ok) return [];
-            return await response.json();
-        } catch (err) {
-            console.error("Error fetching cognitive structures:", err);
-            return [];
-        }
-    };
-
-    // 2. Get all elements for a specific structure
-    const getElementsForStructure = async (shortName) => {
-        try {
-            const response = await fetch(
-                `https://nda.nih.gov/api/datadictionary/datastructure/${shortName}`
-            );
-
-            if (!response.ok) return null;
-            const data = await response.json();
-            return data.dataElements || [];
-        } catch (err) {
-            console.error(`Error fetching elements for ${shortName}:`, err);
-            return null;
-        }
-    };
-
     // Optimized search function with timeouts and focused structure search
     const findElementsByPattern = async (term) => {
-        // Specific known prefixes likely to contain common elements like "taps"
-        const criticalPrefixes = [
-            "eefrt",
-            "flanker",
-            "dccs",
-            "nback",
-            "stroop",
-        ];
         const searchTerm = term.toLowerCase();
         const foundElements = new Map();
+        const structureCache = new Map();
 
-        // Set a total search timeout
-        const searchTimeout = setTimeout(() => {
-            console.log("Search timeout reached - returning current results");
-            return Array.from(foundElements.values());
-        }, 15000); // 15 second timeout
+        console.log("Starting search for:", searchTerm);
 
         try {
-            console.log("Starting search for:", searchTerm);
-
-            // FIRST: If searching for "taps", prioritize eefrt structures
-            if (searchTerm === "taps") {
-                console.log(
-                    "Taps search detected - prioritizing eefrt structures"
-                );
-                try {
-                    const eefrtResponse = await fetch(
-                        `https://nda.nih.gov/api/datadictionary/v2/datastructure?searchTerm=eefrt`
-                    );
-
-                    if (eefrtResponse.ok) {
-                        const eefrtStructures = await eefrtResponse.json();
-                        console.log(
-                            `Found ${eefrtStructures.length} eefrt structures`
-                        );
-
-                        // Process these structures immediately
-                        for (const structure of eefrtStructures) {
-                            const elements = await getElementsForStructure(
-                                structure.shortName
-                            );
-                            if (!elements) continue;
-
-                            console.log(
-                                `Checking ${elements.length} elements in ${structure.shortName}`
-                            );
-
-                            elements.forEach((element) => {
-                                const elementName = (
-                                    element.name || ""
-                                ).toLowerCase();
-                                if (elementName.includes("taps")) {
-                                    console.log(
-                                        `Found taps element: ${element.name}`
-                                    );
-                                    foundElements.set(element.name, {
-                                        name: element.name,
-                                        type: element.type || "Unknown",
-                                        description:
-                                            element.description ||
-                                            "No description available",
-                                        structure: structure.shortName,
-                                        matchType: "name",
-                                    });
-                                }
-                            });
-                        }
-
-                        // Return early if we found matches
-                        if (foundElements.size > 0) {
-                            console.log(
-                                `Found ${foundElements.size} matches in eefrt structures`
-                            );
-                            clearTimeout(searchTimeout);
-                            return Array.from(foundElements.values());
-                        }
-                    }
-                } catch (err) {
-                    console.error("Error in eefrt priority search:", err);
-                }
+            // 1. Fetch initial structure list
+            const initialResponse = await fetch(
+                `https://nda.nih.gov/api/datadictionary/v2/datastructure?searchTerm=${searchTerm}`
+            );
+            let termSpecificStructures = [];
+            if (initialResponse.ok) {
+                const data = await initialResponse.json();
+                termSpecificStructures = data;
             }
 
-            // SECOND: Get focused set of structures based on term
-            const relevantPrefixes = criticalPrefixes.filter(
-                (prefix) =>
-                    searchTerm.includes(prefix) ||
-                    prefix.includes(searchTerm.replace(/[_\-\s]/g, ""))
-            );
+            // 2. Fetch core categories in parallel - but be more selective
+            const coreCategories = ["cognitive_task"];
+            // Only add these categories if we didn't find many term-specific structures
+            if (termSpecificStructures.length < 20) {
+                coreCategories.push(
+                    "clinical_assessments",
+                    "experimental_design"
+                );
+            }
 
-            // Always include cognitive_task category
-            const structurePromises = [
+            const categoryPromises = coreCategories.map((category) =>
                 fetch(
-                    `https://nda.nih.gov/api/datadictionary/datastructure?category=cognitive_task`
+                    `https://nda.nih.gov/api/datadictionary/datastructure?category=${category}`
                 )
                     .then((res) => (res.ok ? res.json() : []))
-                    .catch(() => []),
+                    .catch(() => [])
+            );
+
+            const categoryResults = await Promise.all(categoryPromises);
+
+            // 3. Combine and deduplicate structures more efficiently
+            const allStructures = [
+                ...termSpecificStructures,
+                ...categoryResults.flat(),
+            ];
+            const uniqueStructures = [
+                ...new Set(
+                    allStructures.filter(Boolean).map((s) => s.shortName)
+                ),
             ];
 
-            // Add relevant prefix searches
-            const prefixesToSearch =
-                relevantPrefixes.length > 0
-                    ? relevantPrefixes
-                    : criticalPrefixes;
+            console.log(
+                `Processing ${uniqueStructures.length} relevant structures`
+            );
 
-            prefixesToSearch.forEach((prefix) => {
-                structurePromises.push(
-                    fetch(
-                        `https://nda.nih.gov/api/datadictionary/v2/datastructure?searchTerm=${prefix}`
-                    )
-                        .then((res) => (res.ok ? res.json() : []))
-                        .catch(() => [])
-                );
-            });
+            // 4. Process in larger parallel batches
+            const batchSize = 20; // Increased batch size
+            const batches = [];
 
-            const structureResults = await Promise.all(structurePromises);
-            const allStructures = structureResults.flat();
+            for (let i = 0; i < uniqueStructures.length; i += batchSize) {
+                batches.push(uniqueStructures.slice(i, i + batchSize));
+            }
 
-            // Deduplicate and limit to manageable number
-            const uniqueStructures = Array.from(
-                new Map(
-                    allStructures.map((item) =>
-                        item ? [item.shortName, item] : ["", null]
-                    )
-                ).values()
-            ).filter(Boolean);
+            console.log(`Split into ${batches.length} batches`);
 
-            console.log(`Processing ${uniqueStructures.length} structures`);
-
-            // Limit to most relevant structures
-            const maxStructures = 20;
-            const limitedStructures = uniqueStructures.slice(0, maxStructures);
-
-            // Process structures with smaller batch size for faster feedback
-            const batchSize = 3;
-            for (let i = 0; i < limitedStructures.length; i += batchSize) {
-                // Check if we've been searching too long
-                if (i > 0 && foundElements.size > 0) {
-                    console.log(
-                        `Found ${foundElements.size} matches, stopping further search`
-                    );
-                    break;
-                }
-
-                const batch = limitedStructures.slice(i, i + batchSize);
+            // Process batches with a small delay between each
+            for (
+                let batchIndex = 0;
+                batchIndex < batches.length;
+                batchIndex++
+            ) {
+                const batch = batches[batchIndex];
                 console.log(
-                    `Processing batch ${i / batchSize + 1}: ${batch
-                        .map((s) => s.shortName)
-                        .join(", ")}`
+                    `Processing batch ${batchIndex + 1}/${batches.length}`
                 );
 
-                const batchPromises = batch.map((structure) =>
-                    getElementsForStructure(structure.shortName)
+                const batchPromises = batch.map(async (shortName) => {
+                    if (structureCache.has(shortName)) {
+                        return {
+                            shortName,
+                            elements: structureCache.get(shortName),
+                        };
+                    }
+
+                    try {
+                        const response = await fetch(
+                            `https://nda.nih.gov/api/datadictionary/datastructure/${shortName}`
+                        );
+                        if (!response.ok) return null;
+
+                        const data = await response.json();
+                        const elements = data.dataElements || [];
+
+                        // Only cache if elements array isn't too large
+                        if (elements.length < 1000) {
+                            structureCache.set(shortName, elements);
+                        }
+
+                        return { shortName, elements };
+                    } catch (err) {
+                        console.error(`Error fetching ${shortName}:`, err);
+                        return null;
+                    }
+                });
+
+                // Process each batch
+                const batchResults = (await Promise.all(batchPromises)).filter(
+                    Boolean
                 );
 
-                try {
-                    const batchResults = await Promise.all(batchPromises);
+                // Early result processing
+                batchResults.forEach(({ shortName, elements }) => {
+                    const normalizedSearch = searchTerm.replace(/[_\-\s]/g, "");
 
-                    batchResults.forEach((elements, idx) => {
-                        if (!elements || !batch[idx]) return;
-
-                        console.log(
-                            `Checking ${elements.length} elements in ${batch[idx].shortName}`
+                    elements.forEach((element) => {
+                        const elementName = (element.name || "").toLowerCase();
+                        const elementDesc = (
+                            element.description || ""
+                        ).toLowerCase();
+                        const normalizedName = elementName.replace(
+                            /[_\-\s]/g,
+                            ""
                         );
 
-                        elements.forEach((element) => {
-                            const elementName = (
-                                element.name || ""
-                            ).toLowerCase();
-                            const elementDesc = (
-                                element.description || ""
-                            ).toLowerCase();
-
-                            const normalizedName = elementName.replace(
-                                /[_\-\s]/g,
-                                ""
-                            );
-                            const normalizedSearch = searchTerm.replace(
-                                /[_\-\s]/g,
-                                ""
-                            );
-
-                            if (
-                                normalizedName.includes(normalizedSearch) ||
+                        if (
+                            normalizedName.includes(normalizedSearch) ||
+                            elementDesc.includes(searchTerm)
+                        ) {
+                            const matchType =
+                                normalizedName.includes(normalizedSearch) &&
                                 elementDesc.includes(searchTerm)
-                            ) {
-                                const matchesName =
-                                    normalizedName.includes(normalizedSearch);
-                                const matchesDesc =
-                                    elementDesc.includes(searchTerm);
-                                let matchType = "unknown";
+                                    ? "both"
+                                    : normalizedName.includes(normalizedSearch)
+                                    ? "name"
+                                    : "description";
 
-                                if (matchesName && matchesDesc)
-                                    matchType = "both";
-                                else if (matchesName) matchType = "name";
-                                else if (matchesDesc) matchType = "description";
-
-                                console.log(
-                                    `Found match in ${matchType}: ${element.name}`
-                                );
-
-                                foundElements.set(element.name, {
-                                    name: element.name,
-                                    type: element.type || "Unknown",
-                                    description:
-                                        element.description ||
-                                        "No description available",
-                                    structure: batch[idx].shortName,
-                                    matchType,
-                                });
-                            }
-                        });
+                            foundElements.set(element.name, {
+                                name: element.name,
+                                type: element.type || "Unknown",
+                                description:
+                                    element.description ||
+                                    "No description available",
+                                structure: shortName,
+                                matchType,
+                                relevance: calculateRelevance(
+                                    element,
+                                    searchTerm,
+                                    matchType
+                                ),
+                            });
+                        }
                     });
-                } catch (err) {
-                    console.error("Error processing batch:", err);
-                }
+                });
 
-                // Shorter delay between batches
-                if (i + batchSize < limitedStructures.length) {
-                    await new Promise((resolve) => setTimeout(resolve, 50));
+                // Log progress
+                console.log(`Found ${foundElements.size} matches so far`);
+
+                // Log progress after each batch
+                console.log(
+                    `Found ${foundElements.size} total matches after batch ${
+                        batchIndex + 1
+                    }/${batches.length}`
+                );
+
+                // Small delay between batches to prevent rate limiting
+                if (batchIndex < batches.length - 1) {
+                    await new Promise((resolve) => setTimeout(resolve, 20));
                 }
             }
 
-            // Clear the timeout as we've finished normally
-            clearTimeout(searchTimeout);
-
             // Return sorted results
-            return Array.from(foundElements.values()).sort((a, b) => {
-                // First by match type (name > both > description)
-                const matchPriority = {
-                    name: 0,
-                    both: 1,
-                    description: 2,
-                    unknown: 3,
-                };
-                if (matchPriority[a.matchType] !== matchPriority[b.matchType]) {
-                    return (
-                        matchPriority[a.matchType] - matchPriority[b.matchType]
-                    );
-                }
-
-                // Then for name matches, prefer starts-with
-                if (a.matchType === "name" && b.matchType === "name") {
-                    const startsWithA = a.name
-                        .toLowerCase()
-                        .startsWith(searchTerm);
-                    const startsWithB = b.name
-                        .toLowerCase()
-                        .startsWith(searchTerm);
-                    if (startsWithA && !startsWithB) return -1;
-                    if (!startsWithA && startsWithB) return 1;
-                }
-
-                // Then by length (shorter is better)
-                return a.name.length - b.name.length;
-            });
+            return Array.from(foundElements.values()).sort(
+                (a, b) => b.relevance - a.relevance
+            );
         } catch (err) {
             console.error("Error in findElementsByPattern:", err);
-            clearTimeout(searchTimeout);
             return Array.from(foundElements.values());
         }
+    };
+
+    // Helper function to calculate result relevance
+    const calculateRelevance = (element, searchTerm, matchType) => {
+        let score = 0;
+
+        // Base scores by match type
+        if (matchType === "both") score += 100;
+        else if (matchType === "name") score += 75;
+        else if (matchType === "description") score += 25;
+
+        // Bonus for exact matches
+        if (element.name.toLowerCase() === searchTerm) score += 50;
+
+        // Bonus for starts with
+        if (element.name.toLowerCase().startsWith(searchTerm)) score += 25;
+
+        // Smaller penalty for length difference
+        const lengthDiff = Math.abs(element.name.length - searchTerm.length);
+        score -= Math.min(lengthDiff, 10); // Cap the penalty
+
+        return score;
     };
 
     const handlePartialSearch = async () => {
