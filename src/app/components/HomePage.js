@@ -198,7 +198,7 @@ const HomePage = () => {
 
     return (
         <div className="container mx-auto p-4 max-w-7xl">
-            {/* Tabs */}
+            {/* Tabs navigation - keep exactly as is */}
             <div className="mb-8">
                 <div className="border-b border-gray-200">
                     <nav className="-mb-px flex space-x-8" aria-label="Tabs">
@@ -245,7 +245,12 @@ const HomePage = () => {
                 </div>
             </div>
 
-            {activeTab === Tabs.STRUCTURE_SEARCH && (
+            {/* Tab content - using display instead of conditional rendering */}
+            <div
+                className={
+                    activeTab === Tabs.STRUCTURE_SEARCH ? "block" : "hidden"
+                }
+            >
                 <DataStructureSearch
                     searchTerm={searchTerm}
                     setSearchTerm={setSearchTerm}
@@ -260,7 +265,6 @@ const HomePage = () => {
                     initialCsvFile={csvFile}
                     onFileChange={handleCsvFileChange}
                     onClear={handleClearSearch}
-                    // Pass down CSV validator state
                     validatorState={{
                         selectedMappings,
                         setSelectedMappings,
@@ -274,57 +278,61 @@ const HomePage = () => {
                         setTransformationCounts,
                     }}
                 />
-            )}
+            </div>
 
-            {activeTab === Tabs.FIELD_SEARCH && (
-                <>
-                    <div className="mb-8">
-                        <h1 className="text-3xl font-bold mb-4">
-                            Find Data Structure from CSV
-                        </h1>
-                        <p className="text-gray-600">
-                            Upload a CSV file to find matching data structures
-                            based on your column headers.
-                        </p>
-                    </div>
+            <div
+                className={activeTab === Tabs.FIELD_SEARCH ? "block" : "hidden"}
+            >
+                <div className="mb-8">
+                    <h1 className="text-3xl font-bold mb-4">
+                        Find Data Structure from CSV
+                    </h1>
+                    <p className="text-gray-600">
+                        Upload a CSV file to find matching data structures based
+                        on your column headers.
+                    </p>
+                </div>
 
-                    <CSVHeaderAnalyzer
-                        onStructureSelect={async (shortName, file) => {
-                            resetValidationState(); // Reset state before setting new file
-                            setSearchTerm(shortName);
-                            setCsvFile(file);
+                <CSVHeaderAnalyzer
+                    onStructureSelect={async (shortName, file) => {
+                        resetValidationState();
+                        setSearchTerm(shortName);
+                        setCsvFile(file);
 
-                            try {
-                                const response = await fetch(
-                                    `https://nda.nih.gov/api/datadictionary/v2/datastructure?searchTerm=${shortName}`
-                                );
-                                if (!response.ok)
-                                    throw new Error("Failed to fetch data");
-                                const data = await response.json();
+                        try {
+                            const response = await fetch(
+                                `https://nda.nih.gov/api/datadictionary/v2/datastructure?searchTerm=${shortName}`
+                            );
+                            if (!response.ok)
+                                throw new Error("Failed to fetch data");
+                            const data = await response.json();
 
-                                const structure = data.find(
-                                    (s) => s.shortName === shortName
-                                );
-                                if (structure) {
-                                    handleStructureSelect(structure);
-                                }
-                            } catch (err) {
-                                setError(
-                                    "Error fetching structure: " + err.message
-                                );
+                            const structure = data.find(
+                                (s) => s.shortName === shortName
+                            );
+                            if (structure) {
+                                handleStructureSelect(structure);
                             }
+                        } catch (err) {
+                            setError(
+                                "Error fetching structure: " + err.message
+                            );
+                        }
 
-                            setActiveTab(Tabs.STRUCTURE_SEARCH);
-                        }}
-                    />
-                </>
-            )}
+                        setActiveTab(Tabs.STRUCTURE_SEARCH);
+                    }}
+                />
+            </div>
 
-            {activeTab === Tabs.ELEMENT_SEARCH && (
+            <div
+                className={
+                    activeTab === Tabs.ELEMENT_SEARCH ? "block" : "hidden"
+                }
+            >
                 <DataElementSearch
                     onStructureSelect={handleElementStructureSelect}
                 />
-            )}
+            </div>
         </div>
     );
 };
