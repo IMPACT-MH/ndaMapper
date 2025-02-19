@@ -473,9 +473,40 @@ const DataElementSearch = () => {
                             <div
                                 key={index}
                                 className="p-4 hover:bg-gray-50 cursor-pointer transition-colors"
-                                onClick={() => {
+                                onClick={async () => {
                                     setSearchTerm(match.name);
-                                    setTimeout(() => handleSearch(), 0);
+                                    setIsPartialSearch(false); // Reset partial search state
+                                    setMatchingElements([]); // Clear matching elements
+
+                                    // Fetch and display the full element details
+                                    try {
+                                        const response = await fetch(
+                                            `https://nda.nih.gov/api/datadictionary/dataelement/${match.name}`
+                                        );
+                                        if (response.ok) {
+                                            const data = await response.json();
+                                            setElement(data);
+
+                                            // Update recent searches
+                                            if (
+                                                !recentSearches.includes(
+                                                    match.name
+                                                )
+                                            ) {
+                                                setRecentSearches((prev) =>
+                                                    [match.name, ...prev].slice(
+                                                        0,
+                                                        10
+                                                    )
+                                                );
+                                            }
+                                        }
+                                    } catch (err) {
+                                        console.error(
+                                            "Error fetching element details:",
+                                            err
+                                        );
+                                    }
                                 }}
                             >
                                 <div className="flex justify-between items-start">
