@@ -3,10 +3,12 @@
 import { useState, useEffect } from "react";
 import DataStructureSearch from "./DataStructureSearch";
 import CSVHeaderAnalyzer from "./CSVHeaderAnalyzer";
+import DataElementSearch from "./DataElementSearch";
 
 const Tabs = {
     STRUCTURE_SEARCH: "structure-search",
-    FIELD_SEARCH: "field-search", // Changed from REVERSE_LOOKUP
+    FIELD_SEARCH: "field-search",
+    ELEMENT_SEARCH: "element-search", // Added new tab
 };
 
 const HomePage = () => {
@@ -22,7 +24,7 @@ const HomePage = () => {
     const [csvFile, setCsvFile] = useState(null);
     const [csvHeaders, setCsvHeaders] = useState(null);
 
-    // New state for CSVValidator
+    // State for CSVValidator
     const [selectedMappings, setSelectedMappings] = useState({});
     const [ignoredFields, setIgnoredFields] = useState(new Set());
     const [validationResults, setValidationResults] = useState(null);
@@ -202,11 +204,24 @@ const HomePage = () => {
                         >
                             Reverse Lookup by CSV
                         </button>
+                        <button
+                            onClick={() => setActiveTab(Tabs.ELEMENT_SEARCH)}
+                            className={`
+                                whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm
+                                ${
+                                    activeTab === Tabs.ELEMENT_SEARCH
+                                        ? "border-blue-500 text-blue-600"
+                                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                                }
+                            `}
+                        >
+                            Data Element Search
+                        </button>
                     </nav>
                 </div>
             </div>
 
-            {activeTab === Tabs.STRUCTURE_SEARCH ? (
+            {activeTab === Tabs.STRUCTURE_SEARCH && (
                 <DataStructureSearch
                     searchTerm={searchTerm}
                     setSearchTerm={setSearchTerm}
@@ -235,7 +250,9 @@ const HomePage = () => {
                         setTransformationCounts,
                     }}
                 />
-            ) : (
+            )}
+
+            {activeTab === Tabs.FIELD_SEARCH && (
                 <>
                     <div className="mb-8">
                         <h1 className="text-3xl font-bold mb-4">
@@ -278,6 +295,8 @@ const HomePage = () => {
                     />
                 </>
             )}
+
+            {activeTab === Tabs.ELEMENT_SEARCH && <DataElementSearch />}
         </div>
     );
 };
