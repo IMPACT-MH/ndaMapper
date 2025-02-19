@@ -45,78 +45,64 @@ const DataElementSearch = () => {
     });
 
     // Update the findElementsByPattern function to report progress
+    // Function to check if text contains word with strict boundaries
+    const containsWord = (text, word) => {
+        const regex = new RegExp(`\\b${word}\\b`, "i");
+        return regex.test(text);
+    };
+
     const findElementsByPattern = async (term) => {
         const searchTerm = term.toLowerCase();
         const foundElements = new Map();
         const structureCache = new Map();
 
-        console.log("Starting search for:", searchTerm);
+        setLoadingState((prev) => ({
+            ...prev,
+            isLoading: true,
+            currentBatch: 0,
+            totalBatches: 0,
+            matchesFound: 0,
+        }));
 
         try {
-            // 1. Fetch initial structure list
-            setLoadingState((prev) => ({
-                ...prev,
-                isLoading: true,
-                currentBatch: 0,
-                totalBatches: 0,
-                matchesFound: 0,
-            }));
-
-            const initialResponse = await fetch(
-                `https://nda.nih.gov/api/datadictionary/v2/datastructure?searchTerm=${searchTerm}`
-            );
-            let termSpecificStructures = [];
-            if (initialResponse.ok) {
-                const data = await initialResponse.json();
-                termSpecificStructures = data;
-            }
-
-            // 2. Fetch core categories in parallel
-            const coreCategories = ["cognitive_task"];
-            if (termSpecificStructures.length < 20) {
-                coreCategories.push(
-                    "clinical_assessments",
-                    "experimental_design"
-                );
-            }
-
-            const categoryPromises = coreCategories.map((category) =>
+            // Initial parallel searches
+            const searchPromises = [
                 fetch(
-                    `https://nda.nih.gov/api/datadictionary/datastructure?category=${category}`
-                )
-                    .then((res) => (res.ok ? res.json() : []))
-                    .catch(() => [])
-            );
-
-            const categoryResults = await Promise.all(categoryPromises);
-
-            // 3. Combine and deduplicate structures more efficiently
-            const allStructures = [
-                ...termSpecificStructures,
-                ...categoryResults.flat(),
-            ];
-            const uniqueStructures = [
-                ...new Set(
-                    allStructures.filter(Boolean).map((s) => s.shortName)
+                    `https://nda.nih.gov/api/datadictionary/v2/datastructure?searchTerm=${searchTerm}`
+                ),
+                fetch(
+                    `https://nda.nih.gov/api/datadictionary/datastructure?category=cognitive_task`
                 ),
             ];
 
-            // Calculate total batches
-            const batchSize = 20;
-            const totalBatches = Math.ceil(uniqueStructures.length / batchSize);
-            setLoadingState((prev) => ({ ...prev, totalBatches }));
-
-            console.log(
-                `Processing ${uniqueStructures.length} structures in ${totalBatches} batches`
+            const responses = await Promise.all(searchPromises);
+            const structureArrays = await Promise.all(
+                responses.filter((res) => res.ok).map((res) => res.json())
             );
 
-            // 4. Process in parallel batches
+            // Deduplicate structures
+            const uniqueStructures = [
+                ...new Set(
+                    structureArrays
+                        .flat()
+                        .filter(Boolean)
+                        .map((s) => s.shortName)
+                ),
+            ];
+
+            // Process in parallel batches
+            const batchSize = 25;
             const batches = [];
+
             for (let i = 0; i < uniqueStructures.length; i += batchSize) {
                 batches.push(uniqueStructures.slice(i, i + batchSize));
             }
 
-            // Process batches with progress updates
+            setLoadingState((prev) => ({
+                ...prev,
+                totalBatches: batches.length,
+            }));
+
             for (
                 let batchIndex = 0;
                 batchIndex < batches.length;
@@ -145,12 +131,11 @@ const DataElementSearch = () => {
                         if (!response.ok) return null;
 
                         const data = await response.json();
-                        const elements = data.dataElements || [];
-                        if (elements.length < 1000)
-                            structureCache.set(shortName, elements);
-                        return { shortName, elements };
+                        if (data.dataElements?.length < 1000) {
+                            structureCache.set(shortName, data.dataElements);
+                        }
+                        return { shortName, elements: data.dataElements || [] };
                     } catch (err) {
-                        console.error(`Error fetching ${shortName}:`, err);
                         return null;
                     }
                 });
@@ -160,29 +145,35 @@ const DataElementSearch = () => {
                 );
 
                 batchResults.forEach(({ shortName, elements }) => {
-                    const normalizedSearch = searchTerm.replace(/[_\-\s]/g, "");
-
                     elements.forEach((element) => {
                         const elementName = (element.name || "").toLowerCase();
                         const elementDesc = (
                             element.description || ""
                         ).toLowerCase();
-                        const normalizedName = elementName.replace(
-                            /[_\-\s]/g,
-                            ""
+
+                        // Prepare search words for both singular and plural
+                        const searchWords = [searchTerm];
+                        if (searchTerm.endsWith("s")) {
+                            searchWords.push(searchTerm.slice(0, -1)); // Add singular form
+                        } else {
+                            searchWords.push(searchTerm + "s"); // Add plural form
+                        }
+
+                        // Only consider it a match if the word appears as a whole word
+                        const nameMatch = searchWords.some((word) =>
+                            containsWord(elementName, word)
+                        );
+                        const descMatch = searchWords.some((word) =>
+                            containsWord(elementDesc, word)
                         );
 
-                        if (
-                            normalizedName.includes(normalizedSearch) ||
-                            elementDesc.includes(searchTerm)
-                        ) {
-                            const matchType =
-                                normalizedName.includes(normalizedSearch) &&
-                                elementDesc.includes(searchTerm)
-                                    ? "both"
-                                    : normalizedName.includes(normalizedSearch)
-                                    ? "name"
-                                    : "description";
+                        if (nameMatch || descMatch) {
+                            // If there's a match, log it for debugging
+                            console.log(`Match found in ${shortName}:`, {
+                                name: element.name,
+                                description: element.description,
+                                matchType: nameMatch ? "name" : "description",
+                            });
 
                             foundElements.set(element.name, {
                                 name: element.name,
@@ -191,11 +182,20 @@ const DataElementSearch = () => {
                                     element.description ||
                                     "No description available",
                                 structure: shortName,
-                                matchType,
+                                matchType:
+                                    nameMatch && descMatch
+                                        ? "both"
+                                        : nameMatch
+                                        ? "name"
+                                        : "description",
                                 relevance: calculateRelevance(
                                     element,
                                     searchTerm,
-                                    matchType
+                                    nameMatch && descMatch
+                                        ? "both"
+                                        : nameMatch
+                                        ? "name"
+                                        : "description"
                                 ),
                             });
                         }
@@ -208,12 +208,7 @@ const DataElementSearch = () => {
                 }
             }
 
-            // Final update with results
-            setLoadingState((prev) => ({
-                ...prev,
-                isLoading: false,
-                matchesFound: foundElements.size,
-            }));
+            setLoadingState((prev) => ({ ...prev, isLoading: false }));
 
             return Array.from(foundElements.values()).sort(
                 (a, b) => b.relevance - a.relevance
@@ -224,6 +219,7 @@ const DataElementSearch = () => {
             return Array.from(foundElements.values());
         }
     };
+
     // Helper function to calculate result relevance
     const calculateRelevance = (element, searchTerm, matchType) => {
         let score = 0;
