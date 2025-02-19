@@ -36,6 +36,15 @@ const DataElementSearch = () => {
     };
 
     // Optimized search function with timeouts and focused structure search
+    // Inside DataElementSearch.js, update the loading state:
+    const [loadingState, setLoadingState] = useState({
+        isLoading: false,
+        currentBatch: 0,
+        totalBatches: 0,
+        matchesFound: 0,
+    });
+
+    // Update the findElementsByPattern function to report progress
     const findElementsByPattern = async (term) => {
         const searchTerm = term.toLowerCase();
         const foundElements = new Map();
@@ -45,6 +54,14 @@ const DataElementSearch = () => {
 
         try {
             // 1. Fetch initial structure list
+            setLoadingState((prev) => ({
+                ...prev,
+                isLoading: true,
+                currentBatch: 0,
+                totalBatches: 0,
+                matchesFound: 0,
+            }));
+
             const initialResponse = await fetch(
                 `https://nda.nih.gov/api/datadictionary/v2/datastructure?searchTerm=${searchTerm}`
             );
@@ -54,9 +71,8 @@ const DataElementSearch = () => {
                 termSpecificStructures = data;
             }
 
-            // 2. Fetch core categories in parallel - but be more selective
+            // 2. Fetch core categories in parallel
             const coreCategories = ["cognitive_task"];
-            // Only add these categories if we didn't find many term-specific structures
             if (termSpecificStructures.length < 20) {
                 coreCategories.push(
                     "clinical_assessments",
@@ -85,30 +101,34 @@ const DataElementSearch = () => {
                 ),
             ];
 
+            // Calculate total batches
+            const batchSize = 20;
+            const totalBatches = Math.ceil(uniqueStructures.length / batchSize);
+            setLoadingState((prev) => ({ ...prev, totalBatches }));
+
             console.log(
-                `Processing ${uniqueStructures.length} relevant structures`
+                `Processing ${uniqueStructures.length} structures in ${totalBatches} batches`
             );
 
-            // 4. Process in larger parallel batches
-            const batchSize = 20; // Increased batch size
+            // 4. Process in parallel batches
             const batches = [];
-
             for (let i = 0; i < uniqueStructures.length; i += batchSize) {
                 batches.push(uniqueStructures.slice(i, i + batchSize));
             }
 
-            console.log(`Split into ${batches.length} batches`);
-
-            // Process batches with a small delay between each
+            // Process batches with progress updates
             for (
                 let batchIndex = 0;
                 batchIndex < batches.length;
                 batchIndex++
             ) {
                 const batch = batches[batchIndex];
-                console.log(
-                    `Processing batch ${batchIndex + 1}/${batches.length}`
-                );
+
+                setLoadingState((prev) => ({
+                    ...prev,
+                    currentBatch: batchIndex + 1,
+                    matchesFound: foundElements.size,
+                }));
 
                 const batchPromises = batch.map(async (shortName) => {
                     if (structureCache.has(shortName)) {
@@ -126,12 +146,8 @@ const DataElementSearch = () => {
 
                         const data = await response.json();
                         const elements = data.dataElements || [];
-
-                        // Only cache if elements array isn't too large
-                        if (elements.length < 1000) {
+                        if (elements.length < 1000)
                             structureCache.set(shortName, elements);
-                        }
-
                         return { shortName, elements };
                     } catch (err) {
                         console.error(`Error fetching ${shortName}:`, err);
@@ -139,12 +155,10 @@ const DataElementSearch = () => {
                     }
                 });
 
-                // Process each batch
                 const batchResults = (await Promise.all(batchPromises)).filter(
                     Boolean
                 );
 
-                // Early result processing
                 batchResults.forEach(({ shortName, elements }) => {
                     const normalizedSearch = searchTerm.replace(/[_\-\s]/g, "");
 
@@ -188,32 +202,28 @@ const DataElementSearch = () => {
                     });
                 });
 
-                // Log progress
-                console.log(`Found ${foundElements.size} matches so far`);
-
-                // Log progress after each batch
-                console.log(
-                    `Found ${foundElements.size} total matches after batch ${
-                        batchIndex + 1
-                    }/${batches.length}`
-                );
-
-                // Small delay between batches to prevent rate limiting
+                // Small delay between batches
                 if (batchIndex < batches.length - 1) {
                     await new Promise((resolve) => setTimeout(resolve, 20));
                 }
             }
 
-            // Return sorted results
+            // Final update with results
+            setLoadingState((prev) => ({
+                ...prev,
+                isLoading: false,
+                matchesFound: foundElements.size,
+            }));
+
             return Array.from(foundElements.values()).sort(
                 (a, b) => b.relevance - a.relevance
             );
         } catch (err) {
             console.error("Error in findElementsByPattern:", err);
+            setLoadingState((prev) => ({ ...prev, isLoading: false }));
             return Array.from(foundElements.values());
         }
     };
-
     // Helper function to calculate result relevance
     const calculateRelevance = (element, searchTerm, matchType) => {
         let score = 0;
@@ -402,11 +412,24 @@ const DataElementSearch = () => {
                 )}
             </div>
 
-            {loading && (
+            {loadingState.isLoading && (
                 <div className="text-center py-4">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
                     <p className="mt-2 text-gray-600">
-                        Searching for element...
+                        Searching for elements...
+                        {loadingState.totalBatches > 0 && (
+                            <span className="block text-sm text-gray-500">
+                                Processing batch {loadingState.currentBatch} of{" "}
+                                {loadingState.totalBatches}
+                                {loadingState.matchesFound > 0 && (
+                                    <span>
+                                        {" "}
+                                        • Found {loadingState.matchesFound}{" "}
+                                        matches so far
+                                    </span>
+                                )}
+                            </span>
+                        )}
                     </p>
                 </div>
             )}
