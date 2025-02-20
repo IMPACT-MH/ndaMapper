@@ -390,18 +390,50 @@ const DataElementSearch = ({ onStructureSelect }) => {
                 {/* Recent searches */}
                 {recentSearches.length > 0 && (
                     <div className="mt-3">
-                        <h3 className="text-sm text-gray-500 mb-2">
-                            Recent searches:
-                        </h3>
+                        <div className="flex items-center justify-between mb-2">
+                            <h3 className="text-sm text-gray-500">
+                                Recent searches:
+                            </h3>
+                            <button
+                                onClick={() => {
+                                    setRecentSearches([]);
+                                    localStorage.removeItem(
+                                        "elementSearchHistory"
+                                    );
+                                }}
+                                className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 rounded hover:bg-gray-100"
+                            >
+                                Clear all
+                            </button>
+                        </div>
                         <div className="flex flex-wrap gap-2">
                             {recentSearches.map((term, index) => (
-                                <button
-                                    key={index}
-                                    onClick={() => handleRecentSearch(term)}
-                                    className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-full text-gray-700"
-                                >
-                                    {term}
-                                </button>
+                                <div key={index} className="group relative">
+                                    <button
+                                        onClick={() => handleRecentSearch(term)}
+                                        className="px-3 py-1 text-sm bg-gray-100 group-hover:bg-gray-200 rounded-full text-gray-700"
+                                    >
+                                        {term}
+                                    </button>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            const newSearches =
+                                                recentSearches.filter(
+                                                    (_, i) => i !== index
+                                                );
+                                            setRecentSearches(newSearches);
+                                            localStorage.setItem(
+                                                "elementSearchHistory",
+                                                JSON.stringify(newSearches)
+                                            );
+                                        }}
+                                        className="absolute -top-1 -right-1 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-200 hover:bg-gray-300 rounded-full w-4 h-4 flex items-center justify-center text-xs text-gray-600"
+                                        aria-label="Remove search term"
+                                    >
+                                        ×
+                                    </button>
+                                </div>
                             ))}
                         </div>
                     </div>
