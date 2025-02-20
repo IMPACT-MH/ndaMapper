@@ -20,7 +20,26 @@ const HomePage = () => {
     const [dataElements, setDataElements] = useState([]);
     const [loadingElements, setLoadingElements] = useState(false);
     const [isSearchFocused, setIsSearchFocused] = useState(false);
+
+    // At the top with other state declarations:
+    const [isLoading, setIsLoading] = useState(true);
     const [activeTab, setActiveTab] = useState(Tabs.STRUCTURE_SEARCH);
+
+    // Load saved tab from localStorage after mount
+    // First, update the useEffect to set isLoading to false:
+    useEffect(() => {
+        const savedTab = localStorage.getItem("activeTab");
+        if (savedTab) {
+            setActiveTab(savedTab);
+        }
+        setIsLoading(false);
+    }, []);
+
+    // Save tab to localStorage when it changes
+    useEffect(() => {
+        localStorage.setItem("activeTab", activeTab);
+    }, [activeTab]);
+
     const [csvFile, setCsvFile] = useState(null);
     const [csvHeaders, setCsvHeaders] = useState(null);
 
@@ -198,50 +217,50 @@ const HomePage = () => {
 
     return (
         <div className="container mx-auto p-4 max-w-7xl">
-            {/* Tabs navigation - keep exactly as is */}
-            <div className="mb-8">
-                <div className="border-b border-gray-200">
-                    <nav className="-mb-px flex space-x-8" aria-label="Tabs">
-                        <button
-                            onClick={() => setActiveTab(Tabs.STRUCTURE_SEARCH)}
-                            className={`
-                                whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm
-                                ${
+            <div className={isLoading ? "invisible" : "visible"}>
+                {/* Tabs navigation */}
+                <div className="mb-8">
+                    <div className="border-b border-gray-200">
+                        <nav
+                            className="-mb-px flex space-x-8"
+                            aria-label="Tabs"
+                        >
+                            <button
+                                onClick={() =>
+                                    setActiveTab(Tabs.STRUCTURE_SEARCH)
+                                }
+                                className={`whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm ${
                                     activeTab === Tabs.STRUCTURE_SEARCH
                                         ? "border-blue-500 text-blue-600"
                                         : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                                }
-                            `}
-                        >
-                            Data Structure Search
-                        </button>
-                        <button
-                            onClick={() => setActiveTab(Tabs.FIELD_SEARCH)}
-                            className={`
-                                whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm
-                                ${
+                                }`}
+                            >
+                                Data Structure Search
+                            </button>
+                            <button
+                                onClick={() => setActiveTab(Tabs.FIELD_SEARCH)}
+                                className={`whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm ${
                                     activeTab === Tabs.FIELD_SEARCH
                                         ? "border-blue-500 text-blue-600"
                                         : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                                }`}
+                            >
+                                Reverse Lookup by CSV
+                            </button>
+                            <button
+                                onClick={() =>
+                                    setActiveTab(Tabs.ELEMENT_SEARCH)
                                 }
-                            `}
-                        >
-                            Reverse Lookup by CSV
-                        </button>
-                        <button
-                            onClick={() => setActiveTab(Tabs.ELEMENT_SEARCH)}
-                            className={`
-                                whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm
-                                ${
+                                className={`whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm ${
                                     activeTab === Tabs.ELEMENT_SEARCH
                                         ? "border-blue-500 text-blue-600"
                                         : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                                }
-                            `}
-                        >
-                            Data Element Search
-                        </button>
-                    </nav>
+                                }`}
+                            >
+                                Data Element Search
+                            </button>
+                        </nav>
+                    </div>
                 </div>
             </div>
 
