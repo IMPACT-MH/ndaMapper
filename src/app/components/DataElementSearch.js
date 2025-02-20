@@ -379,18 +379,39 @@ const DataElementSearch = ({ onStructureSelect }) => {
     };
 
     // Update handleRecentSearch to directly use cached results
+    // Replace the existing handleRecentSearch function with this one:
     const handleRecentSearch = async (term) => {
-        setSearchTerm(term);
+        // First try direct element fetch
+        try {
+            const directResponse = await fetch(
+                `https://nda.nih.gov/api/datadictionary/dataelement/${term}`
+            );
 
-        // If we have cached results, use them immediately
-        if (searchCache[term]) {
-            setMatchingElements(searchCache[term]);
-            setIsPartialSearch(true);
-            setElement(null);
-            setError(null);
+            if (directResponse.ok) {
+                const data = await directResponse.json();
+                setSearchTerm(term);
+                setElement(data);
+                setIsPartialSearch(false);
+                setMatchingElements([]);
+                return;
+            }
+        } catch (err) {
+            console.error("Error fetching direct element:", err);
         }
 
-        // Always trigger a new search to ensure fresh results
+        // If not a direct match, set search term and perform search
+        setSearchTerm(term);
+
+        // Check cache
+        if (searchCache[term]) {
+            const matchingElements = searchCache[term];
+            setMatchingElements(matchingElements);
+            setIsPartialSearch(true);
+            setElement(null);
+            return;
+        }
+
+        // If no cache, do a full search
         await handlePartialSearch();
     };
 
