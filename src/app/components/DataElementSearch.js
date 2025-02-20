@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Search, X, AlertCircle, Info } from "lucide-react";
 
 const DataElementSearch = ({ onStructureSelect }) => {
@@ -8,9 +8,36 @@ const DataElementSearch = ({ onStructureSelect }) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [element, setElement] = useState(null);
-    const [recentSearches, setRecentSearches] = useState([]);
     const [matchingElements, setMatchingElements] = useState([]);
     const [isPartialSearch, setIsPartialSearch] = useState(false);
+
+    const [recentSearches, setRecentSearches] = useState([]);
+
+    // Add state for results cache
+    const [searchCache, setSearchCache] = useState({});
+
+    // Load from localStorage after mount
+    useEffect(() => {
+        const saved = localStorage.getItem("elementSearchHistory");
+        if (saved) {
+            setRecentSearches(JSON.parse(saved));
+        }
+    }, []);
+
+    // Update localStorage whenever recentSearches changes
+    useEffect(() => {
+        localStorage.setItem(
+            "elementSearchHistory",
+            JSON.stringify(recentSearches)
+        );
+    }, [recentSearches]);
+
+    // Modify the function to update searches
+    const updateRecentSearches = (newTerm) => {
+        if (!recentSearches.includes(newTerm)) {
+            setRecentSearches((prev) => [newTerm, ...prev].slice(0, 10));
+        }
+    };
 
     // Helper function to highlight search term in text
     const highlightSearchTerm = (text, term) => {
@@ -245,6 +272,16 @@ const DataElementSearch = ({ onStructureSelect }) => {
     const handlePartialSearch = async () => {
         if (!searchTerm.trim()) return;
 
+        // Check cache first
+        if (searchCache[searchTerm.trim()]) {
+            setMatchingElements(searchCache[searchTerm.trim()]);
+            setElement(null);
+            setError(null);
+            setIsPartialSearch(true);
+            updateRecentSearches(searchTerm.trim());
+            return;
+        }
+
         setLoading(true);
         setError(null);
         setIsPartialSearch(true);
@@ -261,14 +298,7 @@ const DataElementSearch = ({ onStructureSelect }) => {
                 const data = await directResponse.json();
                 setElement(data);
                 setIsPartialSearch(false);
-
-                // Update recent searches
-                if (!recentSearches.includes(searchTerm.trim())) {
-                    setRecentSearches((prev) =>
-                        [searchTerm.trim(), ...prev].slice(0, 10)
-                    );
-                }
-
+                updateRecentSearches(searchTerm.trim());
                 setLoading(false);
                 return;
             }
@@ -285,6 +315,12 @@ const DataElementSearch = ({ onStructureSelect }) => {
             }
 
             setMatchingElements(matchingElements);
+            // Cache the results
+            setSearchCache((prev) => ({
+                ...prev,
+                [searchTerm.trim()]: matchingElements,
+            }));
+            updateRecentSearches(searchTerm.trim());
 
             // Auto-select if only one result
             if (matchingElements.length === 1) {
@@ -297,15 +333,7 @@ const DataElementSearch = ({ onStructureSelect }) => {
                         const data = await perfectMatch.json();
                         setElement(data);
                         setIsPartialSearch(false);
-
-                        // Update recent searches with the actual element name
-                        if (
-                            !recentSearches.includes(matchingElements[0].name)
-                        ) {
-                            setRecentSearches((prev) =>
-                                [matchingElements[0].name, ...prev].slice(0, 10)
-                            );
-                        }
+                        updateRecentSearches(matchingElements[0].name);
                     }
                 } catch (err) {
                     console.error("Error fetching single result:", err);
@@ -338,10 +366,10 @@ const DataElementSearch = ({ onStructureSelect }) => {
         setIsPartialSearch(false);
     };
 
+    // Then update the handler
     const handleRecentSearch = (term) => {
         setSearchTerm(term);
-        // Immediately search with this term
-        setTimeout(() => handleSearch(), 0);
+        handleSearch();
     };
 
     return (
@@ -350,13 +378,13 @@ const DataElementSearch = ({ onStructureSelect }) => {
                 <h1 className="text-3xl font-bold mb-4">Data Element Search</h1>
                 <p className="text-gray-600 mb-6">
                     Search for specific data elements to view their details,
-                    value ranges, and containing structures.
+                    value ranges, and associated data structures.
                 </p>
                 <div className="relative">
                     <input
                         type="text"
                         className="w-full p-4 pl-12 border rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Enter full or partial element name or description (e.g., taps, reaction time...)"
+                        placeholder="Enter full or partial element name or description..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         onKeyDown={handleKeyDown}
@@ -525,11 +553,14 @@ const DataElementSearch = ({ onStructureSelect }) => {
                                                     match.name
                                                 )
                                             ) {
-                                                setRecentSearches((prev) =>
-                                                    [match.name, ...prev].slice(
-                                                        0,
-                                                        10
-                                                    )
+                                                const newSearches = [
+                                                    match.name,
+                                                    ...recentSearches,
+                                                ].slice(0, 10);
+                                                setRecentSearches(newSearches);
+                                                localStorage.setItem(
+                                                    "elementSearchHistory",
+                                                    JSON.stringify(newSearches)
                                                 );
                                             }
                                         }

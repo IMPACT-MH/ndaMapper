@@ -78,8 +78,11 @@ const DataStructureSearch = ({
                 <div className="flex-none">
                     <div className="mb-8">
                         <h1 className="text-3xl font-bold mb-4">
-                            NDA Data Dictionary
+                            Data Structure Search
                         </h1>
+                        <p className="text-gray-600 mb-6">
+                            Search the NDA Data Dictionary
+                        </p>
                         <div className="relative">
                             <input
                                 type="text"
@@ -120,11 +123,11 @@ const DataStructureSearch = ({
                         </div>
                     )}
                     {/* Initial state message */}
-                    {!searchTerm && !selectedStructure && (
+                    {/* {!searchTerm && !selectedStructure && (
                         <div className="w-full text-center text-gray-500 py-12">
                             Start typing above to search for data structures
                         </div>
-                    )}
+                    )} */}
                     <div className="flex gap-4 h-full">
                         {/* Results column - independently scrollable */}
                         {/* Results column - independently scrollable */}
