@@ -14,8 +14,15 @@ const DataElementSearch = ({ onStructureSelect }) => {
     const [recentSearches, setRecentSearches] = useState([]);
 
     // Add state for results cache
-    const [searchCache, setSearchCache] = useState({});
-
+    // Initialize cache from localStorage
+    const [searchCache, setSearchCache] = useState(() => {
+        try {
+            const saved = localStorage.getItem("elementSearchCache");
+            return saved ? JSON.parse(saved) : {};
+        } catch (err) {
+            return {};
+        }
+    });
     // Load from localStorage after mount
     useEffect(() => {
         const saved = localStorage.getItem("elementSearchHistory");
@@ -23,6 +30,11 @@ const DataElementSearch = ({ onStructureSelect }) => {
             setRecentSearches(JSON.parse(saved));
         }
     }, []);
+
+    // Save cache whenever it updates
+    useEffect(() => {
+        localStorage.setItem("elementSearchCache", JSON.stringify(searchCache));
+    }, [searchCache]);
 
     // Update localStorage whenever recentSearches changes
     useEffect(() => {
@@ -366,10 +378,20 @@ const DataElementSearch = ({ onStructureSelect }) => {
         setIsPartialSearch(false);
     };
 
-    // Then update the handler
-    const handleRecentSearch = (term) => {
+    // Update handleRecentSearch to directly use cached results
+    const handleRecentSearch = async (term) => {
         setSearchTerm(term);
-        handleSearch();
+
+        // If we have cached results, use them immediately
+        if (searchCache[term]) {
+            setMatchingElements(searchCache[term]);
+            setIsPartialSearch(true);
+            setElement(null);
+            setError(null);
+        }
+
+        // Always trigger a new search to ensure fresh results
+        await handlePartialSearch();
     };
 
     return (
