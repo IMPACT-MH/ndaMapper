@@ -98,38 +98,62 @@ const DataElementSearch = ({ onStructureSelect }) => {
                 return;
             }
 
-            // If no exact match, do partial search
-            const partialResponse = await fetch(
-                `https://nda.nih.gov/api/search/nda/dataelement/full?size=200&highlight=true`,
-                {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "text/plain",
-                    },
-                    body: searchTerm.trim(),
-                }
+            // Prepare search variations
+            const baseWord = searchTerm.trim().toLowerCase();
+            const searchVariations = new Set([
+                baseWord, // original
+                baseWord.endsWith("s") ? baseWord.slice(0, -1) : baseWord + "s", // singular/plural
+            ]);
+
+            // Search with all variations
+            const searchPromises = Array.from(searchVariations).map((term) =>
+                fetch(
+                    `https://nda.nih.gov/api/search/nda/dataelement/full?size=200&highlight=true`,
+                    {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "text/plain",
+                        },
+                        body: term,
+                    }
+                ).then((response) => response.json())
             );
 
-            if (!partialResponse.ok) {
-                throw new Error("Failed to fetch matching elements");
-            }
+            const searchResults = await Promise.all(searchPromises);
 
-            const searchResults = await partialResponse.json();
+            // Combine and deduplicate results
+            const combinedResults = searchResults.reduce((acc, result) => {
+                if (result?.datadict?.results) {
+                    result.datadict.results.forEach((item) => {
+                        // Check if this name contains any of our search variations
+                        const itemName = item.name.toLowerCase();
+                        const isMatch = Array.from(searchVariations).some(
+                            (term) => itemName.includes(term)
+                        );
 
-            if (!searchResults?.datadict?.results?.length) {
-                setError(`No data elements found containing "${searchTerm}"`);
+                        if (
+                            isMatch &&
+                            !acc.some((existing) => existing.name === item.name)
+                        ) {
+                            acc.push(item);
+                        }
+                    });
+                }
+                return acc;
+            }, []);
+
+            if (!combinedResults.length) {
+                setError(
+                    `No data elements found containing "${searchTerm}" or its variations`
+                );
                 setLoading(false);
                 return;
             }
 
-            // Process the results - don't filter out any data
-            // In the data processing section of handleSearch:
-            // Process the results - handle mixed string/iterator responses
-            // Process the results with description recovery attempt
+            // Fetch full details for each unique result
             const elementDetails = await Promise.all(
-                searchResults.datadict.results.map(async (result) => {
+                combinedResults.map(async (result) => {
                     try {
-                        // Fetch full details for each element
                         const response = await fetch(
                             `https://nda.nih.gov/api/datadictionary/dataelement/${result.name}`
                         );
@@ -141,6 +165,8 @@ const DataElementSearch = ({ onStructureSelect }) => {
                         }
 
                         const fullData = await response.json();
+                        const searchVariationsArray =
+                            Array.from(searchVariations);
 
                         return {
                             name: result.name,
@@ -157,26 +183,26 @@ const DataElementSearch = ({ onStructureSelect }) => {
                                 })) || [],
                             total_data_structures:
                                 result.dataStructures?.length || 0,
-                            matchType: result.name
-                                .toLowerCase()
-                                .includes(searchTerm.toLowerCase())
+                            matchType: searchVariationsArray.some((term) =>
+                                result.name.toLowerCase().includes(term)
+                            )
                                 ? "name"
                                 : "description",
                             foundInDescription:
-                                fullData.description
-                                    ?.toLowerCase()
-                                    .includes(searchTerm.toLowerCase()) ||
-                                false,
-                            foundInName: result.name
-                                .toLowerCase()
-                                .includes(searchTerm.toLowerCase()),
+                                searchVariationsArray.some((term) =>
+                                    fullData.description
+                                        ?.toLowerCase()
+                                        .includes(term)
+                                ) || false,
+                            foundInName: searchVariationsArray.some((term) =>
+                                result.name.toLowerCase().includes(term)
+                            ),
                         };
                     } catch (err) {
                         console.error(
                             `Error fetching details for ${result.name}:`,
                             err
                         );
-                        // Fallback to original search result data if fetch fails
                         return {
                             name: result.name,
                             type: result.type || "Text",
@@ -190,25 +216,21 @@ const DataElementSearch = ({ onStructureSelect }) => {
                                 })) || [],
                             total_data_structures:
                                 result.dataStructures?.length || 0,
-                            matchType: result.name
-                                .toLowerCase()
-                                .includes(searchTerm.toLowerCase())
+                            matchType: searchVariationsArray.some((term) =>
+                                result.name.toLowerCase().includes(term)
+                            )
                                 ? "name"
                                 : "description",
                             foundInDescription: false,
-                            foundInName: result.name
-                                .toLowerCase()
-                                .includes(searchTerm.toLowerCase()),
+                            foundInName: searchVariationsArray.some((term) =>
+                                result.name.toLowerCase().includes(term)
+                            ),
                         };
                     }
                 })
             );
 
-            // Sort by relevance
-            const sortedElements = elementDetails.sort(
-                (a, b) => b.relevance - a.relevance
-            );
-            setMatchingElements(sortedElements);
+            setMatchingElements(elementDetails);
             setIsPartialSearch(true);
             updateRecentSearches(searchTerm.trim());
         } catch (err) {
