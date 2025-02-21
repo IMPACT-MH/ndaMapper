@@ -10,20 +10,8 @@ const DataElementSearch = ({ onStructureSelect }) => {
     const [element, setElement] = useState(null);
     const [matchingElements, setMatchingElements] = useState([]);
     const [isPartialSearch, setIsPartialSearch] = useState(false);
-
     const [recentSearches, setRecentSearches] = useState([]);
 
-    // Add state for results cache
-    // Initialize cache from localStorage
-    const [searchCache, setSearchCache] = useState(() => {
-        try {
-            const saved = localStorage.getItem("elementSearchCache");
-            return saved ? JSON.parse(saved) : {};
-        } catch (err) {
-            return {};
-        }
-    });
-    // Load from localStorage after mount
     useEffect(() => {
         const saved = localStorage.getItem("elementSearchHistory");
         if (saved) {
@@ -31,12 +19,6 @@ const DataElementSearch = ({ onStructureSelect }) => {
         }
     }, []);
 
-    // Save cache whenever it updates
-    useEffect(() => {
-        localStorage.setItem("elementSearchCache", JSON.stringify(searchCache));
-    }, [searchCache]);
-
-    // Update localStorage whenever recentSearches changes
     useEffect(() => {
         localStorage.setItem(
             "elementSearchHistory",
@@ -44,20 +26,16 @@ const DataElementSearch = ({ onStructureSelect }) => {
         );
     }, [recentSearches]);
 
-    // Modify the function to update searches
     const updateRecentSearches = (newTerm) => {
         if (!recentSearches.includes(newTerm)) {
             setRecentSearches((prev) => [newTerm, ...prev].slice(0, 10));
         }
     };
 
-    // Helper function to highlight search term in text
     const highlightSearchTerm = (text, term) => {
         if (!text || !term) return text;
-
         try {
             const parts = text.split(new RegExp(`(${term})`, "i"));
-
             return parts.map((part, i) =>
                 part.toLowerCase() === term.toLowerCase() ? (
                     <span key={i} className="bg-yellow-200 font-medium">
@@ -68,240 +46,46 @@ const DataElementSearch = ({ onStructureSelect }) => {
                 )
             );
         } catch (err) {
-            // Fallback in case regex fails
             console.error("Error highlighting text:", err);
             return text;
         }
     };
 
-    // Optimized search function with timeouts and focused structure search
-    // Inside DataElementSearch.js, update the loading state:
-    const [loadingState, setLoadingState] = useState({
-        isLoading: false,
-        currentBatch: 0,
-        totalBatches: 0,
-        matchesFound: 0,
-    });
-
-    // Update the findElementsByPattern function to report progress
-    // Function to check if text contains word with strict boundaries
-    const containsWord = (text, word) => {
-        const regex = new RegExp(`\\b${word}\\b`, "i");
-        return regex.test(text);
-    };
-
-    const findElementsByPattern = async (term) => {
-        const searchTerm = term.toLowerCase();
-        const foundElements = new Map();
-        const structureCache = new Map();
-
-        setLoadingState((prev) => ({
-            ...prev,
-            isLoading: true,
-            currentBatch: 0,
-            totalBatches: 0,
-            matchesFound: 0,
-        }));
-
-        try {
-            // Initial parallel searches
-            const searchPromises = [
-                fetch(
-                    `https://nda.nih.gov/api/datadictionary/v2/datastructure?searchTerm=${searchTerm}`
-                ),
-                fetch(
-                    `https://nda.nih.gov/api/datadictionary/datastructure?category=cognitive_task`
-                ),
-            ];
-
-            const responses = await Promise.all(searchPromises);
-            const structureArrays = await Promise.all(
-                responses.filter((res) => res.ok).map((res) => res.json())
-            );
-
-            // Deduplicate structures
-            const uniqueStructures = [
-                ...new Set(
-                    structureArrays
-                        .flat()
-                        .filter(Boolean)
-                        .map((s) => s.shortName)
-                ),
-            ];
-
-            // Process in parallel batches
-            const batchSize = 25;
-            const batches = [];
-
-            for (let i = 0; i < uniqueStructures.length; i += batchSize) {
-                batches.push(uniqueStructures.slice(i, i + batchSize));
-            }
-
-            setLoadingState((prev) => ({
-                ...prev,
-                totalBatches: batches.length,
-            }));
-
-            for (
-                let batchIndex = 0;
-                batchIndex < batches.length;
-                batchIndex++
-            ) {
-                const batch = batches[batchIndex];
-
-                setLoadingState((prev) => ({
-                    ...prev,
-                    currentBatch: batchIndex + 1,
-                    matchesFound: foundElements.size,
-                }));
-
-                const batchPromises = batch.map(async (shortName) => {
-                    if (structureCache.has(shortName)) {
-                        return {
-                            shortName,
-                            elements: structureCache.get(shortName),
-                        };
-                    }
-
-                    try {
-                        const response = await fetch(
-                            `https://nda.nih.gov/api/datadictionary/datastructure/${shortName}`
-                        );
-                        if (!response.ok) return null;
-
-                        const data = await response.json();
-                        if (data.dataElements?.length < 1000) {
-                            structureCache.set(shortName, data.dataElements);
-                        }
-                        return { shortName, elements: data.dataElements || [] };
-                    } catch (err) {
-                        return null;
-                    }
-                });
-
-                const batchResults = (await Promise.all(batchPromises)).filter(
-                    Boolean
-                );
-
-                batchResults.forEach(({ shortName, elements }) => {
-                    elements.forEach((element) => {
-                        const elementName = (element.name || "").toLowerCase();
-                        const elementDesc = (
-                            element.description || ""
-                        ).toLowerCase();
-
-                        // Prepare search words for both singular and plural
-                        const searchWords = [searchTerm];
-                        if (searchTerm.endsWith("s")) {
-                            searchWords.push(searchTerm.slice(0, -1)); // Add singular form
-                        } else {
-                            searchWords.push(searchTerm + "s"); // Add plural form
-                        }
-
-                        // Only consider it a match if the word appears as a whole word
-                        const nameMatch = searchWords.some((word) =>
-                            containsWord(elementName, word)
-                        );
-                        const descMatch = searchWords.some((word) =>
-                            containsWord(elementDesc, word)
-                        );
-
-                        if (nameMatch || descMatch) {
-                            // If there's a match, log it for debugging
-                            console.log(`Match found in ${shortName}:`, {
-                                name: element.name,
-                                description: element.description,
-                                matchType: nameMatch ? "name" : "description",
-                            });
-
-                            foundElements.set(element.name, {
-                                name: element.name,
-                                type: element.type || "Unknown",
-                                description:
-                                    element.description ||
-                                    "No description available",
-                                structure: shortName,
-                                matchType:
-                                    nameMatch && descMatch
-                                        ? "both"
-                                        : nameMatch
-                                        ? "name"
-                                        : "description",
-                                relevance: calculateRelevance(
-                                    element,
-                                    searchTerm,
-                                    nameMatch && descMatch
-                                        ? "both"
-                                        : nameMatch
-                                        ? "name"
-                                        : "description"
-                                ),
-                            });
-                        }
-                    });
-                });
-
-                // Small delay between batches
-                if (batchIndex < batches.length - 1) {
-                    await new Promise((resolve) => setTimeout(resolve, 20));
-                }
-            }
-
-            setLoadingState((prev) => ({ ...prev, isLoading: false }));
-
-            return Array.from(foundElements.values()).sort(
-                (a, b) => b.relevance - a.relevance
-            );
-        } catch (err) {
-            console.error("Error in findElementsByPattern:", err);
-            setLoadingState((prev) => ({ ...prev, isLoading: false }));
-            return Array.from(foundElements.values());
-        }
-    };
-
-    // Helper function to calculate result relevance
-    const calculateRelevance = (element, searchTerm, matchType) => {
+    const calculateRelevance = (element, searchTerm) => {
         let score = 0;
+        const elementName = element.name.toLowerCase();
+        const searchTermLower = searchTerm.toLowerCase();
 
-        // Base scores by match type
-        if (matchType === "both") score += 100;
-        else if (matchType === "name") score += 75;
-        else if (matchType === "description") score += 25;
+        if (elementName === searchTermLower) {
+            score += 100;
+        } else if (elementName.startsWith(searchTermLower)) {
+            score += 75;
+        } else if (elementName.includes(searchTermLower)) {
+            score += 50;
+        }
 
-        // Bonus for exact matches
-        if (element.name.toLowerCase() === searchTerm) score += 50;
+        if (element.description?.toLowerCase().includes(searchTermLower)) {
+            score += 25;
+        }
 
-        // Bonus for starts with
-        if (element.name.toLowerCase().startsWith(searchTerm)) score += 25;
-
-        // Smaller penalty for length difference
-        const lengthDiff = Math.abs(element.name.length - searchTerm.length);
-        score -= Math.min(lengthDiff, 10); // Cap the penalty
+        if (element.dataStructures?.length) {
+            score += Math.min(element.dataStructures.length * 2, 20);
+        }
 
         return score;
     };
 
-    const handlePartialSearch = async () => {
+    const handleSearch = async () => {
         if (!searchTerm.trim()) return;
-
-        // Check cache first
-        if (searchCache[searchTerm.trim()]) {
-            setMatchingElements(searchCache[searchTerm.trim()]);
-            setElement(null);
-            setError(null);
-            setIsPartialSearch(true);
-            updateRecentSearches(searchTerm.trim());
-            return;
-        }
 
         setLoading(true);
         setError(null);
-        setIsPartialSearch(true);
-        setMatchingElements([]);
         setElement(null);
+        setMatchingElements([]);
+        setIsPartialSearch(false);
 
         try {
-            // First try direct match for efficiency
+            // First try exact match
             const directResponse = await fetch(
                 `https://nda.nih.gov/api/datadictionary/dataelement/${searchTerm.trim()}`
             );
@@ -309,59 +93,130 @@ const DataElementSearch = ({ onStructureSelect }) => {
             if (directResponse.ok) {
                 const data = await directResponse.json();
                 setElement(data);
-                setIsPartialSearch(false);
                 updateRecentSearches(searchTerm.trim());
                 setLoading(false);
                 return;
             }
 
-            // If no direct match, try pattern-based search
-            const matchingElements = await findElementsByPattern(
-                searchTerm.trim()
+            // If no exact match, do partial search
+            const partialResponse = await fetch(
+                `https://nda.nih.gov/api/search/nda/dataelement/full?size=200&highlight=true`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "text/plain",
+                    },
+                    body: searchTerm.trim(),
+                }
             );
 
-            if (matchingElements.length === 0) {
+            if (!partialResponse.ok) {
+                throw new Error("Failed to fetch matching elements");
+            }
+
+            const searchResults = await partialResponse.json();
+
+            if (!searchResults?.datadict?.results?.length) {
                 setError(`No data elements found containing "${searchTerm}"`);
                 setLoading(false);
                 return;
             }
 
-            setMatchingElements(matchingElements);
-            // Cache the results
-            setSearchCache((prev) => ({
-                ...prev,
-                [searchTerm.trim()]: matchingElements,
-            }));
-            updateRecentSearches(searchTerm.trim());
+            // Process the results - don't filter out any data
+            // In the data processing section of handleSearch:
+            // Process the results - handle mixed string/iterator responses
+            // Process the results with description recovery attempt
+            const elementDetails = await Promise.all(
+                searchResults.datadict.results.map(async (result) => {
+                    try {
+                        // Fetch full details for each element
+                        const response = await fetch(
+                            `https://nda.nih.gov/api/datadictionary/dataelement/${result.name}`
+                        );
 
-            // Auto-select if only one result
-            if (matchingElements.length === 1) {
-                try {
-                    const perfectMatch = await fetch(
-                        `https://nda.nih.gov/api/datadictionary/dataelement/${matchingElements[0].name}`
-                    );
+                        if (!response.ok) {
+                            throw new Error(
+                                `Failed to fetch details for ${result.name}`
+                            );
+                        }
 
-                    if (perfectMatch.ok) {
-                        const data = await perfectMatch.json();
-                        setElement(data);
-                        setIsPartialSearch(false);
-                        updateRecentSearches(matchingElements[0].name);
+                        const fullData = await response.json();
+
+                        return {
+                            name: result.name,
+                            type: fullData.type || result.type || "Text",
+                            description:
+                                fullData.description ||
+                                "No description available",
+                            notes: fullData.notes,
+                            dataStructures:
+                                result.dataStructures?.map((ds) => ({
+                                    shortName: ds.shortName,
+                                    title: ds.title || "",
+                                    category: ds.category || "",
+                                })) || [],
+                            total_data_structures:
+                                result.dataStructures?.length || 0,
+                            matchType: result.name
+                                .toLowerCase()
+                                .includes(searchTerm.toLowerCase())
+                                ? "name"
+                                : "description",
+                            foundInDescription:
+                                fullData.description
+                                    ?.toLowerCase()
+                                    .includes(searchTerm.toLowerCase()) ||
+                                false,
+                            foundInName: result.name
+                                .toLowerCase()
+                                .includes(searchTerm.toLowerCase()),
+                        };
+                    } catch (err) {
+                        console.error(
+                            `Error fetching details for ${result.name}:`,
+                            err
+                        );
+                        // Fallback to original search result data if fetch fails
+                        return {
+                            name: result.name,
+                            type: result.type || "Text",
+                            description: "Error loading description",
+                            notes: result.notes,
+                            dataStructures:
+                                result.dataStructures?.map((ds) => ({
+                                    shortName: ds.shortName,
+                                    title: ds.title || "",
+                                    category: ds.category || "",
+                                })) || [],
+                            total_data_structures:
+                                result.dataStructures?.length || 0,
+                            matchType: result.name
+                                .toLowerCase()
+                                .includes(searchTerm.toLowerCase())
+                                ? "name"
+                                : "description",
+                            foundInDescription: false,
+                            foundInName: result.name
+                                .toLowerCase()
+                                .includes(searchTerm.toLowerCase()),
+                        };
                     }
-                } catch (err) {
-                    console.error("Error fetching single result:", err);
-                }
-            }
+                })
+            );
+
+            // Sort by relevance
+            const sortedElements = elementDetails.sort(
+                (a, b) => b.relevance - a.relevance
+            );
+            setMatchingElements(sortedElements);
+            setIsPartialSearch(true);
+            updateRecentSearches(searchTerm.trim());
         } catch (err) {
             console.error("Search error:", err);
             setError(`Error searching for elements: ${err.message}`);
         } finally {
             setLoading(false);
         }
-    };
-
-    const handleSearch = async () => {
-        if (!searchTerm.trim()) return;
-        await handlePartialSearch();
     };
 
     const handleKeyDown = (e) => {
@@ -378,41 +233,9 @@ const DataElementSearch = ({ onStructureSelect }) => {
         setIsPartialSearch(false);
     };
 
-    // Update handleRecentSearch to directly use cached results
-    // Replace the existing handleRecentSearch function with this one:
     const handleRecentSearch = async (term) => {
-        // First try direct element fetch
-        try {
-            const directResponse = await fetch(
-                `https://nda.nih.gov/api/datadictionary/dataelement/${term}`
-            );
-
-            if (directResponse.ok) {
-                const data = await directResponse.json();
-                setSearchTerm(term);
-                setElement(data);
-                setIsPartialSearch(false);
-                setMatchingElements([]);
-                return;
-            }
-        } catch (err) {
-            console.error("Error fetching direct element:", err);
-        }
-
-        // If not a direct match, set search term and perform search
         setSearchTerm(term);
-
-        // Check cache
-        if (searchCache[term]) {
-            const matchingElements = searchCache[term];
-            setMatchingElements(matchingElements);
-            setIsPartialSearch(true);
-            setElement(null);
-            return;
-        }
-
-        // If no cache, do a full search
-        await handlePartialSearch();
+        await handleSearch();
     };
 
     return (
@@ -427,7 +250,7 @@ const DataElementSearch = ({ onStructureSelect }) => {
                     <input
                         type="text"
                         className="w-full p-4 pl-12 border rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Enter full or partial element name or description..."
+                        placeholder="Search element names and descriptions..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         onKeyDown={handleKeyDown}
@@ -452,13 +275,8 @@ const DataElementSearch = ({ onStructureSelect }) => {
                     >
                         Search
                     </button>
-                    <div className="text-xs text-gray-500 mt-2 ml-1">
-                        Search in both element names and descriptions - try
-                        terms like "taps", "reaction time", "age", etc.
-                    </div>
                 </div>
 
-                {/* Recent searches */}
                 {recentSearches.length > 0 && (
                     <div className="mt-3">
                         <div className="flex items-center justify-between mb-2">
@@ -489,14 +307,10 @@ const DataElementSearch = ({ onStructureSelect }) => {
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            const newSearches =
+                                            setRecentSearches(
                                                 recentSearches.filter(
                                                     (_, i) => i !== index
-                                                );
-                                            setRecentSearches(newSearches);
-                                            localStorage.setItem(
-                                                "elementSearchHistory",
-                                                JSON.stringify(newSearches)
+                                                )
                                             );
                                         }}
                                         className="absolute -top-1 -right-1 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-200 hover:bg-gray-300 rounded-full w-4 h-4 flex items-center justify-center text-xs text-gray-600"
@@ -511,24 +325,11 @@ const DataElementSearch = ({ onStructureSelect }) => {
                 )}
             </div>
 
-            {loadingState.isLoading && (
+            {loading && (
                 <div className="text-center py-4">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
                     <p className="mt-2 text-gray-600">
                         Searching for elements...
-                        {loadingState.totalBatches > 0 && (
-                            <span className="block text-sm text-gray-500">
-                                Processing batch {loadingState.currentBatch} of{" "}
-                                {loadingState.totalBatches}
-                                {loadingState.matchesFound > 0 && (
-                                    <span>
-                                        {" "}
-                                        • Found {loadingState.matchesFound}{" "}
-                                        matches so far
-                                    </span>
-                                )}
-                            </span>
-                        )}
                     </p>
                 </div>
             )}
@@ -539,26 +340,10 @@ const DataElementSearch = ({ onStructureSelect }) => {
                     <div>
                         <h4 className="font-medium text-red-800">Error</h4>
                         <p className="text-red-700">{error}</p>
-                        <div className="mt-3 text-sm bg-red-100 p-3 rounded">
-                            <p className="font-medium">Suggestions:</p>
-                            <ul className="list-disc ml-5 mt-1 space-y-1">
-                                <li>Check spelling and try again</li>
-                                <li>Element names are case-sensitive</li>
-                                <li>
-                                    Try removing any spaces or special
-                                    characters
-                                </li>
-                                <li>
-                                    Some common elements: subjectkey, gender,
-                                    interview_age, interview_date
-                                </li>
-                            </ul>
-                        </div>
                     </div>
                 </div>
             )}
 
-            {/* Matching elements section (for partial search) */}
             {isPartialSearch && matchingElements.length > 0 && (
                 <div className="bg-white rounded-lg shadow-md overflow-hidden">
                     <div className="bg-green-50 p-4 border-b border-green-100">
@@ -577,86 +362,104 @@ const DataElementSearch = ({ onStructureSelect }) => {
                                 key={index}
                                 className="p-4 hover:bg-gray-50 cursor-pointer transition-colors"
                                 onClick={async () => {
-                                    setSearchTerm(match.name);
-                                    setIsPartialSearch(false); // Reset partial search state
-                                    setMatchingElements([]); // Clear matching elements
-
-                                    // Fetch and display the full element details
+                                    // Fetch full element details when clicking a result
                                     try {
                                         const response = await fetch(
                                             `https://nda.nih.gov/api/datadictionary/dataelement/${match.name}`
                                         );
                                         if (response.ok) {
-                                            const data = await response.json();
-                                            setElement(data);
-
-                                            // Update recent searches
-                                            if (
-                                                !recentSearches.includes(
-                                                    match.name
-                                                )
-                                            ) {
-                                                const newSearches = [
-                                                    match.name,
-                                                    ...recentSearches,
-                                                ].slice(0, 10);
-                                                setRecentSearches(newSearches);
-                                                localStorage.setItem(
-                                                    "elementSearchHistory",
-                                                    JSON.stringify(newSearches)
-                                                );
-                                            }
+                                            const fullData =
+                                                await response.json();
+                                            setElement(fullData);
+                                            setIsPartialSearch(false);
+                                        } else {
+                                            throw new Error(
+                                                "Failed to fetch element details"
+                                            );
                                         }
                                     } catch (err) {
                                         console.error(
                                             "Error fetching element details:",
                                             err
                                         );
+                                        // Fallback to search result data if fetch fails
+                                        setElement(match);
+                                        setIsPartialSearch(false);
                                     }
                                 }}
                             >
                                 <div className="flex justify-between items-start">
                                     <div>
-                                        <h3 className="font-mono text-blue-600 font-medium">
+                                        <h3 className="font-mono text-blue-600 font-medium flex items-center gap-2">
                                             {match.name}
-                                            <span className="ml-2 text-xs bg-blue-100 px-2 py-1 rounded text-blue-800">
+                                            <span className="text-xs bg-blue-100 px-2 py-1 rounded text-blue-800">
                                                 {match.type}
                                             </span>
-                                            {match.matchType ===
-                                                "description" && (
-                                                <span className="ml-2 text-xs bg-purple-100 px-2 py-1 rounded text-purple-800">
-                                                    Found in description
-                                                </span>
-                                            )}
-                                            {match.matchType === "both" && (
-                                                <span className="ml-2 text-xs bg-green-100 px-2 py-1 rounded text-green-800">
-                                                    Matches name & description
-                                                </span>
-                                            )}
+                                            {match.foundInDescription &&
+                                                !match.foundInName && (
+                                                    <span className="text-xs bg-purple-100 px-2 py-1 rounded text-purple-800">
+                                                        Found in description
+                                                    </span>
+                                                )}
                                         </h3>
                                     </div>
                                     <span className="text-xs text-gray-500">
-                                        {match.structure}
+                                        {match.total_data_structures} structure
+                                        {match.total_data_structures !== 1 &&
+                                            "s"}
                                     </span>
                                 </div>
 
-                                {/* Show description with highlighted search term */}
-                                <p className="text-sm text-gray-700 mt-2">
-                                    {match.matchType === "description" &&
-                                    match.description
-                                        ? highlightSearchTerm(
-                                              match.description,
-                                              searchTerm
-                                          )
-                                        : match.description}
-                                </p>
+                                {match.description && (
+                                    <p className="text-sm text-gray-700 mt-2">
+                                        {highlightSearchTerm(
+                                            match.description,
+                                            searchTerm
+                                        )}
+                                    </p>
+                                )}
+
+                                {match.dataStructures?.length > 0 && (
+                                    <div className="mt-2 flex flex-wrap gap-2">
+                                        {match.dataStructures.map(
+                                            (structure, idx) => (
+                                                <span
+                                                    key={idx}
+                                                    className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-700 cursor-pointer hover:bg-gray-200 group relative"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        onStructureSelect(
+                                                            structure.shortName
+                                                        );
+                                                    }}
+                                                >
+                                                    {structure.shortName}
+                                                    {structure.title && (
+                                                        <div className="absolute hidden group-hover:block bg-gray-800 text-white p-2 rounded shadow-lg text-xs -top-8 left-1/2 transform -translate-x-1/2 whitespace-nowrap z-10">
+                                                            {structure.title}
+                                                        </div>
+                                                    )}
+                                                </span>
+                                            )
+                                        )}
+                                    </div>
+                                )}
+
+                                {match.notes && (
+                                    <div className="mt-2 text-xs text-gray-600">
+                                        <span className="font-medium">
+                                            Notes:{" "}
+                                        </span>
+                                        {match.notes}
+                                    </div>
+                                )}
                             </div>
                         ))}
                     </div>
                 </div>
             )}
 
-            {element && (
+            {element && !isPartialSearch && (
                 <div className="bg-white rounded-lg shadow-md overflow-hidden">
                     <div className="bg-blue-50 p-5 border-b border-blue-100">
                         <h2 className="text-2xl font-mono font-semibold text-blue-800">
@@ -721,8 +524,7 @@ const DataElementSearch = ({ onStructureSelect }) => {
                             <h3 className="text-lg font-medium text-gray-800 mb-2">
                                 Used in Data Structures
                             </h3>
-                            {element.dataStructures &&
-                            element.dataStructures.length > 0 ? (
+                            {element.dataStructures?.length > 0 ? (
                                 <div className="bg-gray-50 p-3 rounded max-h-64 overflow-y-auto">
                                     <ul className="space-y-1">
                                         {element.dataStructures.map(
@@ -744,7 +546,7 @@ const DataElementSearch = ({ onStructureSelect }) => {
                                 </div>
                             ) : (
                                 <p className="text-gray-500 italic">
-                                    Not found in any data structures
+                                    Not found in any data structures s b
                                 </p>
                             )}
                         </div>
