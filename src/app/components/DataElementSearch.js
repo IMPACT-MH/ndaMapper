@@ -32,19 +32,43 @@ const DataElementSearch = ({ onStructureSelect }) => {
         }
     };
 
-    const highlightSearchTerm = (text, term) => {
-        if (!text || !term) return text;
+    // Helper to check for matches
+    const checkForMatches = (text, searchTerms) => {
+        if (!text) return false;
+        const textLower = text.toLowerCase();
+        return searchTerms.some((term) =>
+            textLower.includes(term.toLowerCase())
+        );
+    };
+
+    // Escape special characters for regex
+    const escapeRegExp = (string) => {
+        return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    };
+
+    // In the component where you're rendering results:
+    const highlightSearchTerm = (text, searchTerms) => {
+        if (!text || !searchTerms?.length) return text;
+
+        // Create regex pattern for all search terms
+        const pattern = searchTerms.map((term) => escapeRegExp(term)).join("|");
+        const regex = new RegExp(`(${pattern})`, "gi");
+
         try {
-            const parts = text.split(new RegExp(`(${term})`, "i"));
-            return parts.map((part, i) =>
-                part.toLowerCase() === term.toLowerCase() ? (
+            const parts = text.split(regex);
+            return parts.map((part, i) => {
+                // Check if this part matches any of our search terms (case insensitive)
+                const isMatch = searchTerms.some(
+                    (term) => part.toLowerCase() === term.toLowerCase()
+                );
+                return isMatch ? (
                     <span key={i} className="bg-yellow-200 font-medium">
                         {part}
                     </span>
                 ) : (
                     part
-                )
-            );
+                );
+            });
         } catch (err) {
             console.error("Error highlighting text:", err);
             return text;
@@ -85,6 +109,14 @@ const DataElementSearch = ({ onStructureSelect }) => {
         setIsPartialSearch(false);
 
         try {
+            // Create array of terms to match (singular and plural)
+            const searchVariations = [searchTerm.trim()];
+            if (searchTerm.endsWith("s")) {
+                searchVariations.push(searchTerm.slice(0, -1).trim()); // Add singular form
+            } else {
+                searchVariations.push(searchTerm.trim() + "s"); // Add plural form
+            }
+
             // First try exact match
             const directResponse = await fetch(
                 `https://nda.nih.gov/api/datadictionary/dataelement/${searchTerm.trim()}`
@@ -98,13 +130,6 @@ const DataElementSearch = ({ onStructureSelect }) => {
                 return;
             }
 
-            // If no exact match, prepare variations of the search term
-            const baseWord = searchTerm.trim().toLowerCase();
-            const searchVariations = new Set([
-                baseWord, // original
-                baseWord.endsWith("s") ? baseWord.slice(0, -1) : baseWord + "s", // singular/plural
-            ]);
-
             // Use a search query that explicitly looks at both name and description
             const partialResponse = await fetch(
                 `https://nda.nih.gov/api/search/nda/dataelement/full?size=10000&highlight=true`,
@@ -113,7 +138,7 @@ const DataElementSearch = ({ onStructureSelect }) => {
                     headers: {
                         "Content-Type": "text/plain",
                     },
-                    body: Array.from(searchVariations).join(" OR "),
+                    body: searchVariations.join(" OR "),
                 }
             );
 
@@ -146,21 +171,47 @@ const DataElementSearch = ({ onStructureSelect }) => {
                         }
 
                         const fullData = await response.json();
-                        const searchVariationsArray =
-                            Array.from(searchVariations);
 
-                        // Case-insensitive matches for both name and description
-                        const nameLower = result.name.toLowerCase();
-                        const descriptionLower = (
-                            fullData.description || ""
-                        ).toLowerCase();
+                        // Create array of terms to check (singular and plural)
 
-                        const nameMatch = searchVariationsArray.some((term) =>
-                            nameLower.includes(term)
+                        // Helper to generate search variations
+                        const getSearchVariations = (searchTerm) => {
+                            const baseWord = searchTerm.trim().toLowerCase();
+                            const variations = new Set([
+                                baseWord, // original: "tap"
+                                baseWord.endsWith("s")
+                                    ? baseWord.slice(0, -1)
+                                    : baseWord + "s", // plural/singular: "taps" or "tap"
+                                baseWord + "ping", // gerund form: "tapping"
+                                baseWord.endsWith("s")
+                                    ? baseWord.slice(0, -1) + "ping"
+                                    : baseWord + "ping", // handle gerund for both singular/plural
+                            ]);
+                            return Array.from(variations);
+                        };
+                        // In your handleSearch function:
+                        const searchVariations =
+                            getSearchVariations(searchTerm);
+
+                        if (searchTerm.endsWith("s")) {
+                            searchVariations.push(
+                                searchTerm.slice(0, -1).trim()
+                            );
+                        } else {
+                            searchVariations.push(searchTerm.trim() + "s");
+                        }
+
+                        // Check for matches in all text fields
+                        const nameMatch = checkForMatches(
+                            result.name,
+                            searchVariations
                         );
-                        const descriptionMatch = searchVariationsArray.some(
-                            (term) => descriptionLower.includes(term)
-                        );
+                        const descriptionMatch =
+                            checkForMatches(
+                                fullData.description,
+                                searchVariations
+                            ) ||
+                            checkForMatches(fullData.notes, searchVariations);
 
                         return {
                             name: result.name,
@@ -177,10 +228,16 @@ const DataElementSearch = ({ onStructureSelect }) => {
                                 })) || [],
                             total_data_structures:
                                 result.dataStructures?.length || 0,
-                            matchType: nameMatch ? "name" : "description",
+                            matchType: nameMatch
+                                ? "name"
+                                : descriptionMatch
+                                ? "description"
+                                : null,
                             foundInDescription: descriptionMatch,
                             foundInName: nameMatch,
                             score: result._score,
+                            // Store search variations for highlighting
+                            searchTerms: searchVariations,
                         };
                     } catch (err) {
                         console.error(
@@ -192,10 +249,10 @@ const DataElementSearch = ({ onStructureSelect }) => {
                 })
             );
 
-            // Filter out any null results from failed fetches and ensure both name and description matching are case-insensitive
+            // Filter out any null results from failed fetches
             const validElements = elementDetails.filter(Boolean);
 
-            // Sort results: name matches first, then description matches, then by score
+            // Sort results: name matches first, then description/notes matches, then by score
             const sortedElements = validElements.sort((a, b) => {
                 if (a.foundInName !== b.foundInName) {
                     return b.foundInName ? 1 : -1;
@@ -412,11 +469,10 @@ const DataElementSearch = ({ onStructureSelect }) => {
                                     <p className="text-sm text-gray-700 mt-2">
                                         {highlightSearchTerm(
                                             match.description,
-                                            searchTerm
+                                            match.searchTerms
                                         )}
                                     </p>
                                 )}
-
                                 {match.dataStructures?.length > 0 && (
                                     <div className="mt-2 flex flex-wrap gap-2">
                                         {match.dataStructures.map(
