@@ -98,51 +98,32 @@ const DataElementSearch = ({ onStructureSelect }) => {
                 return;
             }
 
-            // Prepare search variations
+            // If no exact match, prepare variations of the search term
             const baseWord = searchTerm.trim().toLowerCase();
             const searchVariations = new Set([
                 baseWord, // original
                 baseWord.endsWith("s") ? baseWord.slice(0, -1) : baseWord + "s", // singular/plural
             ]);
 
-            // Search with all variations
-            const searchPromises = Array.from(searchVariations).map((term) =>
-                fetch(
-                    `https://nda.nih.gov/api/search/nda/dataelement/full?size=200&highlight=true`,
-                    {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "text/plain",
-                        },
-                        body: term,
-                    }
-                ).then((response) => response.json())
+            // Use a search query that explicitly looks at both name and description
+            const partialResponse = await fetch(
+                `https://nda.nih.gov/api/search/nda/dataelement/full?size=10000&highlight=true`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "text/plain",
+                    },
+                    body: Array.from(searchVariations).join(" OR "),
+                }
             );
 
-            const searchResults = await Promise.all(searchPromises);
+            if (!partialResponse.ok) {
+                throw new Error("Failed to fetch matching elements");
+            }
 
-            // Combine and deduplicate results
-            const combinedResults = searchResults.reduce((acc, result) => {
-                if (result?.datadict?.results) {
-                    result.datadict.results.forEach((item) => {
-                        // Check if this name contains any of our search variations
-                        const itemName = item.name.toLowerCase();
-                        const isMatch = Array.from(searchVariations).some(
-                            (term) => itemName.includes(term)
-                        );
+            const searchResults = await partialResponse.json();
 
-                        if (
-                            isMatch &&
-                            !acc.some((existing) => existing.name === item.name)
-                        ) {
-                            acc.push(item);
-                        }
-                    });
-                }
-                return acc;
-            }, []);
-
-            if (!combinedResults.length) {
+            if (!searchResults?.datadict?.results?.length) {
                 setError(
                     `No data elements found containing "${searchTerm}" or its variations`
                 );
@@ -150,9 +131,9 @@ const DataElementSearch = ({ onStructureSelect }) => {
                 return;
             }
 
-            // Fetch full details for each unique result
+            // Get full details for each result
             const elementDetails = await Promise.all(
-                combinedResults.map(async (result) => {
+                searchResults.datadict.results.map(async (result) => {
                     try {
                         const response = await fetch(
                             `https://nda.nih.gov/api/datadictionary/dataelement/${result.name}`
@@ -167,6 +148,19 @@ const DataElementSearch = ({ onStructureSelect }) => {
                         const fullData = await response.json();
                         const searchVariationsArray =
                             Array.from(searchVariations);
+
+                        // Case-insensitive matches for both name and description
+                        const nameLower = result.name.toLowerCase();
+                        const descriptionLower = (
+                            fullData.description || ""
+                        ).toLowerCase();
+
+                        const nameMatch = searchVariationsArray.some((term) =>
+                            nameLower.includes(term)
+                        );
+                        const descriptionMatch = searchVariationsArray.some(
+                            (term) => descriptionLower.includes(term)
+                        );
 
                         return {
                             name: result.name,
@@ -183,54 +177,36 @@ const DataElementSearch = ({ onStructureSelect }) => {
                                 })) || [],
                             total_data_structures:
                                 result.dataStructures?.length || 0,
-                            matchType: searchVariationsArray.some((term) =>
-                                result.name.toLowerCase().includes(term)
-                            )
-                                ? "name"
-                                : "description",
-                            foundInDescription:
-                                searchVariationsArray.some((term) =>
-                                    fullData.description
-                                        ?.toLowerCase()
-                                        .includes(term)
-                                ) || false,
-                            foundInName: searchVariationsArray.some((term) =>
-                                result.name.toLowerCase().includes(term)
-                            ),
+                            matchType: nameMatch ? "name" : "description",
+                            foundInDescription: descriptionMatch,
+                            foundInName: nameMatch,
+                            score: result._score,
                         };
                     } catch (err) {
                         console.error(
                             `Error fetching details for ${result.name}:`,
                             err
                         );
-                        return {
-                            name: result.name,
-                            type: result.type || "Text",
-                            description: "Error loading description",
-                            notes: result.notes,
-                            dataStructures:
-                                result.dataStructures?.map((ds) => ({
-                                    shortName: ds.shortName,
-                                    title: ds.title || "",
-                                    category: ds.category || "",
-                                })) || [],
-                            total_data_structures:
-                                result.dataStructures?.length || 0,
-                            matchType: searchVariationsArray.some((term) =>
-                                result.name.toLowerCase().includes(term)
-                            )
-                                ? "name"
-                                : "description",
-                            foundInDescription: false,
-                            foundInName: searchVariationsArray.some((term) =>
-                                result.name.toLowerCase().includes(term)
-                            ),
-                        };
+                        return null;
                     }
                 })
             );
 
-            setMatchingElements(elementDetails);
+            // Filter out any null results from failed fetches and ensure both name and description matching are case-insensitive
+            const validElements = elementDetails.filter(Boolean);
+
+            // Sort results: name matches first, then description matches, then by score
+            const sortedElements = validElements.sort((a, b) => {
+                if (a.foundInName !== b.foundInName) {
+                    return b.foundInName ? 1 : -1;
+                }
+                if (a.foundInDescription !== b.foundInDescription) {
+                    return b.foundInDescription ? 1 : -1;
+                }
+                return b.score - a.score;
+            });
+
+            setMatchingElements(sortedElements);
             setIsPartialSearch(true);
             updateRecentSearches(searchTerm.trim());
         } catch (err) {
