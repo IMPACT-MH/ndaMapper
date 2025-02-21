@@ -46,18 +46,19 @@ const DataElementSearch = ({ onStructureSelect }) => {
         return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     };
 
-    // In the component where you're rendering results:
+    // Update the rendering section to include highlighting
     const highlightSearchTerm = (text, searchTerms) => {
         if (!text || !searchTerms?.length) return text;
 
-        // Create regex pattern for all search terms
-        const pattern = searchTerms.map((term) => escapeRegExp(term)).join("|");
-        const regex = new RegExp(`(${pattern})`, "gi");
-
         try {
+            // Create pattern that matches any of the search terms
+            const pattern = searchTerms
+                .map((term) => term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+                .join("|");
+            const regex = new RegExp(`(${pattern})`, "gi");
+
             const parts = text.split(regex);
             return parts.map((part, i) => {
-                // Check if this part matches any of our search terms (case insensitive)
                 const isMatch = searchTerms.some(
                     (term) => part.toLowerCase() === term.toLowerCase()
                 );
@@ -75,25 +76,72 @@ const DataElementSearch = ({ onStructureSelect }) => {
         }
     };
 
+    const levenshteinDistance = (str1, str2) => {
+        const track = Array(str2.length + 1)
+            .fill(null)
+            .map(() => Array(str1.length + 1).fill(null));
+        for (let i = 0; i <= str1.length; i++) track[0][i] = i;
+        for (let j = 0; j <= str2.length; j++) track[j][0] = j;
+        for (let j = 1; j <= str2.length; j++) {
+            for (let i = 1; i <= str1.length; i++) {
+                const indicator = str1[i - 1] === str2[j - 1] ? 0 : 1;
+                track[j][i] = Math.min(
+                    track[j][i - 1] + 1,
+                    track[j - 1][i] + 1,
+                    track[j - 1][i - 1] + indicator
+                );
+            }
+        }
+        return track[str2.length][str1.length];
+    };
+
     const calculateRelevance = (element, searchTerm) => {
         let score = 0;
         const elementName = element.name.toLowerCase();
         const searchTermLower = searchTerm.toLowerCase();
 
+        // First look for the search term in the element name parts
+        const elementParts = elementName.split("_");
+        const searchParts = searchTermLower.split("_");
+
+        // Perfect match gets highest score
         if (elementName === searchTermLower) {
-            score += 100;
-        } else if (elementName.startsWith(searchTermLower)) {
-            score += 75;
-        } else if (elementName.includes(searchTermLower)) {
-            score += 50;
+            return 1000;
         }
 
-        if (element.description?.toLowerCase().includes(searchTermLower)) {
-            score += 25;
+        // Calculate Levenshtein distance between search parts and element parts
+        for (let i = 0; i < searchParts.length; i++) {
+            const searchPart = searchParts[i];
+            let bestPartDistance = Infinity;
+
+            for (let j = 0; j < elementParts.length; j++) {
+                const elementPart = elementParts[j];
+                const distance = levenshteinDistance(searchPart, elementPart);
+                bestPartDistance = Math.min(bestPartDistance, distance);
+            }
+
+            // Heavily weight exact part matches
+            if (bestPartDistance === 0) {
+                score += 100;
+            } else if (bestPartDistance <= 2) {
+                // Allow for small typos
+                score += 50 / bestPartDistance;
+            }
         }
 
-        if (element.dataStructures?.length) {
-            score += Math.min(element.dataStructures.length * 2, 20);
+        // Look for exact prefix matches with remaining parts
+        if (elementName.startsWith(searchTermLower + "_")) {
+            score += 500;
+        }
+
+        // Penalize matches that are just based on numbers
+        if (elementName.match(/^\d+$/) || searchTermLower.match(/^\d+$/)) {
+            score *= 0.1;
+        }
+
+        // Severely penalize matches only found in description
+        if (!elementName.includes(searchTermLower)) {
+            score *= 0.1;
         }
 
         return score;
@@ -109,14 +157,6 @@ const DataElementSearch = ({ onStructureSelect }) => {
         setIsPartialSearch(false);
 
         try {
-            // Create array of terms to match (singular and plural)
-            const searchVariations = [searchTerm.trim()];
-            if (searchTerm.endsWith("s")) {
-                searchVariations.push(searchTerm.slice(0, -1).trim()); // Add singular form
-            } else {
-                searchVariations.push(searchTerm.trim() + "s"); // Add plural form
-            }
-
             // First try exact match
             const directResponse = await fetch(
                 `https://nda.nih.gov/api/datadictionary/dataelement/${searchTerm.trim()}`
@@ -130,7 +170,33 @@ const DataElementSearch = ({ onStructureSelect }) => {
                 return;
             }
 
-            // Use a search query that explicitly looks at both name and description
+            // If no exact match, prepare variations of the search term
+            const baseWord = searchTerm.trim().toLowerCase();
+
+            // Create search variations including parts of compound terms
+            const searchVariations = [baseWord];
+
+            // Add parts before and after underscores
+            if (baseWord.includes("_")) {
+                // Get everything up to the last underscore
+                const beforeLastUnderscore = baseWord.substring(
+                    0,
+                    baseWord.lastIndexOf("_")
+                );
+                // Get the parts by splitting
+                const parts = baseWord.split("_");
+
+                searchVariations.push(
+                    beforeLastUnderscore, // e.g., 'eefrt_01' from 'eefrt_01_taps'
+                    ...parts // individual parts
+                );
+            }
+
+            // Also search for the term with a trailing underscore
+            searchVariations.push(baseWord + "_");
+            searchVariations.push(`.*${baseWord}.*`);
+
+            // Use search endpoint for initial results
             const partialResponse = await fetch(
                 `https://nda.nih.gov/api/search/nda/dataelement/full?size=10000&highlight=true`,
                 {
@@ -172,46 +238,32 @@ const DataElementSearch = ({ onStructureSelect }) => {
 
                         const fullData = await response.json();
 
-                        // Create array of terms to check (singular and plural)
+                        // Case-insensitive matches for both name and description
+                        const nameLower = result.name.toLowerCase();
+                        const descriptionLower = (
+                            fullData.description || ""
+                        ).toLowerCase();
+                        const notesLower = (fullData.notes || "").toLowerCase();
 
-                        // Helper to generate search variations
-                        const getSearchVariations = (searchTerm) => {
-                            const baseWord = searchTerm.trim().toLowerCase();
-                            const variations = new Set([
-                                baseWord, // original: "tap"
-                                baseWord.endsWith("s")
-                                    ? baseWord.slice(0, -1)
-                                    : baseWord + "s", // plural/singular: "taps" or "tap"
-                                baseWord + "ping", // gerund form: "tapping"
-                                baseWord.endsWith("s")
-                                    ? baseWord.slice(0, -1) + "ping"
-                                    : baseWord + "ping", // handle gerund for both singular/plural
-                            ]);
-                            return Array.from(variations);
-                        };
-                        // In your handleSearch function:
-                        const searchVariations =
-                            getSearchVariations(searchTerm);
-
-                        if (searchTerm.endsWith("s")) {
-                            searchVariations.push(
-                                searchTerm.slice(0, -1).trim()
-                            );
-                        } else {
-                            searchVariations.push(searchTerm.trim() + "s");
-                        }
-
-                        // Check for matches in all text fields
-                        const nameMatch = checkForMatches(
-                            result.name,
-                            searchVariations
+                        const nameMatch = searchVariations.some((term) =>
+                            nameLower.includes(term)
                         );
-                        const descriptionMatch =
-                            checkForMatches(
-                                fullData.description,
-                                searchVariations
-                            ) ||
-                            checkForMatches(fullData.notes, searchVariations);
+                        const descriptionMatch = searchVariations.some(
+                            (term) =>
+                                descriptionLower.includes(term) ||
+                                notesLower.includes(term)
+                        );
+
+                        // Calculate relevance score for this result
+                        const relevanceScore = calculateRelevance(
+                            {
+                                name: result.name,
+                                description: fullData.description,
+                                notes: fullData.notes,
+                                dataStructures: result.dataStructures,
+                            },
+                            baseWord
+                        );
 
                         return {
                             name: result.name,
@@ -228,15 +280,10 @@ const DataElementSearch = ({ onStructureSelect }) => {
                                 })) || [],
                             total_data_structures:
                                 result.dataStructures?.length || 0,
-                            matchType: nameMatch
-                                ? "name"
-                                : descriptionMatch
-                                ? "description"
-                                : null,
+                            matchType: nameMatch ? "name" : "description",
                             foundInDescription: descriptionMatch,
                             foundInName: nameMatch,
-                            score: result._score,
-                            // Store search variations for highlighting
+                            score: relevanceScore,
                             searchTerms: searchVariations,
                         };
                     } catch (err) {
@@ -249,21 +296,12 @@ const DataElementSearch = ({ onStructureSelect }) => {
                 })
             );
 
-            // Filter out any null results from failed fetches
-            const validElements = elementDetails.filter(Boolean);
+            // Filter out null results and sort by relevance score
+            const validElements = elementDetails
+                .filter(Boolean)
+                .sort((a, b) => b.score - a.score);
 
-            // Sort results: name matches first, then description/notes matches, then by score
-            const sortedElements = validElements.sort((a, b) => {
-                if (a.foundInName !== b.foundInName) {
-                    return b.foundInName ? 1 : -1;
-                }
-                if (a.foundInDescription !== b.foundInDescription) {
-                    return b.foundInDescription ? 1 : -1;
-                }
-                return b.score - a.score;
-            });
-
-            setMatchingElements(sortedElements);
+            setMatchingElements(validElements);
             setIsPartialSearch(true);
             updateRecentSearches(searchTerm.trim());
         } catch (err) {
@@ -450,18 +488,17 @@ const DataElementSearch = ({ onStructureSelect }) => {
                                             <span className="text-xs bg-blue-100 px-2 py-1 rounded text-blue-800">
                                                 {match.type}
                                             </span>
-                                            {match.foundInDescription &&
-                                                !match.foundInName && (
-                                                    <span className="text-xs bg-purple-100 px-2 py-1 rounded text-purple-800">
-                                                        Found in description
-                                                    </span>
-                                                )}
+                                            {match.matchType ===
+                                                "description" && (
+                                                <span className="text-xs bg-purple-100 px-2 py-1 rounded text-purple-800">
+                                                    Found in description
+                                                </span>
+                                            )}
                                         </h3>
                                     </div>
                                     <span className="text-xs text-gray-500">
-                                        {match.total_data_structures} structure
-                                        {match.total_data_structures !== 1 &&
-                                            "s"}
+                                        {match.dataStructures?.[0]?.shortName ||
+                                            ""}
                                     </span>
                                 </div>
 
@@ -473,6 +510,7 @@ const DataElementSearch = ({ onStructureSelect }) => {
                                         )}
                                     </p>
                                 )}
+
                                 {match.dataStructures?.length > 0 && (
                                     <div className="mt-2 flex flex-wrap gap-2">
                                         {match.dataStructures.map(
