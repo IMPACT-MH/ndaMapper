@@ -170,33 +170,8 @@ const DataElementSearch = ({ onStructureSelect }) => {
                 return;
             }
 
-            // If no exact match, prepare variations of the search term
-            const baseWord = searchTerm.trim().toLowerCase();
-
-            // Create search variations including parts of compound terms
-            const searchVariations = [baseWord];
-
-            // Add parts before and after underscores
-            if (baseWord.includes("_")) {
-                // Get everything up to the last underscore
-                const beforeLastUnderscore = baseWord.substring(
-                    0,
-                    baseWord.lastIndexOf("_")
-                );
-                // Get the parts by splitting
-                const parts = baseWord.split("_");
-
-                searchVariations.push(
-                    beforeLastUnderscore, // e.g., 'eefrt_01' from 'eefrt_01_taps'
-                    ...parts // individual parts
-                );
-            }
-
-            // Also search for the term with a trailing underscore
-            searchVariations.push(baseWord + "_");
-            searchVariations.push(`.*${baseWord}.*`);
-
-            // Use search endpoint for initial results
+            // If no exact match, use the search API
+            const searchQuery = searchTerm.trim();
             const partialResponse = await fetch(
                 `https://nda.nih.gov/api/search/nda/dataelement/full?size=10000&highlight=true`,
                 {
@@ -204,7 +179,7 @@ const DataElementSearch = ({ onStructureSelect }) => {
                     headers: {
                         "Content-Type": "text/plain",
                     },
-                    body: searchVariations.join(" OR "),
+                    body: searchQuery,
                 }
             );
 
@@ -215,9 +190,7 @@ const DataElementSearch = ({ onStructureSelect }) => {
             const searchResults = await partialResponse.json();
 
             if (!searchResults?.datadict?.results?.length) {
-                setError(
-                    `No data elements found containing "${searchTerm}" or its variations`
-                );
+                setError(`No data elements found containing "${searchTerm}"`);
                 setLoading(false);
                 return;
             }
@@ -238,33 +211,7 @@ const DataElementSearch = ({ onStructureSelect }) => {
 
                         const fullData = await response.json();
 
-                        // Case-insensitive matches for both name and description
-                        const nameLower = result.name.toLowerCase();
-                        const descriptionLower = (
-                            fullData.description || ""
-                        ).toLowerCase();
-                        const notesLower = (fullData.notes || "").toLowerCase();
-
-                        const nameMatch = searchVariations.some((term) =>
-                            nameLower.includes(term)
-                        );
-                        const descriptionMatch = searchVariations.some(
-                            (term) =>
-                                descriptionLower.includes(term) ||
-                                notesLower.includes(term)
-                        );
-
-                        // Calculate relevance score for this result
-                        const relevanceScore = calculateRelevance(
-                            {
-                                name: result.name,
-                                description: fullData.description,
-                                notes: fullData.notes,
-                                dataStructures: result.dataStructures,
-                            },
-                            baseWord
-                        );
-
+                        // Use the API's _score for relevance
                         return {
                             name: result.name,
                             type: fullData.type || result.type || "Text",
@@ -280,11 +227,13 @@ const DataElementSearch = ({ onStructureSelect }) => {
                                 })) || [],
                             total_data_structures:
                                 result.dataStructures?.length || 0,
-                            matchType: nameMatch ? "name" : "description",
-                            foundInDescription: descriptionMatch,
-                            foundInName: nameMatch,
-                            score: relevanceScore,
-                            searchTerms: searchVariations,
+                            _score: result._score,
+                            searchTerms: [searchQuery],
+                            matchType: result.name
+                                .toLowerCase()
+                                .includes(searchQuery.toLowerCase())
+                                ? "name"
+                                : "description",
                         };
                     } catch (err) {
                         console.error(
@@ -296,10 +245,10 @@ const DataElementSearch = ({ onStructureSelect }) => {
                 })
             );
 
-            // Filter out null results and sort by relevance score
+            // Filter out null results and sort by API's _score
             const validElements = elementDetails
                 .filter(Boolean)
-                .sort((a, b) => b.score - a.score);
+                .sort((a, b) => (b._score || 0) - (a._score || 0));
 
             setMatchingElements(validElements);
             setIsPartialSearch(true);
@@ -445,7 +394,7 @@ const DataElementSearch = ({ onStructureSelect }) => {
                             "{searchTerm}"
                         </h2>
                         <p className="text-sm text-green-700 mt-1">
-                            Click on an element name to view its details
+                            Results are sorted by relevance score
                         </p>
                     </div>
 
@@ -488,6 +437,10 @@ const DataElementSearch = ({ onStructureSelect }) => {
                                             <span className="text-xs bg-blue-100 px-2 py-1 rounded text-blue-800">
                                                 {match.type}
                                             </span>
+                                            <span className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-700">
+                                                Score:{" "}
+                                                {match._score?.toFixed(2)}
+                                            </span>
                                             {match.matchType ===
                                                 "description" && (
                                                 <span className="text-xs bg-purple-100 px-2 py-1 rounded text-purple-800">
@@ -496,10 +449,6 @@ const DataElementSearch = ({ onStructureSelect }) => {
                                             )}
                                         </h3>
                                     </div>
-                                    <span className="text-xs text-gray-500">
-                                        {match.dataStructures?.[0]?.shortName ||
-                                            ""}
-                                    </span>
                                 </div>
 
                                 {match.description && (
