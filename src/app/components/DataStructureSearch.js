@@ -35,6 +35,8 @@ const DataStructureSearch = ({
     setDatabaseFilterEnabled,
     databaseStructures,
     setDatabaseStructures,
+    databaseName,
+    setDatabaseName,
 }) => {
     const [headers, setHeaders] = useState([]);
     const [isExpanded, setIsExpanded] = useState(false);
@@ -77,6 +79,7 @@ const DataStructureSearch = ({
                     structureNames
                 );
                 setDatabaseStructures(structureNames);
+                // setDatabaseName(data.databaseName);
             } else {
                 console.error(
                     "Failed to fetch database structures, status:",
@@ -92,7 +95,81 @@ const DataStructureSearch = ({
         }
     };
 
-    // No need for filtering logic here anymore since it's handled in HomePage
+    // Helper function to check if a data element exists in the database version of the structure
+    const isElementInDatabase = (elementName) => {
+        if (
+            !databaseFilterEnabled ||
+            !selectedStructure ||
+            !databaseStructures.length === 0
+        ) {
+            return false;
+        }
+
+        // Get the database API response (we need to store this when we fetch it)
+        // For now, we'll need to fetch the database structure details
+        // This could be optimized by storing the full database response
+        return false; // Placeholder until we implement the check
+    };
+
+    // New state to store database structure details
+    const [databaseStructureDetails, setDatabaseStructureDetails] =
+        useState(null);
+
+    // Fetch database structure details when a structure is selected
+    useEffect(() => {
+        if (
+            selectedStructure &&
+            databaseFilterEnabled &&
+            databaseStructures.includes(
+                selectedStructure.shortName.toLowerCase()
+            )
+        ) {
+            fetchDatabaseStructureDetails();
+        } else {
+            setDatabaseStructureDetails(null);
+        }
+    }, [selectedStructure, databaseFilterEnabled, databaseStructures]);
+
+    const fetchDatabaseStructureDetails = async () => {
+        try {
+            const response = await fetch(
+                "https://spinup-002b0f.spinup.yale.edu/api/dataStructures/database"
+            );
+            if (response.ok) {
+                const data = await response.json();
+                if (data && data.dataStructures && selectedStructure) {
+                    // Find the structure that matches (case-insensitive)
+                    const matchingStructureKey = Object.keys(
+                        data.dataStructures
+                    ).find(
+                        (key) =>
+                            key.toLowerCase() ===
+                            selectedStructure.shortName.toLowerCase()
+                    );
+
+                    if (matchingStructureKey) {
+                        setDatabaseStructureDetails(
+                            data.dataStructures[matchingStructureKey]
+                        );
+                    }
+                }
+            }
+        } catch (error) {
+            console.error("Error fetching database structure details:", error);
+        }
+    };
+
+    // Updated helper function to check if a data element exists in the database
+    const isElementInDatabaseUpdated = (elementName) => {
+        if (!databaseFilterEnabled || !databaseStructureDetails) {
+            return false;
+        }
+
+        return databaseStructureDetails.dataElements.some(
+            (dbElement) =>
+                dbElement.name.toLowerCase() === elementName.toLowerCase()
+        );
+    };
 
     // Clear headers when CSV file is removed
     useEffect(() => {
@@ -156,7 +233,7 @@ const DataStructureSearch = ({
                                 <div className="flex items-center space-x-2">
                                     <Database className="w-4 h-4 text-blue-600" />
                                     <span className="text-sm font-medium text-gray-700">
-                                        Show only IMPACT-MH data structures
+                                        Show only {databaseName} data structures
                                     </span>
                                     {loadingDatabaseStructures && (
                                         <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-500"></div>
@@ -241,7 +318,7 @@ const DataStructureSearch = ({
                                                     0 && (
                                                     <p className="text-sm text-blue-600 mt-1">
                                                         <Database className="w-3 h-3 inline mr-1" />
-                                                        Database filtered
+                                                        {databaseName} filtered
                                                     </p>
                                                 )}
                                         </div>
@@ -304,7 +381,7 @@ const DataStructureSearch = ({
                                         <>
                                             <Database className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                                             <h3 className="text-lg font-medium text-gray-900 mb-2">
-                                                No Database Matches Found
+                                                No Data Structure Matches Found
                                             </h3>
                                             <p className="text-gray-600 mb-4">
                                                 No structures in your database
@@ -586,6 +663,10 @@ const DataStructureSearch = ({
                                                                                         headers.includes(
                                                                                             element.name
                                                                                         );
+                                                                                    const isInDatabase =
+                                                                                        isElementInDatabaseUpdated(
+                                                                                            element.name
+                                                                                        );
 
                                                                                     return (
                                                                                         <tr
@@ -595,9 +676,20 @@ const DataStructureSearch = ({
                                                                                             className="hover:bg-gray-50"
                                                                                         >
                                                                                             <td className="px-6 py-4 whitespace-nowrap">
-                                                                                                {isIncluded && (
-                                                                                                    <CheckCircle className="w-4 h-4 text-green-500" />
-                                                                                                )}
+                                                                                                <div className="flex items-center space-x-2">
+                                                                                                    {isIncluded && (
+                                                                                                        <CheckCircle
+                                                                                                            className="w-4 h-4 text-green-500"
+                                                                                                            title="Included in uploaded CSV"
+                                                                                                        />
+                                                                                                    )}
+                                                                                                    {isInDatabase && (
+                                                                                                        <Database
+                                                                                                            className="w-4 h-4 text-blue-500"
+                                                                                                            title="Available in database"
+                                                                                                        />
+                                                                                                    )}
+                                                                                                </div>
                                                                                             </td>
                                                                                             <td className="px-6 py-4 whitespace-nowrap font-mono text-sm">
                                                                                                 {

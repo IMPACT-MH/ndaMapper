@@ -28,6 +28,7 @@ const HomePage = () => {
     // Database filter state
     const [databaseFilterEnabled, setDatabaseFilterEnabled] = useState(true);
     const [databaseStructures, setDatabaseStructures] = useState([]);
+    const [databaseName, setDatabaseName] = useState("IMPACT-MH");
 
     // Load saved tab from localStorage after mount
     useEffect(() => {
@@ -404,6 +405,8 @@ const HomePage = () => {
                     setDatabaseFilterEnabled={setDatabaseFilterEnabled}
                     databaseStructures={databaseStructures}
                     setDatabaseStructures={setDatabaseStructures}
+                    databaseName={databaseName}
+                    setDatabaseName={setDatabaseName}
                 />
             </div>
 
