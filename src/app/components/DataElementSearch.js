@@ -930,17 +930,44 @@ const DataElementSearch = ({ onStructureSelect }) => {
             {element && !isPartialSearch && (
                 <div className="bg-white rounded-lg shadow-md overflow-hidden">
                     <div className="bg-blue-50 p-5 border-b border-blue-100">
-                        <div className="flex items-center gap-3">
-                            <h2 className="text-2xl font-mono font-semibold text-blue-800">
-                                {element.name}
-                            </h2>
-                            {databaseFilterEnabled &&
-                                isElementInDatabase(element.name) && (
-                                    <div className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">
-                                        <Database className="w-3 h-3" />
-                                        <span>Available in Database</span>
-                                    </div>
-                                )}
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <h2 className="text-2xl font-mono font-semibold text-blue-800">
+                                    {element.name}
+                                </h2>
+                                {databaseFilterEnabled &&
+                                    isElementInDatabase(element.name) && (
+                                        <div className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">
+                                            <Database className="w-3 h-3" />
+                                            <span>Available in Database</span>
+                                        </div>
+                                    )}
+                            </div>
+                            {/* Back button - only show if we came from search results */}
+                            {matchingElements.length > 0 && (
+                                <button
+                                    onClick={() => {
+                                        setElement(null);
+                                        setIsPartialSearch(true);
+                                    }}
+                                    className="flex items-center gap-2 px-3 py-2 text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded transition-colors"
+                                >
+                                    <svg
+                                        className="w-4 h-4"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M15 19l-7-7 7-7"
+                                        />
+                                    </svg>
+                                    Back to Results
+                                </button>
+                            )}
                         </div>
                         <div className="flex items-center mt-2">
                             <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
