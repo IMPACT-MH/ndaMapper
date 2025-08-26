@@ -18,6 +18,7 @@ const DataStructureSearch = ({
     searchTerm,
     setSearchTerm,
     structures,
+    totalStructureCount,
     loading,
     error,
     selectedStructure,
@@ -155,8 +156,7 @@ const DataStructureSearch = ({
                                 <div className="flex items-center space-x-2">
                                     <Database className="w-4 h-4 text-blue-600" />
                                     <span className="text-sm font-medium text-gray-700">
-                                        Show only structures available in
-                                        database
+                                        Show only IMPACT-MH data structures
                                     </span>
                                     {loadingDatabaseStructures && (
                                         <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-500"></div>
@@ -229,7 +229,12 @@ const DataStructureSearch = ({
                                     >
                                         <div className="p-4">
                                             <h2 className="text-xl font-semibold">
-                                                Results ({structures.length})
+                                                Results ({structures.length}
+                                                {databaseFilterEnabled &&
+                                                    totalStructureCount >
+                                                        structures.length &&
+                                                    ` of ${totalStructureCount} total`}
+                                                )
                                             </h2>
                                             {databaseFilterEnabled &&
                                                 databaseStructures.length >

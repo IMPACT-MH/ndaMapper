@@ -14,6 +14,7 @@ const Tabs = {
 const HomePage = () => {
     const [searchTerm, setSearchTerm] = useState("");
     const [structures, setStructures] = useState([]);
+    const [totalStructureCount, setTotalStructureCount] = useState(0); // Track total results for context
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [selectedStructure, setSelectedStructure] = useState(null);
@@ -145,6 +146,7 @@ const HomePage = () => {
             !searchTerm.startsWith("category:")
         ) {
             setStructures([]);
+            setTotalStructureCount(0);
             return;
         }
 
@@ -164,6 +166,9 @@ const HomePage = () => {
         const response = await fetch(endpoint);
         if (!response.ok) throw new Error("Failed to fetch data");
         const allData = await response.json();
+
+        // Store total count before filtering
+        setTotalStructureCount(allData.length);
 
         // Filter the NDA results to only include structures that exist in our database
         const filteredData = allData.filter((structure) => {
@@ -225,6 +230,9 @@ const HomePage = () => {
         const response = await fetch(endpoint);
         if (!response.ok) throw new Error("Failed to fetch data");
         const data = await response.json();
+
+        // Set total count for context
+        setTotalStructureCount(data.length);
 
         // Only sort if it's a regular search, not a category search
         if (!isCategory) {
@@ -368,6 +376,7 @@ const HomePage = () => {
                     searchTerm={searchTerm}
                     setSearchTerm={setSearchTerm}
                     structures={structures}
+                    totalStructureCount={totalStructureCount}
                     loading={loading}
                     error={error}
                     selectedStructure={selectedStructure}
