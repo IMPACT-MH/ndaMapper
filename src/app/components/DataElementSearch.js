@@ -154,6 +154,7 @@ const DataElementSearch = ({ onStructureSelect }) => {
                     description:
                         elementData.description || "No description available",
                     notes: elementData.notes,
+                    valueRange: elementData.valueRange,
                     _score: nameMatch ? 100 : descriptionMatch ? 50 : 25, // Prioritize name matches
                     searchTerms: [searchTerm],
                     matchType: nameMatch
@@ -197,34 +198,7 @@ const DataElementSearch = ({ onStructureSelect }) => {
                 }
             }
 
-            // First try exact match (for both database-filtered and unfiltered searches)
-            const directResponse = await fetch(
-                `https://nda.nih.gov/api/datadictionary/dataelement/${searchTerm.trim()}`
-            );
-
-            if (directResponse.ok) {
-                const data = await directResponse.json();
-
-                // Check if this element should be shown based on database filter
-                if (
-                    databaseFilterEnabled &&
-                    databaseElements.size > 0 &&
-                    !isElementInDatabase(data.name)
-                ) {
-                    setError(
-                        `Element "${searchTerm}" not found in database. Disable database filter to see all NDA elements.`
-                    );
-                    setLoading(false);
-                    return;
-                }
-
-                setElement(data);
-                updateRecentSearches(searchTerm.trim());
-                setLoading(false);
-                return;
-            }
-
-            // If no exact match and no database matches, use the NDA search API
+            // Use the NDA search API for partial matches
             const searchQuery = searchTerm.trim();
             const partialResponse = await fetch(
                 `https://nda.nih.gov/api/search/nda/dataelement/full?size=10000&highlight=true`,
@@ -283,6 +257,7 @@ const DataElementSearch = ({ onStructureSelect }) => {
                                 fullData.description ||
                                 "No description available",
                             notes: fullData.notes,
+                            valueRange: fullData.valueRange,
                             dataStructures:
                                 result.dataStructures?.map((ds) => ({
                                     shortName: ds.shortName,
