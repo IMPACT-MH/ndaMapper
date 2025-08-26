@@ -33,6 +33,40 @@ const DataElementSearch = ({ onStructureSelect }) => {
         );
     }, [recentSearches]);
 
+    // Browser history integration
+    useEffect(() => {
+        const handlePopState = (event) => {
+            const state = event.state;
+            if (state) {
+                if (state.view === "element" && state.element) {
+                    setElement(state.element);
+                    setIsPartialSearch(false);
+                } else if (state.view === "results" && state.results) {
+                    setMatchingElements(state.results);
+                    setIsPartialSearch(true);
+                    setElement(null);
+                } else if (state.view === "search") {
+                    setMatchingElements([]);
+                    setIsPartialSearch(false);
+                    setElement(null);
+                }
+            }
+        };
+
+        window.addEventListener("popstate", handlePopState);
+        return () => window.removeEventListener("popstate", handlePopState);
+    }, []);
+
+    // Function to push state to browser history
+    const pushHistoryState = (view, data) => {
+        const state = { view, ...data };
+        window.history.pushState(
+            state,
+            "",
+            window.location.pathname + window.location.search
+        );
+    };
+
     // Fetch database elements when filter is enabled
     useEffect(() => {
         if (databaseFilterEnabled && databaseElements.size === 0) {
@@ -202,6 +236,13 @@ const DataElementSearch = ({ onStructureSelect }) => {
                     setIsPartialSearch(true);
                     setTotalElementCount(databaseMatches.length); // In this case, we only searched database
                     updateRecentSearches(searchTerm.trim());
+
+                    // Push to browser history
+                    pushHistoryState("results", {
+                        results: databaseMatches,
+                        searchTerm: searchTerm.trim(),
+                    });
+
                     setLoading(false);
                     return;
                 }
@@ -343,6 +384,12 @@ const DataElementSearch = ({ onStructureSelect }) => {
             setMatchingElements(validElements);
             setIsPartialSearch(true);
             updateRecentSearches(searchTerm.trim());
+
+            // Push to browser history
+            pushHistoryState("results", {
+                results: validElements,
+                searchTerm: searchTerm.trim(),
+            });
         } catch (err) {
             console.error("Search error:", err);
 
@@ -390,6 +437,13 @@ const DataElementSearch = ({ onStructureSelect }) => {
                     setIsPartialSearch(true);
                     setTotalElementCount(databaseMatches.length);
                     updateRecentSearches(term.trim());
+
+                    // Push to browser history
+                    pushHistoryState("results", {
+                        results: databaseMatches,
+                        searchTerm: term.trim(),
+                    });
+
                     setLoading(false);
                     return;
                 }
@@ -522,6 +576,12 @@ const DataElementSearch = ({ onStructureSelect }) => {
             setMatchingElements(validElements);
             setIsPartialSearch(true);
             updateRecentSearches(term.trim());
+
+            // Push to browser history
+            pushHistoryState("results", {
+                results: validElements,
+                searchTerm: term.trim(),
+            });
         } catch (err) {
             console.error("Search error:", err);
 
@@ -807,6 +867,11 @@ const DataElementSearch = ({ onStructureSelect }) => {
                                                 await response.json();
                                             setElement(fullData);
                                             setIsPartialSearch(false);
+
+                                            // Push to browser history
+                                            pushHistoryState("element", {
+                                                element: fullData,
+                                            });
                                         } else {
                                             throw new Error(
                                                 "Failed to fetch element details"
@@ -819,6 +884,11 @@ const DataElementSearch = ({ onStructureSelect }) => {
                                         );
                                         setElement(match);
                                         setIsPartialSearch(false);
+
+                                        // Push to browser history even with fallback data
+                                        pushHistoryState("element", {
+                                            element: match,
+                                        });
                                     }
                                 }}
                             >
@@ -947,8 +1017,7 @@ const DataElementSearch = ({ onStructureSelect }) => {
                             {matchingElements.length > 0 && (
                                 <button
                                     onClick={() => {
-                                        setElement(null);
-                                        setIsPartialSearch(true);
+                                        window.history.back();
                                     }}
                                     className="flex items-center gap-2 px-3 py-2 text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded transition-colors"
                                 >
