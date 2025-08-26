@@ -29,17 +29,20 @@ const DataStructureSearch = ({
     onFileChange,
     onClear,
     validatorState,
+    // New props for database filtering
+    databaseFilterEnabled,
+    setDatabaseFilterEnabled,
+    databaseStructures,
+    setDatabaseStructures,
 }) => {
     const [headers, setHeaders] = useState([]);
     const [isExpanded, setIsExpanded] = useState(false);
-    const [databaseFilterEnabled, setDatabaseFilterEnabled] = useState(true);
     const [loadingDatabaseStructures, setLoadingDatabaseStructures] =
         useState(false);
-    const [databaseStructures, setDatabaseStructures] = useState([]);
 
     // Fetch database structures when component mounts or filter is toggled
     useEffect(() => {
-        if (databaseFilterEnabled) {
+        if (databaseFilterEnabled && databaseStructures.length === 0) {
             fetchDatabaseStructures();
         }
     }, [databaseFilterEnabled]);
@@ -88,18 +91,7 @@ const DataStructureSearch = ({
         }
     };
 
-    // Filter structures based on database filter
-    const filteredStructures =
-        databaseFilterEnabled && databaseStructures.length > 0
-            ? structures.filter((structure) => {
-                  // Case-insensitive comparison
-                  const structureNameLower = structure.shortName.toLowerCase();
-                  const databaseStructuresLower = databaseStructures.map(
-                      (name) => name.toLowerCase()
-                  );
-                  return databaseStructuresLower.includes(structureNameLower);
-              })
-            : structures;
+    // No need for filtering logic here anymore since it's handled in HomePage
 
     // Clear headers when CSV file is removed
     useEffect(() => {
@@ -220,7 +212,7 @@ const DataStructureSearch = ({
 
                     <div className="flex gap-4 h-full">
                         {/* Results column - independently scrollable */}
-                        {searchTerm && filteredStructures.length > 0 && (
+                        {searchTerm && structures.length > 0 && (
                             <div
                                 ref={resultsRef}
                                 className={`transition-all duration-300 ease-in-out shrink-0 ${
@@ -237,13 +229,7 @@ const DataStructureSearch = ({
                                     >
                                         <div className="p-4">
                                             <h2 className="text-xl font-semibold">
-                                                Results (
-                                                {filteredStructures.length}
-                                                {databaseFilterEnabled &&
-                                                    structures.length >
-                                                        filteredStructures.length &&
-                                                    ` of ${structures.length}`}
-                                                )
+                                                Results ({structures.length})
                                             </h2>
                                             {databaseFilterEnabled &&
                                                 databaseStructures.length >
@@ -256,7 +242,7 @@ const DataStructureSearch = ({
                                         </div>
                                     </div>
                                     <div className="p-4 space-y-2">
-                                        {filteredStructures.map((structure) => (
+                                        {structures.map((structure) => (
                                             <div
                                                 key={structure.shortName}
                                                 className={`p-4 border rounded hover:bg-gray-50 cursor-pointer transition-colors ${
@@ -304,33 +290,47 @@ const DataStructureSearch = ({
                             </div>
                         )}
 
-                        {/* Show message when no results due to filtering */}
-                        {searchTerm &&
-                            structures.length > 0 &&
-                            filteredStructures.length === 0 &&
-                            databaseFilterEnabled && (
-                                <div className="flex-1 flex items-center justify-center">
-                                    <div className="text-center p-8">
-                                        <Database className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                                        <h3 className="text-lg font-medium text-gray-900 mb-2">
-                                            No Database Matches Found
-                                        </h3>
-                                        <p className="text-gray-600 mb-4">
-                                            Found {structures.length}{" "}
-                                            structures, but none are available
-                                            in the database.
-                                        </p>
-                                        <button
-                                            onClick={() =>
-                                                setDatabaseFilterEnabled(false)
-                                            }
-                                            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-                                        >
-                                            Show All Results
-                                        </button>
-                                    </div>
+                        {/* Show message when no results found */}
+                        {searchTerm && structures.length === 0 && !loading && (
+                            <div className="flex-1 flex items-center justify-center">
+                                <div className="text-center p-8">
+                                    {databaseFilterEnabled &&
+                                    databaseStructures.length > 0 ? (
+                                        <>
+                                            <Database className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                                            <h3 className="text-lg font-medium text-gray-900 mb-2">
+                                                No Database Matches Found
+                                            </h3>
+                                            <p className="text-gray-600 mb-4">
+                                                No structures in your database
+                                                match "{searchTerm}".
+                                            </p>
+                                            <button
+                                                onClick={() =>
+                                                    setDatabaseFilterEnabled(
+                                                        false
+                                                    )
+                                                }
+                                                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                                            >
+                                                Search All NDA Structures
+                                            </button>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Search className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                                            <h3 className="text-lg font-medium text-gray-900 mb-2">
+                                                No Results Found
+                                            </h3>
+                                            <p className="text-gray-600">
+                                                No structures match "
+                                                {searchTerm}".
+                                            </p>
+                                        </>
+                                    )}
                                 </div>
-                            )}
+                            </div>
+                        )}
 
                         {/* Data Structure column - independently scrollable */}
                         {selectedStructure && (

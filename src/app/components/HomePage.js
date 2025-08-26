@@ -8,7 +8,7 @@ import DataElementSearch from "./DataElementSearch";
 const Tabs = {
     STRUCTURE_SEARCH: "structure-search",
     FIELD_SEARCH: "field-search",
-    ELEMENT_SEARCH: "element-search", // Added new tab
+    ELEMENT_SEARCH: "element-search",
 };
 
 const HomePage = () => {
@@ -21,12 +21,14 @@ const HomePage = () => {
     const [loadingElements, setLoadingElements] = useState(false);
     const [isSearchFocused, setIsSearchFocused] = useState(false);
 
-    // At the top with other state declarations:
     const [isLoading, setIsLoading] = useState(true);
     const [activeTab, setActiveTab] = useState(Tabs.STRUCTURE_SEARCH);
 
+    // Database filter state
+    const [databaseFilterEnabled, setDatabaseFilterEnabled] = useState(true);
+    const [databaseStructures, setDatabaseStructures] = useState([]);
+
     // Load saved tab from localStorage after mount
-    // First, update the useEffect to set isLoading to false:
     useEffect(() => {
         const savedTab = localStorage.getItem("activeTab");
         if (savedTab) {
@@ -57,14 +59,12 @@ const HomePage = () => {
         setActiveTab(Tabs.STRUCTURE_SEARCH);
         setSearchTerm(structureName);
 
-        // Fetch the structure details directly
         try {
             const response = await fetch(
                 `https://nda.nih.gov/api/datadictionary/v2/datastructure?searchTerm=${structureName}`
             );
             if (response.ok) {
                 const structures = await response.json();
-                // Find exact match
                 const exactMatch = structures.find(
                     (s) => s.shortName === structureName
                 );
@@ -86,8 +86,8 @@ const HomePage = () => {
 
     const handleClearSearch = () => {
         setSearchTerm("");
-        setCsvFile(null); // Clear the CSV file
-        setSelectedStructure(null); // Optional: also clear selected structure
+        setCsvFile(null);
+        setSelectedStructure(null);
     };
 
     useEffect(() => {
@@ -99,70 +99,167 @@ const HomePage = () => {
         } else {
             setStructures([]);
         }
-    }, [searchTerm]);
+    }, [searchTerm, databaseFilterEnabled, databaseStructures]);
 
     const fetchData = async () => {
         setLoading(true);
         setError(null);
         try {
-            // Determine if this is a category search
-            const isCategory = searchTerm.startsWith("category:");
-            const searchValue = isCategory
-                ? searchTerm.replace("category:", "")
-                : searchTerm;
-
-            // Use different API endpoints based on search type
-            const endpoint = isCategory
-                ? `https://nda.nih.gov/api/datadictionary/datastructure?category=${encodeURIComponent(
-                      searchValue
-                  )}`
-                : `https://nda.nih.gov/api/datadictionary/v2/datastructure?searchTerm=${searchValue}`;
-
-            const response = await fetch(endpoint);
-            if (!response.ok) throw new Error("Failed to fetch data");
-            const data = await response.json();
-
-            // Only sort if it's a regular search, not a category search
-            if (!isCategory) {
-                const searchLower = searchValue.toLowerCase();
-                const normalizedSearch = searchLower.replace(/[_-]/g, "");
-
-                const sortedData = data.sort((a, b) => {
-                    const aTitle = a.title?.toLowerCase() || "";
-                    const bTitle = b.title?.toLowerCase() || "";
-                    const aShortName = a.shortName
-                        .toLowerCase()
-                        .replace(/[_-]/g, "");
-                    const bShortName = b.shortName
-                        .toLowerCase()
-                        .replace(/[_-]/g, "");
-
-                    if (aShortName === normalizedSearch) return -1;
-                    if (bShortName === normalizedSearch) return 1;
-
-                    const aContainsSearch =
-                        aShortName.includes(normalizedSearch);
-                    const bContainsSearch =
-                        bShortName.includes(normalizedSearch);
-
-                    const aContainsTitle = aTitle.includes(searchLower);
-                    const bContainsTitle = bTitle.includes(searchLower);
-
-                    if (aContainsSearch && !bContainsSearch) return -1;
-                    if (!aContainsSearch && bContainsSearch) return 1;
-                    if (aContainsTitle && !bContainsTitle) return -1;
-                    if (!aContainsTitle && bContainsTitle) return 1;
-
-                    return 0;
-                });
-                setStructures(sortedData);
+            // If database filter is enabled and we have database structures, search within those first
+            if (databaseFilterEnabled && databaseStructures.length > 0) {
+                await fetchDatabaseFilteredData();
             } else {
-                setStructures(data);
+                await fetchAllData();
             }
         } catch (err) {
             setError("Error fetching data: " + err.message);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchDatabaseFilteredData = async () => {
+        // Filter database structures by search term
+        const searchLower = searchTerm.toLowerCase();
+        const normalizedSearch = searchLower.replace(/[_-]/g, "");
+
+        // First, filter database structures that match the search term
+        const matchingDbStructures = databaseStructures.filter(
+            (dbStructure) => {
+                const dbStructureLower = dbStructure.toLowerCase();
+                const normalizedDbStructure = dbStructureLower.replace(
+                    /[_-]/g,
+                    ""
+                );
+
+                return (
+                    dbStructureLower.includes(searchLower) ||
+                    normalizedDbStructure.includes(normalizedSearch) ||
+                    searchTerm.startsWith("category:")
+                );
+            }
+        );
+
+        if (
+            matchingDbStructures.length === 0 &&
+            !searchTerm.startsWith("category:")
+        ) {
+            setStructures([]);
+            return;
+        }
+
+        // Determine if this is a category search
+        const isCategory = searchTerm.startsWith("category:");
+        const searchValue = isCategory
+            ? searchTerm.replace("category:", "")
+            : searchTerm;
+
+        // Use different API endpoints based on search type
+        const endpoint = isCategory
+            ? `https://nda.nih.gov/api/datadictionary/datastructure?category=${encodeURIComponent(
+                  searchValue
+              )}`
+            : `https://nda.nih.gov/api/datadictionary/v2/datastructure?searchTerm=${searchValue}`;
+
+        const response = await fetch(endpoint);
+        if (!response.ok) throw new Error("Failed to fetch data");
+        const allData = await response.json();
+
+        // Filter the NDA results to only include structures that exist in our database
+        const filteredData = allData.filter((structure) => {
+            const structureNameLower = structure.shortName.toLowerCase();
+            const databaseStructuresLower = databaseStructures.map((name) =>
+                name.toLowerCase()
+            );
+            return databaseStructuresLower.includes(structureNameLower);
+        });
+
+        // Sort the filtered results
+        if (!isCategory) {
+            const sortedData = filteredData.sort((a, b) => {
+                const aTitle = a.title?.toLowerCase() || "";
+                const bTitle = b.title?.toLowerCase() || "";
+                const aShortName = a.shortName
+                    .toLowerCase()
+                    .replace(/[_-]/g, "");
+                const bShortName = b.shortName
+                    .toLowerCase()
+                    .replace(/[_-]/g, "");
+
+                if (aShortName === normalizedSearch) return -1;
+                if (bShortName === normalizedSearch) return 1;
+
+                const aContainsSearch = aShortName.includes(normalizedSearch);
+                const bContainsSearch = bShortName.includes(normalizedSearch);
+
+                const aContainsTitle = aTitle.includes(searchLower);
+                const bContainsTitle = bTitle.includes(searchLower);
+
+                if (aContainsSearch && !bContainsSearch) return -1;
+                if (!aContainsSearch && bContainsSearch) return 1;
+                if (aContainsTitle && !bContainsTitle) return -1;
+                if (!aContainsTitle && bContainsTitle) return 1;
+
+                return 0;
+            });
+            setStructures(sortedData);
+        } else {
+            setStructures(filteredData);
+        }
+    };
+
+    const fetchAllData = async () => {
+        // Determine if this is a category search
+        const isCategory = searchTerm.startsWith("category:");
+        const searchValue = isCategory
+            ? searchTerm.replace("category:", "")
+            : searchTerm;
+
+        // Use different API endpoints based on search type
+        const endpoint = isCategory
+            ? `https://nda.nih.gov/api/datadictionary/datastructure?category=${encodeURIComponent(
+                  searchValue
+              )}`
+            : `https://nda.nih.gov/api/datadictionary/v2/datastructure?searchTerm=${searchValue}`;
+
+        const response = await fetch(endpoint);
+        if (!response.ok) throw new Error("Failed to fetch data");
+        const data = await response.json();
+
+        // Only sort if it's a regular search, not a category search
+        if (!isCategory) {
+            const searchLower = searchValue.toLowerCase();
+            const normalizedSearch = searchLower.replace(/[_-]/g, "");
+
+            const sortedData = data.sort((a, b) => {
+                const aTitle = a.title?.toLowerCase() || "";
+                const bTitle = b.title?.toLowerCase() || "";
+                const aShortName = a.shortName
+                    .toLowerCase()
+                    .replace(/[_-]/g, "");
+                const bShortName = b.shortName
+                    .toLowerCase()
+                    .replace(/[_-]/g, "");
+
+                if (aShortName === normalizedSearch) return -1;
+                if (bShortName === normalizedSearch) return 1;
+
+                const aContainsSearch = aShortName.includes(normalizedSearch);
+                const bContainsSearch = bShortName.includes(normalizedSearch);
+
+                const aContainsTitle = aTitle.includes(searchLower);
+                const bContainsTitle = bTitle.includes(searchLower);
+
+                if (aContainsSearch && !bContainsSearch) return -1;
+                if (!aContainsSearch && bContainsSearch) return 1;
+                if (aContainsTitle && !bContainsTitle) return -1;
+                if (!aContainsTitle && bContainsTitle) return 1;
+
+                return 0;
+            });
+            setStructures(sortedData);
+        } else {
+            setStructures(data);
         }
     };
 
@@ -175,7 +272,6 @@ const HomePage = () => {
             if (!response.ok) throw new Error("Failed to fetch data elements");
             const data = await response.json();
 
-            // The data.dataElements array is already in the format we need
             const sortedElements = data.dataElements.sort(
                 (a, b) => a.position - b.position
             );
@@ -191,13 +287,11 @@ const HomePage = () => {
 
     const handleStructureSearch = (shortName) => {
         setSearchTerm(shortName);
-        // This will trigger the search due to the useEffect
     };
 
     const handleStructureSelect = (structure) => {
         setSelectedStructure(structure);
         if (structure) {
-            // Only fetch elements if we have a structure
             fetchDataElements(structure.shortName);
         }
     };
@@ -212,7 +306,7 @@ const HomePage = () => {
 
     const handleCsvFileChange = (file) => {
         setCsvFile(file);
-        resetValidationState(); // Reset all validation state when a new file is uploaded
+        resetValidationState();
     };
 
     return (
@@ -264,7 +358,7 @@ const HomePage = () => {
                 </div>
             </div>
 
-            {/* Tab content - using display instead of conditional rendering */}
+            {/* Tab content */}
             <div
                 className={
                     activeTab === Tabs.STRUCTURE_SEARCH ? "block" : "hidden"
@@ -296,6 +390,11 @@ const HomePage = () => {
                         transformationCounts,
                         setTransformationCounts,
                     }}
+                    // Pass database filter props
+                    databaseFilterEnabled={databaseFilterEnabled}
+                    setDatabaseFilterEnabled={setDatabaseFilterEnabled}
+                    databaseStructures={databaseStructures}
+                    setDatabaseStructures={setDatabaseStructures}
                 />
             </div>
 
