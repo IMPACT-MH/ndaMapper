@@ -200,8 +200,16 @@ const DataElementSearch = ({ onStructureSelect }) => {
 
             // Use the NDA search API for partial matches
             const searchQuery = searchTerm.trim();
+
+            // Add validation for very broad searches that might overwhelm the API
+            if (searchQuery.length < 2) {
+                setError("Search term must be at least 2 characters long");
+                setLoading(false);
+                return;
+            }
+
             const partialResponse = await fetch(
-                `https://nda.nih.gov/api/search/nda/dataelement/full?size=10000&highlight=true`,
+                `https://nda.nih.gov/api/search/nda/dataelement/full?size=1000&highlight=true`,
                 {
                     method: "POST",
                     headers: {
@@ -212,7 +220,30 @@ const DataElementSearch = ({ onStructureSelect }) => {
             );
 
             if (!partialResponse.ok) {
-                throw new Error("Failed to fetch matching elements");
+                const statusText =
+                    partialResponse.statusText || "Unknown error";
+                const status = partialResponse.status;
+
+                // Handle different types of API errors
+                if (status === 500) {
+                    setError(
+                        `The search query "${searchTerm}" may be too broad or complex for the NDA API. Try using more specific search terms.`
+                    );
+                } else if (status === 429) {
+                    setError(
+                        "Too many requests. Please wait a moment and try again."
+                    );
+                } else if (status === 408 || status === 504) {
+                    setError(
+                        "Search request timed out. Try using more specific search terms."
+                    );
+                } else {
+                    setError(
+                        `Search failed (${status}: ${statusText}). Try using different search terms or check your connection.`
+                    );
+                }
+                setLoading(false);
+                return;
             }
 
             const searchResults = await partialResponse.json();
@@ -305,7 +336,23 @@ const DataElementSearch = ({ onStructureSelect }) => {
             updateRecentSearches(searchTerm.trim());
         } catch (err) {
             console.error("Search error:", err);
-            setError(`Error searching for elements: ${err.message}`);
+
+            // Handle different types of errors
+            if (err.name === "TypeError" && err.message.includes("fetch")) {
+                setError(
+                    "Network connection error. Please check your internet connection and try again."
+                );
+            } else if (err.message.includes("JSON")) {
+                setError(
+                    "Received invalid response from search API. Try a different search term or try again later."
+                );
+            } else if (err.message.includes("timeout")) {
+                setError(
+                    "Search request timed out. Try using more specific search terms."
+                );
+            } else {
+                setError(`Search error: ${err.message}`);
+            }
         } finally {
             setLoading(false);
         }
