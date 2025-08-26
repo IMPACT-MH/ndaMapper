@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, X, AlertCircle, Info } from "lucide-react";
+import { Search, X, AlertCircle, Info, Database } from "lucide-react";
 
 const DataElementSearch = ({ onStructureSelect }) => {
     const [searchTerm, setSearchTerm] = useState("");
@@ -11,6 +11,13 @@ const DataElementSearch = ({ onStructureSelect }) => {
     const [matchingElements, setMatchingElements] = useState([]);
     const [isPartialSearch, setIsPartialSearch] = useState(false);
     const [recentSearches, setRecentSearches] = useState([]);
+
+    // Database filter state
+    const [databaseFilterEnabled, setDatabaseFilterEnabled] = useState(true);
+    const [databaseElements, setDatabaseElements] = useState(new Map()); // Changed to Map to store full element objects
+    const [loadingDatabaseElements, setLoadingDatabaseElements] =
+        useState(false);
+    const [totalElementCount, setTotalElementCount] = useState(0);
 
     useEffect(() => {
         const saved = localStorage.getItem("elementSearchHistory");
@@ -26,32 +33,77 @@ const DataElementSearch = ({ onStructureSelect }) => {
         );
     }, [recentSearches]);
 
+    // Fetch database elements when filter is enabled
+    useEffect(() => {
+        if (databaseFilterEnabled && databaseElements.size === 0) {
+            fetchDatabaseElements();
+        }
+    }, [databaseFilterEnabled, databaseElements.size]);
+
+    const fetchDatabaseElements = async () => {
+        setLoadingDatabaseElements(true);
+        try {
+            const response = await fetch(
+                "https://spinup-002b0f.spinup.yale.edu/api/dataStructures/database"
+            );
+            if (response.ok) {
+                const data = await response.json();
+
+                const allElements = new Map(); // Store full element objects
+
+                if (
+                    data &&
+                    data.dataStructures &&
+                    typeof data.dataStructures === "object"
+                ) {
+                    // Extract all unique elements from all structures
+                    Object.values(data.dataStructures).forEach((structure) => {
+                        if (
+                            structure.dataElements &&
+                            Array.isArray(structure.dataElements)
+                        ) {
+                            structure.dataElements.forEach((element) => {
+                                if (element.name) {
+                                    // Store full element object with lowercase name as key
+                                    allElements.set(
+                                        element.name.toLowerCase(),
+                                        element
+                                    );
+                                }
+                            });
+                        }
+                    });
+                }
+
+                console.log(
+                    `Found ${allElements.size} unique database elements`
+                );
+                setDatabaseElements(allElements);
+            } else {
+                console.error(
+                    "Failed to fetch database elements, status:",
+                    response.status
+                );
+                setDatabaseElements(new Map());
+            }
+        } catch (error) {
+            console.error("Error fetching database elements:", error);
+            setDatabaseElements(new Map());
+        } finally {
+            setLoadingDatabaseElements(false);
+        }
+    };
+
     const updateRecentSearches = (newTerm) => {
         if (!recentSearches.includes(newTerm)) {
             setRecentSearches((prev) => [newTerm, ...prev].slice(0, 10));
         }
     };
 
-    // Helper to check for matches
-    const checkForMatches = (text, searchTerms) => {
-        if (!text) return false;
-        const textLower = text.toLowerCase();
-        return searchTerms.some((term) =>
-            textLower.includes(term.toLowerCase())
-        );
-    };
-
-    // Escape special characters for regex
-    const escapeRegExp = (string) => {
-        return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    };
-
-    // Update the rendering section to include highlighting
     const highlightSearchTerm = (text, searchTerms) => {
         if (!text || !searchTerms?.length) return text;
 
         try {
-            // Create pattern that matches any of the search terms
             const pattern = searchTerms
                 .map((term) => term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
                 .join("|");
@@ -76,75 +128,46 @@ const DataElementSearch = ({ onStructureSelect }) => {
         }
     };
 
-    const levenshteinDistance = (str1, str2) => {
-        const track = Array(str2.length + 1)
-            .fill(null)
-            .map(() => Array(str1.length + 1).fill(null));
-        for (let i = 0; i <= str1.length; i++) track[0][i] = i;
-        for (let j = 0; j <= str2.length; j++) track[j][0] = j;
-        for (let j = 1; j <= str2.length; j++) {
-            for (let i = 1; i <= str1.length; i++) {
-                const indicator = str1[i - 1] === str2[j - 1] ? 0 : 1;
-                track[j][i] = Math.min(
-                    track[j][i - 1] + 1,
-                    track[j - 1][i] + 1,
-                    track[j - 1][i - 1] + indicator
-                );
-            }
-        }
-        return track[str2.length][str1.length];
+    const isElementInDatabase = (elementName) => {
+        return databaseElements.has(elementName.toLowerCase());
     };
 
-    const calculateRelevance = (element, searchTerm) => {
-        let score = 0;
-        const elementName = element.name.toLowerCase();
-        const searchTermLower = searchTerm.toLowerCase();
+    // Search within database elements for matching terms
+    const searchDatabaseElements = (searchTerm) => {
+        const searchLower = searchTerm.toLowerCase();
+        const matches = [];
 
-        // First look for the search term in the element name parts
-        const elementParts = elementName.split("_");
-        const searchParts = searchTermLower.split("_");
+        for (const [elementName, elementData] of databaseElements) {
+            // Check if search term appears in name or description
+            const nameMatch = elementName.includes(searchLower);
+            const descriptionMatch = elementData.description
+                ?.toLowerCase()
+                .includes(searchLower);
+            const notesMatch = elementData.notes
+                ?.toLowerCase()
+                .includes(searchLower);
 
-        // Perfect match gets highest score
-        if (elementName === searchTermLower) {
-            return 1000;
-        }
-
-        // Calculate Levenshtein distance between search parts and element parts
-        for (let i = 0; i < searchParts.length; i++) {
-            const searchPart = searchParts[i];
-            let bestPartDistance = Infinity;
-
-            for (let j = 0; j < elementParts.length; j++) {
-                const elementPart = elementParts[j];
-                const distance = levenshteinDistance(searchPart, elementPart);
-                bestPartDistance = Math.min(bestPartDistance, distance);
+            if (nameMatch || descriptionMatch || notesMatch) {
+                matches.push({
+                    name: elementData.name,
+                    type: elementData.type || "String",
+                    description:
+                        elementData.description || "No description available",
+                    notes: elementData.notes,
+                    _score: nameMatch ? 100 : descriptionMatch ? 50 : 25, // Prioritize name matches
+                    searchTerms: [searchTerm],
+                    matchType: nameMatch
+                        ? "name"
+                        : descriptionMatch
+                        ? "description"
+                        : "notes",
+                    inDatabase: true,
+                    dataStructures: [], // We could enhance this later to include which structures contain this element
+                });
             }
-
-            // Heavily weight exact part matches
-            if (bestPartDistance === 0) {
-                score += 100;
-            } else if (bestPartDistance <= 2) {
-                // Allow for small typos
-                score += 50 / bestPartDistance;
-            }
         }
 
-        // Look for exact prefix matches with remaining parts
-        if (elementName.startsWith(searchTermLower + "_")) {
-            score += 500;
-        }
-
-        // Penalize matches that are just based on numbers
-        if (elementName.match(/^\d+$/) || searchTermLower.match(/^\d+$/)) {
-            score *= 0.1;
-        }
-
-        // Severely penalize matches only found in description
-        if (!elementName.includes(searchTermLower)) {
-            score *= 0.1;
-        }
-
-        return score;
+        return matches.sort((a, b) => b._score - a._score);
     };
 
     const handleSearch = async () => {
@@ -157,20 +180,51 @@ const DataElementSearch = ({ onStructureSelect }) => {
         setIsPartialSearch(false);
 
         try {
-            // First try exact match
+            // If database filter is enabled, first try searching within database elements
+            if (databaseFilterEnabled && databaseElements.size > 0) {
+                const databaseMatches = searchDatabaseElements(
+                    searchTerm.trim()
+                );
+
+                if (databaseMatches.length > 0) {
+                    // Found matches in database, show those
+                    setMatchingElements(databaseMatches);
+                    setIsPartialSearch(true);
+                    setTotalElementCount(databaseMatches.length); // In this case, we only searched database
+                    updateRecentSearches(searchTerm.trim());
+                    setLoading(false);
+                    return;
+                }
+            }
+
+            // First try exact match (for both database-filtered and unfiltered searches)
             const directResponse = await fetch(
                 `https://nda.nih.gov/api/datadictionary/dataelement/${searchTerm.trim()}`
             );
 
             if (directResponse.ok) {
                 const data = await directResponse.json();
+
+                // Check if this element should be shown based on database filter
+                if (
+                    databaseFilterEnabled &&
+                    databaseElements.size > 0 &&
+                    !isElementInDatabase(data.name)
+                ) {
+                    setError(
+                        `Element "${searchTerm}" not found in database. Disable database filter to see all NDA elements.`
+                    );
+                    setLoading(false);
+                    return;
+                }
+
                 setElement(data);
                 updateRecentSearches(searchTerm.trim());
                 setLoading(false);
                 return;
             }
 
-            // If no exact match, use the search API
+            // If no exact match and no database matches, use the NDA search API
             const searchQuery = searchTerm.trim();
             const partialResponse = await fetch(
                 `https://nda.nih.gov/api/search/nda/dataelement/full?size=10000&highlight=true`,
@@ -190,10 +244,21 @@ const DataElementSearch = ({ onStructureSelect }) => {
             const searchResults = await partialResponse.json();
 
             if (!searchResults?.datadict?.results?.length) {
-                setError(`No data elements found containing "${searchTerm}"`);
+                if (databaseFilterEnabled && databaseElements.size > 0) {
+                    setError(
+                        `No data elements found containing "${searchTerm}" in your database. Try disabling the database filter to search all NDA elements.`
+                    );
+                } else {
+                    setError(
+                        `No data elements found containing "${searchTerm}"`
+                    );
+                }
                 setLoading(false);
                 return;
             }
+
+            // Store total count before filtering
+            setTotalElementCount(searchResults.datadict.results.length);
 
             // Get full details for each result
             const elementDetails = await Promise.all(
@@ -211,7 +276,6 @@ const DataElementSearch = ({ onStructureSelect }) => {
 
                         const fullData = await response.json();
 
-                        // Use the API's _score for relevance
                         return {
                             name: result.name,
                             type: fullData.type || result.type || "Text",
@@ -234,6 +298,7 @@ const DataElementSearch = ({ onStructureSelect }) => {
                                 .includes(searchQuery.toLowerCase())
                                 ? "name"
                                 : "description",
+                            inDatabase: isElementInDatabase(result.name),
                         };
                     } catch (err) {
                         console.error(
@@ -245,10 +310,20 @@ const DataElementSearch = ({ onStructureSelect }) => {
                 })
             );
 
-            // Filter out null results and sort by API's _score
-            const validElements = elementDetails
-                .filter(Boolean)
-                .sort((a, b) => (b._score || 0) - (a._score || 0));
+            // Filter out null results
+            let validElements = elementDetails.filter(Boolean);
+
+            // Apply database filter if enabled
+            if (databaseFilterEnabled && databaseElements.size > 0) {
+                validElements = validElements.filter(
+                    (element) => element.inDatabase
+                );
+            }
+
+            // Sort by API's _score
+            validElements = validElements.sort(
+                (a, b) => (b._score || 0) - (a._score || 0)
+            );
 
             setMatchingElements(validElements);
             setIsPartialSearch(true);
@@ -273,6 +348,7 @@ const DataElementSearch = ({ onStructureSelect }) => {
         setError(null);
         setMatchingElements([]);
         setIsPartialSearch(false);
+        setTotalElementCount(0);
     };
 
     const handleRecentSearch = async (term) => {
@@ -288,6 +364,45 @@ const DataElementSearch = ({ onStructureSelect }) => {
                     Search for specific data elements to view their details,
                     value ranges, and associated data structures.
                 </p>
+
+                {/* Database Filter Checkbox */}
+                <div className="mb-4">
+                    <label className="flex items-center space-x-3 cursor-pointer">
+                        <input
+                            type="checkbox"
+                            checked={databaseFilterEnabled}
+                            onChange={(e) => {
+                                e.stopPropagation();
+                                setDatabaseFilterEnabled(e.target.checked);
+                                // Clear results when toggling filter to avoid confusion
+                                if (isPartialSearch) {
+                                    setMatchingElements([]);
+                                    setIsPartialSearch(false);
+                                }
+                                if (element) {
+                                    setElement(null);
+                                }
+                            }}
+                            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                        />
+                        <div className="flex items-center space-x-2">
+                            <Database className="w-4 h-4 text-blue-600" />
+                            <span className="text-sm font-medium text-gray-700">
+                                Show only elements available in database
+                            </span>
+                            {loadingDatabaseElements && (
+                                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-500"></div>
+                            )}
+                        </div>
+                    </label>
+                    {databaseFilterEnabled && databaseElements.size > 0 && (
+                        <p className="text-xs text-gray-500 mt-1 ml-7">
+                            Filtering by {databaseElements.size} available
+                            elements
+                        </p>
+                    )}
+                </div>
+
                 <div className="relative">
                     <input
                         type="text"
@@ -382,6 +497,17 @@ const DataElementSearch = ({ onStructureSelect }) => {
                     <div>
                         <h4 className="font-medium text-red-800">Error</h4>
                         <p className="text-red-700">{error}</p>
+                        {error.includes("not found in database") && (
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setDatabaseFilterEnabled(false);
+                                }}
+                                className="mt-2 px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600"
+                            >
+                                Search All NDA Elements
+                            </button>
+                        )}
                     </div>
                 </div>
             )}
@@ -392,10 +518,22 @@ const DataElementSearch = ({ onStructureSelect }) => {
                         <h2 className="text-lg font-medium text-green-800">
                             Found {matchingElements.length} elements containing
                             "{searchTerm}"
+                            {databaseFilterEnabled &&
+                                totalElementCount > matchingElements.length &&
+                                ` (${totalElementCount} total in NDA)`}
                         </h2>
-                        <p className="text-sm text-green-700 mt-1">
-                            Results are sorted by relevance score
-                        </p>
+                        <div className="flex items-center gap-4 mt-1">
+                            <p className="text-sm text-green-700">
+                                Results are sorted by relevance score
+                            </p>
+                            {databaseFilterEnabled &&
+                                databaseElements.size > 0 && (
+                                    <p className="text-sm text-blue-600">
+                                        <Database className="w-3 h-3 inline mr-1" />
+                                        Database filtered
+                                    </p>
+                                )}
+                        </div>
                     </div>
 
                     <div className="divide-y">
@@ -404,7 +542,6 @@ const DataElementSearch = ({ onStructureSelect }) => {
                                 key={index}
                                 className="p-4 hover:bg-gray-50 cursor-pointer transition-colors"
                                 onClick={async () => {
-                                    // Fetch full element details when clicking a result
                                     try {
                                         const response = await fetch(
                                             `https://nda.nih.gov/api/datadictionary/dataelement/${match.name}`
@@ -424,7 +561,6 @@ const DataElementSearch = ({ onStructureSelect }) => {
                                             "Error fetching element details:",
                                             err
                                         );
-                                        // Fallback to search result data if fetch fails
                                         setElement(match);
                                         setIsPartialSearch(false);
                                     }
@@ -446,6 +582,12 @@ const DataElementSearch = ({ onStructureSelect }) => {
                                                 <span className="text-xs bg-purple-100 px-2 py-1 rounded text-purple-800">
                                                     Found in description
                                                 </span>
+                                            )}
+                                            {match.inDatabase && (
+                                                <Database
+                                                    className="w-4 h-4 text-blue-500"
+                                                    title="Available in database"
+                                                />
                                             )}
                                         </h3>
                                     </div>
@@ -500,12 +642,50 @@ const DataElementSearch = ({ onStructureSelect }) => {
                 </div>
             )}
 
+            {/* Show message when no database results found */}
+            {isPartialSearch &&
+                matchingElements.length === 0 &&
+                databaseFilterEnabled &&
+                totalElementCount > 0 && (
+                    <div className="bg-blue-50 p-4 rounded-lg flex items-start gap-3">
+                        <Database className="w-5 h-5 text-blue-500 mt-1 flex-shrink-0" />
+                        <div>
+                            <h4 className="font-medium text-blue-800">
+                                No Database Matches Found
+                            </h4>
+                            <p className="text-blue-700 mt-1">
+                                Found {totalElementCount} elements in NDA
+                                containing "{searchTerm}", but none are
+                                available in your database.
+                            </p>
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setDatabaseFilterEnabled(false);
+                                }}
+                                className="mt-2 px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600"
+                            >
+                                Show All NDA Elements
+                            </button>
+                        </div>
+                    </div>
+                )}
+
             {element && !isPartialSearch && (
                 <div className="bg-white rounded-lg shadow-md overflow-hidden">
                     <div className="bg-blue-50 p-5 border-b border-blue-100">
-                        <h2 className="text-2xl font-mono font-semibold text-blue-800">
-                            {element.name}
-                        </h2>
+                        <div className="flex items-center gap-3">
+                            <h2 className="text-2xl font-mono font-semibold text-blue-800">
+                                {element.name}
+                            </h2>
+                            {databaseFilterEnabled &&
+                                isElementInDatabase(element.name) && (
+                                    <div className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">
+                                        <Database className="w-3 h-3" />
+                                        <span>Available in Database</span>
+                                    </div>
+                                )}
+                        </div>
                         <div className="flex items-center mt-2">
                             <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
                                 {element.type}
@@ -587,7 +767,7 @@ const DataElementSearch = ({ onStructureSelect }) => {
                                 </div>
                             ) : (
                                 <p className="text-gray-500 italic">
-                                    Not found in any data structures s b
+                                    Not found in any data structures
                                 </p>
                             )}
                         </div>
