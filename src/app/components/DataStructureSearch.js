@@ -7,6 +7,7 @@ import {
     ChevronLeft,
     FileText,
     Table,
+    Database,
 } from "lucide-react";
 import CSVValidator from "./CSVValidator";
 import DownloadStructureButton from "./DownloadStructureButton";
@@ -25,12 +26,80 @@ const DataStructureSearch = ({
     loadingElements,
     handleStructureSearch,
     initialCsvFile,
-    onFileChange, // New prop to pass changes up
+    onFileChange,
     onClear,
-    validatorState, // New prop
+    validatorState,
 }) => {
     const [headers, setHeaders] = useState([]);
     const [isExpanded, setIsExpanded] = useState(false);
+    const [databaseFilterEnabled, setDatabaseFilterEnabled] = useState(true);
+    const [loadingDatabaseStructures, setLoadingDatabaseStructures] =
+        useState(false);
+    const [databaseStructures, setDatabaseStructures] = useState([]);
+
+    // Fetch database structures when component mounts or filter is toggled
+    useEffect(() => {
+        if (databaseFilterEnabled) {
+            fetchDatabaseStructures();
+        }
+    }, [databaseFilterEnabled]);
+
+    const fetchDatabaseStructures = async () => {
+        setLoadingDatabaseStructures(true);
+        try {
+            const response = await fetch(
+                "https://spinup-002b0f.spinup.yale.edu/api/dataStructures/database"
+            );
+            if (response.ok) {
+                const data = await response.json();
+
+                let structureNames = [];
+
+                // Handle the specific format: { dataStructures: { "aces01": {...}, "structure2": {...} } }
+                if (
+                    data &&
+                    data.dataStructures &&
+                    typeof data.dataStructures === "object"
+                ) {
+                    structureNames = Object.keys(data.dataStructures);
+                } else {
+                    console.warn("Unexpected API response format:", data);
+                    setDatabaseStructures([]);
+                    return;
+                }
+
+                console.log(
+                    `Found ${structureNames.length} database structures:`,
+                    structureNames
+                );
+                setDatabaseStructures(structureNames);
+            } else {
+                console.error(
+                    "Failed to fetch database structures, status:",
+                    response.status
+                );
+                setDatabaseStructures([]);
+            }
+        } catch (error) {
+            console.error("Error fetching database structures:", error);
+            setDatabaseStructures([]);
+        } finally {
+            setLoadingDatabaseStructures(false);
+        }
+    };
+
+    // Filter structures based on database filter
+    const filteredStructures =
+        databaseFilterEnabled && databaseStructures.length > 0
+            ? structures.filter((structure) => {
+                  // Case-insensitive comparison
+                  const structureNameLower = structure.shortName.toLowerCase();
+                  const databaseStructuresLower = databaseStructures.map(
+                      (name) => name.toLowerCase()
+                  );
+                  return databaseStructuresLower.includes(structureNameLower);
+              })
+            : structures;
 
     // Clear headers when CSV file is removed
     useEffect(() => {
@@ -53,18 +122,12 @@ const DataStructureSearch = ({
     const showDetailsHeader = useScrollDirection(detailsRef);
 
     const handleCategoryClick = async (category) => {
-        // First collapse/reset view state if expanded
         if (isExpanded) {
             setIsExpanded(false);
         }
 
-        // Then trigger the category search
         setSearchTerm(`category:${category}`);
 
-        // Don't clear the selected structure anymore
-        // handleStructureSelect(null);  <- Remove this
-
-        // Scroll back to top of search results
         window.scrollTo({
             top: 0,
             behavior: "smooth",
@@ -83,6 +146,40 @@ const DataStructureSearch = ({
                         <p className="text-gray-600 mb-6">
                             Search the NDA Data Dictionary
                         </p>
+
+                        {/* Database Filter Checkbox */}
+                        <div className="mb-4">
+                            <label className="flex items-center space-x-3 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={databaseFilterEnabled}
+                                    onChange={(e) =>
+                                        setDatabaseFilterEnabled(
+                                            e.target.checked
+                                        )
+                                    }
+                                    className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                                />
+                                <div className="flex items-center space-x-2">
+                                    <Database className="w-4 h-4 text-blue-600" />
+                                    <span className="text-sm font-medium text-gray-700">
+                                        Show only structures available in
+                                        database
+                                    </span>
+                                    {loadingDatabaseStructures && (
+                                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-500"></div>
+                                    )}
+                                </div>
+                            </label>
+                            {databaseFilterEnabled &&
+                                databaseStructures.length > 0 && (
+                                    <p className="text-xs text-gray-500 mt-1 ml-7">
+                                        Filtering by {databaseStructures.length}{" "}
+                                        available structures
+                                    </p>
+                                )}
+                        </div>
+
                         <div className="relative">
                             <input
                                 type="text"
@@ -110,8 +207,6 @@ const DataStructureSearch = ({
 
                 {/* Scrollable content section */}
                 <div className="flex-1 min-h-0">
-                    {" "}
-                    {/* min-h-0 is crucial for nested flex scroll */}
                     {loading && (
                         <div className="text-center py-4">
                             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
@@ -122,16 +217,10 @@ const DataStructureSearch = ({
                             {error}
                         </div>
                     )}
-                    {/* Initial state message */}
-                    {/* {!searchTerm && !selectedStructure && (
-                        <div className="w-full text-center text-gray-500 py-12">
-                            Start typing above to search for data structures
-                        </div>
-                    )} */}
+
                     <div className="flex gap-4 h-full">
                         {/* Results column - independently scrollable */}
-                        {/* Results column - independently scrollable */}
-                        {searchTerm && structures.length > 0 && (
+                        {searchTerm && filteredStructures.length > 0 && (
                             <div
                                 ref={resultsRef}
                                 className={`transition-all duration-300 ease-in-out shrink-0 ${
@@ -146,12 +235,28 @@ const DataStructureSearch = ({
                                                 : "-translate-y-full"
                                         }`}
                                     >
-                                        <h2 className="text-xl font-semibold p-4">
-                                            Results ({structures.length})
-                                        </h2>
+                                        <div className="p-4">
+                                            <h2 className="text-xl font-semibold">
+                                                Results (
+                                                {filteredStructures.length}
+                                                {databaseFilterEnabled &&
+                                                    structures.length >
+                                                        filteredStructures.length &&
+                                                    ` of ${structures.length}`}
+                                                )
+                                            </h2>
+                                            {databaseFilterEnabled &&
+                                                databaseStructures.length >
+                                                    0 && (
+                                                    <p className="text-sm text-blue-600 mt-1">
+                                                        <Database className="w-3 h-3 inline mr-1" />
+                                                        Database filtered
+                                                    </p>
+                                                )}
+                                        </div>
                                     </div>
                                     <div className="p-4 space-y-2">
-                                        {structures.map((structure) => (
+                                        {filteredStructures.map((structure) => (
                                             <div
                                                 key={structure.shortName}
                                                 className={`p-4 border rounded hover:bg-gray-50 cursor-pointer transition-colors ${
@@ -168,8 +273,21 @@ const DataStructureSearch = ({
                                                 }}
                                             >
                                                 <div className="flex justify-between items-start">
-                                                    <h3 className="font-mono text-lg font-medium text-blue-600">
+                                                    <h3 className="font-mono text-lg font-medium text-blue-600 flex items-center">
                                                         {structure.shortName}
+                                                        {databaseFilterEnabled &&
+                                                            databaseStructures
+                                                                .map((name) =>
+                                                                    name.toLowerCase()
+                                                                )
+                                                                .includes(
+                                                                    structure.shortName.toLowerCase()
+                                                                ) && (
+                                                                <Database
+                                                                    className="w-4 h-4 ml-2 text-green-500"
+                                                                    title="Available in database"
+                                                                />
+                                                            )}
                                                     </h3>
                                                     <span className="text-sm bg-gray-100 px-2 py-1 rounded">
                                                         {structure.source ||
@@ -185,6 +303,34 @@ const DataStructureSearch = ({
                                 </div>
                             </div>
                         )}
+
+                        {/* Show message when no results due to filtering */}
+                        {searchTerm &&
+                            structures.length > 0 &&
+                            filteredStructures.length === 0 &&
+                            databaseFilterEnabled && (
+                                <div className="flex-1 flex items-center justify-center">
+                                    <div className="text-center p-8">
+                                        <Database className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                                        <h3 className="text-lg font-medium text-gray-900 mb-2">
+                                            No Database Matches Found
+                                        </h3>
+                                        <p className="text-gray-600 mb-4">
+                                            Found {structures.length}{" "}
+                                            structures, but none are available
+                                            in the database.
+                                        </p>
+                                        <button
+                                            onClick={() =>
+                                                setDatabaseFilterEnabled(false)
+                                            }
+                                            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                                        >
+                                            Show All Results
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
 
                         {/* Data Structure column - independently scrollable */}
                         {selectedStructure && (
@@ -231,10 +377,30 @@ const DataStructureSearch = ({
                                         <div className="bg-white rounded-lg shadow">
                                             {/* Details content */}
                                             <div className="bg-white p-6 rounded-lg shadow">
-                                                <h1 className="text-2xl font-semibold mb-8">
-                                                    {/* Data Structure */}
-                                                    {selectedStructure.title}
-                                                </h1>
+                                                <div className="flex items-center gap-3 mb-8">
+                                                    <h1 className="text-2xl font-semibold">
+                                                        {
+                                                            selectedStructure.title
+                                                        }
+                                                    </h1>
+                                                    {databaseFilterEnabled &&
+                                                        databaseStructures
+                                                            .map((name) =>
+                                                                name.toLowerCase()
+                                                            )
+                                                            .includes(
+                                                                selectedStructure.shortName.toLowerCase()
+                                                            ) && (
+                                                            <div className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">
+                                                                <Database className="w-3 h-3" />
+                                                                <span>
+                                                                    Available in
+                                                                    Database
+                                                                </span>
+                                                            </div>
+                                                        )}
+                                                </div>
+
                                                 {selectedStructure ? (
                                                     <div className="space-y-8">
                                                         {/* Basic Info Section */}
@@ -261,10 +427,6 @@ const DataStructureSearch = ({
                                                                 <h3 className="font-medium text-gray-600 mb-2">
                                                                     Status
                                                                 </h3>
-                                                                {/* <p className="text-lg text-gray-900">
-                                                                    Data
-                                                                    Structure
-                                                                </p> */}
                                                                 <span className="px-3 py-1 rounded-full text-sm bg-green-100 text-green-700">
                                                                     {
                                                                         selectedStructure.status
