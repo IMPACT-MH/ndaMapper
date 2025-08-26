@@ -171,8 +171,17 @@ const DataElementSearch = ({ onStructureSelect }) => {
         return matches.sort((a, b) => b._score - a._score);
     };
 
-    const handleSearch = async () => {
+    // Original handleSearch function for backward compatibility
+    const handleSearch = () => handleSearchWithFilter();
+
+    // Modified handleSearch function that accepts filter state as parameter
+    const handleSearchWithFilter = async (customFilterEnabled = null) => {
         if (!searchTerm.trim()) return;
+
+        const effectiveFilterEnabled =
+            customFilterEnabled !== null
+                ? customFilterEnabled
+                : databaseFilterEnabled;
 
         setLoading(true);
         setError(null);
@@ -182,7 +191,7 @@ const DataElementSearch = ({ onStructureSelect }) => {
 
         try {
             // If database filter is enabled, first try searching within database elements
-            if (databaseFilterEnabled && databaseElements.size > 0) {
+            if (effectiveFilterEnabled && databaseElements.size > 0) {
                 const databaseMatches = searchDatabaseElements(
                     searchTerm.trim()
                 );
@@ -249,7 +258,7 @@ const DataElementSearch = ({ onStructureSelect }) => {
             const searchResults = await partialResponse.json();
 
             if (!searchResults?.datadict?.results?.length) {
-                if (databaseFilterEnabled && databaseElements.size > 0) {
+                if (effectiveFilterEnabled && databaseElements.size > 0) {
                     setError(
                         `No data elements found containing "${searchTerm}" in your database. Try disabling the database filter to search all NDA elements.`
                     );
@@ -320,7 +329,7 @@ const DataElementSearch = ({ onStructureSelect }) => {
             let validElements = elementDetails.filter(Boolean);
 
             // Apply database filter if enabled
-            if (databaseFilterEnabled && databaseElements.size > 0) {
+            if (effectiveFilterEnabled && databaseElements.size > 0) {
                 validElements = validElements.filter(
                     (element) => element.inDatabase
                 );
@@ -358,6 +367,222 @@ const DataElementSearch = ({ onStructureSelect }) => {
         }
     };
 
+    // Search function that accepts a term directly (for recent searches)
+    const handleSearchWithTerm = async (term) => {
+        if (!term.trim()) return;
+
+        setLoading(true);
+        setError(null);
+        setElement(null);
+        setMatchingElements([]);
+        setIsPartialSearch(false);
+
+        try {
+            // If database filter is enabled, first try searching within database elements
+            if (databaseFilterEnabled && databaseElements.size > 0) {
+                const databaseMatches = searchDatabaseElementsWithTerm(
+                    term.trim()
+                );
+
+                if (databaseMatches.length > 0) {
+                    // Found matches in database, show those
+                    setMatchingElements(databaseMatches);
+                    setIsPartialSearch(true);
+                    setTotalElementCount(databaseMatches.length);
+                    updateRecentSearches(term.trim());
+                    setLoading(false);
+                    return;
+                }
+            }
+
+            // Use the NDA search API for partial matches
+            const searchQuery = term.trim();
+
+            if (searchQuery.length < 2) {
+                setError("Search term must be at least 2 characters long");
+                setLoading(false);
+                return;
+            }
+
+            const partialResponse = await fetch(
+                `https://nda.nih.gov/api/search/nda/dataelement/full?size=1000&highlight=true`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "text/plain",
+                    },
+                    body: searchQuery,
+                }
+            );
+
+            if (!partialResponse.ok) {
+                const statusText =
+                    partialResponse.statusText || "Unknown error";
+                const status = partialResponse.status;
+
+                if (status === 500) {
+                    setError(
+                        `The search query "${term}" may be too broad or complex for the NDA API. Try using more specific search terms.`
+                    );
+                } else if (status === 429) {
+                    setError(
+                        "Too many requests. Please wait a moment and try again."
+                    );
+                } else if (status === 408 || status === 504) {
+                    setError(
+                        "Search request timed out. Try using more specific search terms."
+                    );
+                } else {
+                    setError(
+                        `Search failed (${status}: ${statusText}). Try using different search terms or check your connection.`
+                    );
+                }
+                setLoading(false);
+                return;
+            }
+
+            const searchResults = await partialResponse.json();
+
+            if (!searchResults?.datadict?.results?.length) {
+                if (databaseFilterEnabled && databaseElements.size > 0) {
+                    setError(
+                        `No data elements found containing "${term}" in your database. Try disabling the database filter to search all NDA elements.`
+                    );
+                } else {
+                    setError(`No data elements found containing "${term}"`);
+                }
+                setLoading(false);
+                return;
+            }
+
+            setTotalElementCount(searchResults.datadict.results.length);
+
+            const elementDetails = await Promise.all(
+                searchResults.datadict.results.map(async (result) => {
+                    try {
+                        const response = await fetch(
+                            `https://nda.nih.gov/api/datadictionary/dataelement/${result.name}`
+                        );
+
+                        if (!response.ok) {
+                            throw new Error(
+                                `Failed to fetch details for ${result.name}`
+                            );
+                        }
+
+                        const fullData = await response.json();
+
+                        return {
+                            name: result.name,
+                            type: fullData.type || result.type || "Text",
+                            description:
+                                fullData.description ||
+                                "No description available",
+                            notes: fullData.notes,
+                            valueRange: fullData.valueRange,
+                            dataStructures:
+                                result.dataStructures?.map((ds) => ({
+                                    shortName: ds.shortName,
+                                    title: ds.title || "",
+                                    category: ds.category || "",
+                                })) || [],
+                            total_data_structures:
+                                result.dataStructures?.length || 0,
+                            _score: result._score,
+                            searchTerms: [searchQuery],
+                            matchType: result.name
+                                .toLowerCase()
+                                .includes(searchQuery.toLowerCase())
+                                ? "name"
+                                : "description",
+                            inDatabase: isElementInDatabase(result.name),
+                        };
+                    } catch (err) {
+                        console.error(
+                            `Error fetching details for ${result.name}:`,
+                            err
+                        );
+                        return null;
+                    }
+                })
+            );
+
+            let validElements = elementDetails.filter(Boolean);
+
+            if (databaseFilterEnabled && databaseElements.size > 0) {
+                validElements = validElements.filter(
+                    (element) => element.inDatabase
+                );
+            }
+
+            validElements = validElements.sort(
+                (a, b) => (b._score || 0) - (a._score || 0)
+            );
+
+            setMatchingElements(validElements);
+            setIsPartialSearch(true);
+            updateRecentSearches(term.trim());
+        } catch (err) {
+            console.error("Search error:", err);
+
+            if (err.name === "TypeError" && err.message.includes("fetch")) {
+                setError(
+                    "Network connection error. Please check your internet connection and try again."
+                );
+            } else if (err.message.includes("JSON")) {
+                setError(
+                    "Received invalid response from search API. Try a different search term or try again later."
+                );
+            } else if (err.message.includes("timeout")) {
+                setError(
+                    "Search request timed out. Try using more specific search terms."
+                );
+            } else {
+                setError(`Search error: ${err.message}`);
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Database search function that accepts a term directly
+    const searchDatabaseElementsWithTerm = (searchTerm) => {
+        const searchLower = searchTerm.toLowerCase();
+        const matches = [];
+
+        for (const [elementName, elementData] of databaseElements) {
+            const nameMatch = elementName.includes(searchLower);
+            const descriptionMatch = elementData.description
+                ?.toLowerCase()
+                .includes(searchLower);
+            const notesMatch = elementData.notes
+                ?.toLowerCase()
+                .includes(searchLower);
+
+            if (nameMatch || descriptionMatch || notesMatch) {
+                matches.push({
+                    name: elementData.name,
+                    type: elementData.type || "String",
+                    description:
+                        elementData.description || "No description available",
+                    notes: elementData.notes,
+                    valueRange: elementData.valueRange,
+                    _score: nameMatch ? 100 : descriptionMatch ? 50 : 25,
+                    searchTerms: [searchTerm],
+                    matchType: nameMatch
+                        ? "name"
+                        : descriptionMatch
+                        ? "description"
+                        : "notes",
+                    inDatabase: true,
+                    dataStructures: [],
+                });
+            }
+        }
+
+        return matches.sort((a, b) => b._score - a._score);
+    };
+
     const handleKeyDown = (e) => {
         if (e.key === "Enter") {
             handleSearch();
@@ -375,7 +600,13 @@ const DataElementSearch = ({ onStructureSelect }) => {
 
     const handleRecentSearch = async (term) => {
         setSearchTerm(term);
-        await handleSearch();
+        // Clear current results
+        setMatchingElements([]);
+        setIsPartialSearch(false);
+        setElement(null);
+
+        // Search directly with the term instead of relying on state update
+        await handleSearchWithTerm(term);
     };
 
     return (
@@ -395,14 +626,17 @@ const DataElementSearch = ({ onStructureSelect }) => {
                             checked={databaseFilterEnabled}
                             onChange={(e) => {
                                 e.stopPropagation();
-                                setDatabaseFilterEnabled(e.target.checked);
-                                // Clear results when toggling filter to avoid confusion
-                                if (isPartialSearch) {
-                                    setMatchingElements([]);
-                                    setIsPartialSearch(false);
-                                }
-                                if (element) {
-                                    setElement(null);
+                                const newFilterState = e.target.checked;
+                                setDatabaseFilterEnabled(newFilterState);
+
+                                // Clear current results
+                                setMatchingElements([]);
+                                setIsPartialSearch(false);
+                                setElement(null);
+
+                                // If we have a search term, automatically re-search with new filter
+                                if (searchTerm.trim()) {
+                                    handleSearchWithFilter(newFilterState);
                                 }
                             }}
                             className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
