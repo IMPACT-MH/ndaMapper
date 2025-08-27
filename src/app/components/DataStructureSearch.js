@@ -499,8 +499,10 @@ const DataStructureSearch = ({
                                                                     </p>
                                                                     <span className="px-3 py-1 rounded-full text-sm bg-gray-100 text-black-700">
                                                                         v
-                                                                        {selectedStructure.version ||
-                                                                            "1.0"}
+                                                                        {selectedStructure.shortName.slice(
+                                                                            -1
+                                                                        )}
+                                                                        .0
                                                                     </span>
                                                                 </div>
                                                             </div>
