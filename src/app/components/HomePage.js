@@ -588,6 +588,10 @@ const HomePage = () => {
                     databaseName={databaseName}
                     loadingDatabaseStructures={loadingDatabaseStructures}
                     databaseElements={databaseElements}
+                    onSwitchToElementSearch={(elementName) => {
+                        setSearchTerm(elementName);
+                        setActiveTab(Tabs.ELEMENT_SEARCH);
+                    }}
                 />
             </div>
 
@@ -666,6 +670,7 @@ const HomePage = () => {
                     loadingDatabaseElements={loadingDatabaseElements}
                     setLoadingDatabaseElements={setLoadingDatabaseElements}
                     databaseName={databaseName}
+                    initialSearchTerm={searchTerm}
                 />
             </div>
         </div>

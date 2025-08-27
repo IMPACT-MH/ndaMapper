@@ -37,6 +37,7 @@ const DataStructureSearch = ({
     databaseName,
     loadingDatabaseStructures,
     databaseElements,
+    onSwitchToElementSearch,
 }) => {
     const [headers, setHeaders] = useState([]);
     const [isExpanded, setIsExpanded] = useState(false);
@@ -72,6 +73,15 @@ const DataStructureSearch = ({
             top: 0,
             behavior: "smooth",
         });
+    };
+
+    const handleElementDoubleClick = (elementName) => {
+        // Switch to element search tab and search for this element
+        setSearchTerm(elementName);
+        // You'll need to add a prop to handle tab switching
+        if (typeof onSwitchToElementSearch === "function") {
+            onSwitchToElementSearch(elementName);
+        }
     };
 
     return (
@@ -547,7 +557,12 @@ const DataStructureSearch = ({
                                                                                             key={
                                                                                                 index
                                                                                             }
-                                                                                            className="hover:bg-gray-50"
+                                                                                            className="hover:bg-gray-50 cursor-pointer"
+                                                                                            onDoubleClick={() =>
+                                                                                                handleElementDoubleClick(
+                                                                                                    element.name
+                                                                                                )
+                                                                                            }
                                                                                         >
                                                                                             <td className="px-6 py-4 whitespace-nowrap">
                                                                                                 <div className="flex items-center space-x-2">
@@ -558,10 +573,18 @@ const DataStructureSearch = ({
                                                                                                         />
                                                                                                     )}
                                                                                                     {isInDatabase && (
-                                                                                                        <Database
-                                                                                                            className="w-4 h-4 text-blue-500"
-                                                                                                            title="Available in database"
-                                                                                                        />
+                                                                                                        <div className="relative group">
+                                                                                                            <Database className="w-4 h-4 text-blue-500 cursor-help" />
+                                                                                                            <div className="absolute bottom-full left-0 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-10">
+                                                                                                                This
+                                                                                                                element
+                                                                                                                exists
+                                                                                                                in
+                                                                                                                the
+                                                                                                                IMPACT-MH
+                                                                                                                database
+                                                                                                            </div>
+                                                                                                        </div>
                                                                                                     )}
                                                                                                 </div>
                                                                                             </td>

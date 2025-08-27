@@ -13,6 +13,7 @@ const DataElementSearch = ({
     loadingDatabaseElements,
     setLoadingDatabaseElements,
     databaseName,
+    initialSearchTerm,
 }) => {
     const [searchTerm, setSearchTerm] = useState("");
     const [loading, setLoading] = useState(false);
@@ -36,6 +37,15 @@ const DataElementSearch = ({
             JSON.stringify(recentSearches)
         );
     }, [recentSearches]);
+
+    // Handle initial search term from parent
+    useEffect(() => {
+        if (initialSearchTerm && initialSearchTerm !== searchTerm) {
+            setSearchTerm(initialSearchTerm);
+            // Trigger search automatically
+            handleSearchWithTerm(initialSearchTerm);
+        }
+    }, [initialSearchTerm]);
 
     // Browser history integration
     useEffect(() => {
