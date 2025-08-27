@@ -455,7 +455,7 @@ const DataCategorySearch = ({
                                                         >
                                                             <div className="flex justify-between items-start">
                                                                 <div className="flex-1">
-                                                                    <h4 className="font-mono font-medium font-extrabold flex items-center">
+                                                                    <h4 className="font-mono text-blue-600 font-medium flex items-center">
                                                                         {
                                                                             structure.shortName
                                                                         }

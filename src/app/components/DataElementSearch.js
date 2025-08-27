@@ -957,13 +957,6 @@ const DataElementSearch = ({
                                 <h2 className="text-2xl font-mono font-semibold text-blue-800">
                                     {element.name}
                                 </h2>
-                                {databaseFilterEnabled &&
-                                    isElementInDatabase(element.name) && (
-                                        <div className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">
-                                            <Database className="w-3 h-3" />
-                                            <span>Available in Database</span>
-                                        </div>
-                                    )}
                             </div>
                             {/* Back button - only show if we came from search results */}
                             {matchingElements.length > 0 && (
