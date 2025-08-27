@@ -233,7 +233,7 @@ const DataStructureSearch = ({
                                 <div className="flex items-center space-x-2">
                                     <Database className="w-4 h-4 text-blue-600" />
                                     <span className="text-sm font-medium text-gray-700">
-                                        Show only {databaseName} data structures
+                                        Show only {databaseName} structures
                                     </span>
                                     {loadingDatabaseStructures && (
                                         <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-500"></div>
