@@ -193,10 +193,30 @@ const DataCategorySearch = ({
     };
 
     const isStructureInDatabase = (shortName) => {
-        if (!databaseFilterEnabled || !databaseStructures.length) return false;
+        if (!databaseStructures.length) return false;
         return databaseStructures
             .map((name) => name.toLowerCase())
             .includes(shortName?.toLowerCase());
+    };
+
+    const hasStructuresInDatabase = (categoryOrDataType) => {
+        if (!databaseStructures.length) return false;
+        return filteredStructures.some((structure) => {
+            const isInDatabase = databaseStructures
+                .map((name) => name.toLowerCase())
+                .includes(structure.shortName.toLowerCase());
+
+            if (groupBy === "category") {
+                return (
+                    structure.categories?.includes(categoryOrDataType) &&
+                    isInDatabase
+                );
+            } else {
+                return (
+                    structure.dataType === categoryOrDataType && isInDatabase
+                );
+            }
+        });
     };
 
     const groupedStructures = groupStructures(filteredStructures);
@@ -353,8 +373,21 @@ const DataCategorySearch = ({
                                                     }
                                                     className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
                                                 />
-                                                <span className="ml-2 text-sm text-gray-700">
+                                                <span className="ml-2 text-sm text-gray-700 flex items-center">
                                                     {dataType}
+                                                    {hasStructuresInDatabase(
+                                                        dataType
+                                                    ) && (
+                                                        <div className="relative group ml-1">
+                                                            <Database className="w-3 h-3 text-blue-500 cursor-help" />
+                                                            <div className="absolute bottom-full left-0 mb-1 px-2 py-1 text-xs text-white bg-gray-800 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-10">
+                                                                This data type
+                                                                has structures
+                                                                in the IMPACT-MH
+                                                                database
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </span>
                                             </label>
                                         ))}
@@ -387,8 +420,21 @@ const DataCategorySearch = ({
                                                     }
                                                     className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
                                                 />
-                                                <span className="ml-2 text-sm text-gray-700">
+                                                <span className="ml-2 text-sm text-gray-700 flex items-center">
                                                     {category}
+                                                    {hasStructuresInDatabase(
+                                                        category
+                                                    ) && (
+                                                        <div className="relative group ml-1">
+                                                            <Database className="w-3 h-3 text-blue-500 cursor-help" />
+                                                            <div className="absolute bottom-full left-0 mb-1 px-2 py-1 text-xs text-white bg-gray-800 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-10">
+                                                                This category
+                                                                has structures
+                                                                in the IMPACT-MH
+                                                                database
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </span>
                                             </label>
                                         ))}
