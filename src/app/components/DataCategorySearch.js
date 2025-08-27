@@ -455,17 +455,25 @@ const DataCategorySearch = ({
                                                         >
                                                             <div className="flex justify-between items-start">
                                                                 <div className="flex-1">
-                                                                    <h4 className="font-mono text-blue-600 font-medium flex items-center">
+                                                                    <h4 className="font-mono font-medium font-extrabold flex items-center">
                                                                         {
                                                                             structure.shortName
                                                                         }
                                                                         {isStructureInDatabase(
                                                                             structure.shortName
                                                                         ) && (
-                                                                            <Database
-                                                                                className="w-4 h-4 ml-2 text-green-500"
-                                                                                title="Available in database"
-                                                                            />
+                                                                            <div className="relative group">
+                                                                                <Database className="w-4 h-4 ml-2 text-blue-500 cursor-help" />
+                                                                                <div className="absolute bottom-full left-2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-10">
+                                                                                    This
+                                                                                    structure
+                                                                                    exists
+                                                                                    in
+                                                                                    the
+                                                                                    IMPACT-MH
+                                                                                    database
+                                                                                </div>
+                                                                            </div>
                                                                         )}
                                                                     </h4>
                                                                     <p className="text-gray-700 mt-1">

@@ -221,7 +221,7 @@ const DataStructureSearch = ({
                                                 }}
                                             >
                                                 <div className="flex justify-between items-start">
-                                                    <h3 className="font-mono text-lg font-medium text-blue-600 flex items-center">
+                                                    <h3 className="font-mono text-lg font-medium font-extrabold flex items-center">
                                                         {structure.shortName}
                                                         {databaseFilterEnabled &&
                                                             databaseStructures
@@ -231,10 +231,17 @@ const DataStructureSearch = ({
                                                                 .includes(
                                                                     structure.shortName.toLowerCase()
                                                                 ) && (
-                                                                <Database
-                                                                    className="w-4 h-4 ml-2 text-green-500"
-                                                                    title="Available in database"
-                                                                />
+                                                                <div className="relative group">
+                                                                    <Database className="w-4 h-4 ml-2 text-blue-500 cursor-help" />
+                                                                    <div className="absolute bottom-full left-0 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-10">
+                                                                        This
+                                                                        structure
+                                                                        exists
+                                                                        in the
+                                                                        IMPACT-MH
+                                                                        database
+                                                                    </div>
+                                                                </div>
                                                             )}
                                                     </h3>
                                                     <span className="text-sm bg-gray-100 px-2 py-1 rounded">
