@@ -615,7 +615,7 @@ const DataElementSearch = ({
     return (
         <div className="space-y-6">
             <div className="mb-8">
-                <h1 className="text-3xl font-bold mb-4">Data Element Search</h1>
+                <h1 className="text-3xl font-bold mb-4">Data Elements</h1>
                 <p className="text-gray-600 mb-6">
                     Search the NDA Data Dictionary
                 </p>

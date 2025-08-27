@@ -482,20 +482,11 @@ const HomePage = () => {
                                             : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                                     }`}
                                 >
-                                    Data Dictionary Explorer
+                                    Data Dictionary
                                 </button>
-                                <button
-                                    onClick={() =>
-                                        setActiveTab(Tabs.ELEMENT_SEARCH)
-                                    }
-                                    className={`whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm ${
-                                        activeTab === Tabs.ELEMENT_SEARCH
-                                            ? "border-blue-500 text-blue-600"
-                                            : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                                    }`}
-                                >
-                                    Data Element Search
-                                </button>
+                                {/* <div className="text-gray-400 text-sm pb-4 -mx-2">
+                                    →
+                                </div> */}
                                 <button
                                     onClick={() =>
                                         setActiveTab(Tabs.STRUCTURE_SEARCH)
@@ -506,15 +497,33 @@ const HomePage = () => {
                                             : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                                     }`}
                                 >
-                                    Data Structure Search
+                                    Data Structures
                                 </button>
+                                {/* <div className="text-gray-400 text-sm pb-4 -mx-2">
+                                    →
+                                </div> */}
+                                <button
+                                    onClick={() =>
+                                        setActiveTab(Tabs.ELEMENT_SEARCH)
+                                    }
+                                    className={`whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm ${
+                                        activeTab === Tabs.ELEMENT_SEARCH
+                                            ? "border-blue-500 text-blue-600"
+                                            : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                                    }`}
+                                >
+                                    Data Elements
+                                </button>
+                                <div className="text-gray-400 text-sm pb-4 mx-2">
+                                    |
+                                </div>
                                 <button
                                     onClick={() =>
                                         setActiveTab(Tabs.FIELD_SEARCH)
                                     }
                                     className={`whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm ${
                                         activeTab === Tabs.FIELD_SEARCH
-                                            ? "border-blue-500 text-blue-600"
+                                            ? "border-green-500 text-green-600"
                                             : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                                     }`}
                                 >

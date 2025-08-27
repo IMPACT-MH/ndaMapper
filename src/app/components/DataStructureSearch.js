@@ -80,7 +80,7 @@ const DataStructureSearch = ({
                 <div className="flex-none">
                     <div className="mb-8">
                         <h1 className="text-3xl font-bold mb-4">
-                            Data Structure Search
+                            Data Structures
                         </h1>
                         <p className="text-gray-600 mb-6">
                             Search the NDA Data Dictionary

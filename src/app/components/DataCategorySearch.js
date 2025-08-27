@@ -207,9 +207,7 @@ const DataCategorySearch = ({
     return (
         <div className="space-y-6">
             <div className="mb-8">
-                <h1 className="text-3xl font-bold mb-4">
-                    Data Dictionary Explorer
-                </h1>
+                <h1 className="text-3xl font-bold mb-4">Data Dictionary</h1>
                 <p className="text-gray-600 mb-6">
                     Browse all NDA data structures by category and data type
                 </p>
@@ -228,7 +226,7 @@ const DataCategorySearch = ({
                         <div className="flex items-center space-x-2">
                             <Database className="w-4 h-4 text-blue-600" />
                             <span className="text-sm font-medium text-gray-700">
-                                Show only {databaseName} structures
+                                Show only {databaseName} dictionary
                             </span>
                             {loadingDatabaseStructures && (
                                 <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-500"></div>
