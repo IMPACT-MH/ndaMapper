@@ -330,6 +330,18 @@ const HomePage = () => {
                         >
                             <button
                                 onClick={() =>
+                                    setActiveTab(Tabs.ELEMENT_SEARCH)
+                                }
+                                className={`whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm ${
+                                    activeTab === Tabs.ELEMENT_SEARCH
+                                        ? "border-blue-500 text-blue-600"
+                                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                                }`}
+                            >
+                                Data Element Search
+                            </button>
+                            <button
+                                onClick={() =>
                                     setActiveTab(Tabs.STRUCTURE_SEARCH)
                                 }
                                 className={`whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm ${
@@ -349,18 +361,6 @@ const HomePage = () => {
                                 }`}
                             >
                                 Reverse Lookup by CSV
-                            </button>
-                            <button
-                                onClick={() =>
-                                    setActiveTab(Tabs.ELEMENT_SEARCH)
-                                }
-                                className={`whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm ${
-                                    activeTab === Tabs.ELEMENT_SEARCH
-                                        ? "border-blue-500 text-blue-600"
-                                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                                }`}
-                            >
-                                Data Element Search
                             </button>
                         </nav>
                     </div>
