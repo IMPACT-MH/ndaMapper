@@ -35,6 +35,7 @@ const DataStructureSearch = ({
     setDatabaseFilterEnabled,
     databaseStructures,
     databaseName,
+    loadingDatabaseStructures,
 }) => {
     const [headers, setHeaders] = useState([]);
     const [isExpanded, setIsExpanded] = useState(false);
@@ -103,9 +104,9 @@ const DataStructureSearch = ({
                                     <span className="text-sm font-medium text-gray-700">
                                         Show only {databaseName} structures
                                     </span>
-                                    {/* {loadingDatabaseStructures && (
+                                    {loadingDatabaseStructures && (
                                         <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-500"></div>
-                                    )} */}
+                                    )}
                                 </div>
                             </label>
                             {databaseFilterEnabled &&

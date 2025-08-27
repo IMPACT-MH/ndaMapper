@@ -10,6 +10,7 @@ const DataCategorySearch = ({
     setDatabaseFilterEnabled,
     databaseStructures,
     databaseName,
+    loadingDatabaseStructures,
 }) => {
     const [allStructures, setAllStructures] = useState([]);
     const [filteredStructures, setFilteredStructures] = useState([]);
@@ -207,7 +208,7 @@ const DataCategorySearch = ({
         <div className="space-y-6">
             <div className="mb-8">
                 <h1 className="text-3xl font-bold mb-4">
-                    Data Ontology Explorer
+                    Data Dictionary Explorer
                 </h1>
                 <p className="text-gray-600 mb-6">
                     Browse all NDA data structures by category and data type
@@ -229,6 +230,9 @@ const DataCategorySearch = ({
                             <span className="text-sm font-medium text-gray-700">
                                 Show only {databaseName} structures
                             </span>
+                            {loadingDatabaseStructures && (
+                                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-500"></div>
+                            )}
                         </div>
                     </label>
                     {databaseFilterEnabled && databaseStructures.length > 0 && (

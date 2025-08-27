@@ -38,6 +38,10 @@ const HomePage = () => {
     const [loadingDatabaseElements, setLoadingDatabaseElements] =
         useState(false);
 
+    // Database structures loading state
+    const [loadingDatabaseStructures, setLoadingDatabaseStructures] =
+        useState(false);
+
     // Load saved tab from localStorage after mount
     useEffect(() => {
         const savedTab = localStorage.getItem("activeTab");
@@ -119,6 +123,7 @@ const HomePage = () => {
     };
 
     const fetchDatabaseStructures = async () => {
+        setLoadingDatabaseStructures(true);
         try {
             const response = await fetch(DATA_PORTAL);
             if (response.ok) {
@@ -154,6 +159,8 @@ const HomePage = () => {
         } catch (error) {
             console.error("Error fetching database structures:", error);
             setDatabaseStructures([]);
+        } finally {
+            setLoadingDatabaseStructures(false);
         }
     };
 
@@ -473,7 +480,7 @@ const HomePage = () => {
                                         : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                                 }`}
                             >
-                                Data Ontology Explorer
+                                Data Dictionary Explorer
                             </button>
                             <button
                                 onClick={() =>
@@ -552,6 +559,7 @@ const HomePage = () => {
                     setDatabaseFilterEnabled={setDatabaseFilterEnabled}
                     databaseStructures={databaseStructures}
                     databaseName={databaseName}
+                    loadingDatabaseStructures={loadingDatabaseStructures}
                 />
             </div>
 
@@ -567,6 +575,7 @@ const HomePage = () => {
                     setDatabaseFilterEnabled={setDatabaseFilterEnabled}
                     databaseStructures={databaseStructures}
                     databaseName={databaseName}
+                    loadingDatabaseStructures={loadingDatabaseStructures}
                 />
             </div>
 
