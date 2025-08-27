@@ -4,11 +4,13 @@ import { useState, useEffect } from "react";
 import DataStructureSearch from "./DataStructureSearch";
 import CSVHeaderAnalyzer from "./CSVHeaderAnalyzer";
 import DataElementSearch from "./DataElementSearch";
+import DataCategorySearch from "./DataCategorySearch";
 
 const Tabs = {
     STRUCTURE_SEARCH: "structure-search",
     FIELD_SEARCH: "field-search",
     ELEMENT_SEARCH: "element-search",
+    CATEGORY_SEARCH: "category-search",
 };
 
 const HomePage = () => {
@@ -58,6 +60,28 @@ const HomePage = () => {
     });
 
     const handleElementStructureSelect = async (structureName) => {
+        setActiveTab(Tabs.STRUCTURE_SEARCH);
+        setSearchTerm(structureName);
+
+        try {
+            const response = await fetch(
+                `https://nda.nih.gov/api/datadictionary/v2/datastructure?searchTerm=${structureName}`
+            );
+            if (response.ok) {
+                const structures = await response.json();
+                const exactMatch = structures.find(
+                    (s) => s.shortName === structureName
+                );
+                if (exactMatch) {
+                    handleStructureSelect(exactMatch);
+                }
+            }
+        } catch (err) {
+            console.error("Error fetching structure:", err);
+        }
+    };
+
+    const handleCategoryStructureSelect = async (structureName) => {
         setActiveTab(Tabs.STRUCTURE_SEARCH);
         setSearchTerm(structureName);
 
@@ -353,6 +377,18 @@ const HomePage = () => {
                                 Data Structure Search
                             </button>
                             <button
+                                onClick={() =>
+                                    setActiveTab(Tabs.CATEGORY_SEARCH)
+                                }
+                                className={`whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm ${
+                                    activeTab === Tabs.CATEGORY_SEARCH
+                                        ? "border-blue-500 text-blue-600"
+                                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                                }`}
+                            >
+                                Data Category Search
+                            </button>
+                            <button
                                 onClick={() => setActiveTab(Tabs.FIELD_SEARCH)}
                                 className={`whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm ${
                                     activeTab === Tabs.FIELD_SEARCH
@@ -407,6 +443,21 @@ const HomePage = () => {
                     setDatabaseStructures={setDatabaseStructures}
                     databaseName={databaseName}
                     setDatabaseName={setDatabaseName}
+                />
+            </div>
+
+            <div
+                className={
+                    activeTab === Tabs.CATEGORY_SEARCH ? "block" : "hidden"
+                }
+            >
+                <DataCategorySearch
+                    onStructureSelect={handleCategoryStructureSelect}
+                    // Pass database filter props
+                    databaseFilterEnabled={databaseFilterEnabled}
+                    setDatabaseFilterEnabled={setDatabaseFilterEnabled}
+                    databaseStructures={databaseStructures}
+                    databaseName={databaseName}
                 />
             </div>
 
