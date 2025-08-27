@@ -354,6 +354,18 @@ const HomePage = () => {
                         >
                             <button
                                 onClick={() =>
+                                    setActiveTab(Tabs.CATEGORY_SEARCH)
+                                }
+                                className={`whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm ${
+                                    activeTab === Tabs.CATEGORY_SEARCH
+                                        ? "border-blue-500 text-blue-600"
+                                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                                }`}
+                            >
+                                Data Ontology Explorer
+                            </button>
+                            <button
+                                onClick={() =>
                                     setActiveTab(Tabs.ELEMENT_SEARCH)
                                 }
                                 className={`whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm ${
@@ -375,18 +387,6 @@ const HomePage = () => {
                                 }`}
                             >
                                 Data Structure Search
-                            </button>
-                            <button
-                                onClick={() =>
-                                    setActiveTab(Tabs.CATEGORY_SEARCH)
-                                }
-                                className={`whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm ${
-                                    activeTab === Tabs.CATEGORY_SEARCH
-                                        ? "border-blue-500 text-blue-600"
-                                        : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                                }`}
-                            >
-                                Data Category Search
                             </button>
                             <button
                                 onClick={() => setActiveTab(Tabs.FIELD_SEARCH)}

@@ -207,7 +207,7 @@ const DataCategorySearch = ({
         <div className="space-y-6">
             <div className="mb-8">
                 <h1 className="text-3xl font-bold mb-4">
-                    Data Category Search
+                    Data Ontology Explorer
                 </h1>
                 <p className="text-gray-600 mb-6">
                     Browse all NDA data structures by category and data type
@@ -325,40 +325,6 @@ const DataCategorySearch = ({
                                 Filters
                             </h3>
 
-                            {/* Category Filters */}
-                            <div className="mb-6">
-                                <h4 className="font-medium text-gray-700 mb-2">
-                                    Categories
-                                </h4>
-                                <div className="space-y-2 max-h-48 overflow-y-auto">
-                                    {Array.from(availableCategories)
-                                        .sort()
-                                        .map((category) => (
-                                            <label
-                                                key={category}
-                                                className="flex items-center"
-                                            >
-                                                <input
-                                                    type="checkbox"
-                                                    checked={selectedFilters.categories.has(
-                                                        category
-                                                    )}
-                                                    onChange={() =>
-                                                        toggleFilter(
-                                                            "categories",
-                                                            category
-                                                        )
-                                                    }
-                                                    className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-                                                />
-                                                <span className="ml-2 text-sm text-gray-700">
-                                                    {category}
-                                                </span>
-                                            </label>
-                                        ))}
-                                </div>
-                            </div>
-
                             {/* Data Type Filters */}
                             <div>
                                 <h4 className="font-medium text-gray-700 mb-2">
@@ -387,6 +353,40 @@ const DataCategorySearch = ({
                                                 />
                                                 <span className="ml-2 text-sm text-gray-700">
                                                     {dataType}
+                                                </span>
+                                            </label>
+                                        ))}
+                                </div>
+                            </div>
+                            <br />
+                            {/* Category Filters */}
+                            <div className="mb-6">
+                                <h4 className="font-medium text-gray-700 mb-2">
+                                    Categories
+                                </h4>
+                                <div className="space-y-2 max-h-48 overflow-y-auto">
+                                    {Array.from(availableCategories)
+                                        .sort()
+                                        .map((category) => (
+                                            <label
+                                                key={category}
+                                                className="flex items-center"
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedFilters.categories.has(
+                                                        category
+                                                    )}
+                                                    onChange={() =>
+                                                        toggleFilter(
+                                                            "categories",
+                                                            category
+                                                        )
+                                                    }
+                                                    className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                                                />
+                                                <span className="ml-2 text-sm text-gray-700">
+                                                    {category}
                                                 </span>
                                             </label>
                                         ))}
