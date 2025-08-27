@@ -5,6 +5,7 @@ import DataStructureSearch from "./DataStructureSearch";
 import CSVHeaderAnalyzer from "./CSVHeaderAnalyzer";
 import DataElementSearch from "./DataElementSearch";
 import DataCategorySearch from "./DataCategorySearch";
+import { DATA_PORTAL } from "@/const";
 
 const Tabs = {
     STRUCTURE_SEARCH: "structure-search",
@@ -32,6 +33,11 @@ const HomePage = () => {
     const [databaseStructures, setDatabaseStructures] = useState([]);
     const [databaseName, setDatabaseName] = useState("IMPACT-MH");
 
+    // Database elements state for DataElementSearch
+    const [databaseElements, setDatabaseElements] = useState(new Map());
+    const [loadingDatabaseElements, setLoadingDatabaseElements] =
+        useState(false);
+
     // Load saved tab from localStorage after mount
     useEffect(() => {
         const savedTab = localStorage.getItem("activeTab");
@@ -45,6 +51,111 @@ const HomePage = () => {
     useEffect(() => {
         localStorage.setItem("activeTab", activeTab);
     }, [activeTab]);
+
+    // Fetch database elements when filter is enabled
+    useEffect(() => {
+        if (databaseFilterEnabled && databaseElements.size === 0) {
+            fetchDatabaseElements();
+        }
+    }, [databaseFilterEnabled, databaseElements.size]);
+
+    // Fetch database structures when filter is enabled
+    useEffect(() => {
+        if (databaseFilterEnabled && databaseStructures.length === 0) {
+            fetchDatabaseStructures();
+        }
+    }, [databaseFilterEnabled, databaseStructures.length]);
+
+    const fetchDatabaseElements = async () => {
+        setLoadingDatabaseElements(true);
+        try {
+            const response = await fetch(DATA_PORTAL);
+            if (response.ok) {
+                const data = await response.json();
+
+                const allElements = new Map(); // Store full element objects
+
+                if (
+                    data &&
+                    data.dataStructures &&
+                    typeof data.dataStructures === "object"
+                ) {
+                    // Extract all unique elements from all structures
+                    Object.values(data.dataStructures).forEach((structure) => {
+                        if (
+                            structure.dataElements &&
+                            Array.isArray(structure.dataElements)
+                        ) {
+                            structure.dataElements.forEach((element) => {
+                                if (element.name) {
+                                    // Store full element object with lowercase name as key
+                                    allElements.set(
+                                        element.name.toLowerCase(),
+                                        element
+                                    );
+                                }
+                            });
+                        }
+                    });
+                }
+
+                console.log(
+                    `Found ${allElements.size} unique database elements`
+                );
+                setDatabaseElements(allElements);
+            } else {
+                console.error(
+                    "Failed to fetch database elements, status:",
+                    response.status
+                );
+                setDatabaseElements(new Map());
+            }
+        } catch (error) {
+            console.error("Error fetching database elements:", error);
+            setDatabaseElements(new Map());
+        } finally {
+            setLoadingDatabaseElements(false);
+        }
+    };
+
+    const fetchDatabaseStructures = async () => {
+        try {
+            const response = await fetch(DATA_PORTAL);
+            if (response.ok) {
+                const data = await response.json();
+
+                let structureNames = [];
+
+                // Handle the specific format: { dataStructures: { "aces01": {...}, "structure2": {...} } }
+                if (
+                    data &&
+                    data.dataStructures &&
+                    typeof data.dataStructures === "object"
+                ) {
+                    structureNames = Object.keys(data.dataStructures);
+                } else {
+                    console.warn("Unexpected API response format:", data);
+                    setDatabaseStructures([]);
+                    return;
+                }
+
+                console.log(
+                    `Found ${structureNames.length} database structures:`,
+                    structureNames
+                );
+                setDatabaseStructures(structureNames);
+            } else {
+                console.error(
+                    "Failed to fetch database structures, status:",
+                    response.status
+                );
+                setDatabaseStructures([]);
+            }
+        } catch (error) {
+            console.error("Error fetching database structures:", error);
+            setDatabaseStructures([]);
+        }
+    };
 
     const [csvFile, setCsvFile] = useState(null);
     const [csvHeaders, setCsvHeaders] = useState(null);
@@ -440,9 +551,7 @@ const HomePage = () => {
                     databaseFilterEnabled={databaseFilterEnabled}
                     setDatabaseFilterEnabled={setDatabaseFilterEnabled}
                     databaseStructures={databaseStructures}
-                    setDatabaseStructures={setDatabaseStructures}
                     databaseName={databaseName}
-                    setDatabaseName={setDatabaseName}
                 />
             </div>
 
@@ -512,6 +621,14 @@ const HomePage = () => {
             >
                 <DataElementSearch
                     onStructureSelect={handleElementStructureSelect}
+                    // Pass database filter props
+                    databaseFilterEnabled={databaseFilterEnabled}
+                    setDatabaseFilterEnabled={setDatabaseFilterEnabled}
+                    databaseElements={databaseElements}
+                    setDatabaseElements={setDatabaseElements}
+                    loadingDatabaseElements={loadingDatabaseElements}
+                    setLoadingDatabaseElements={setLoadingDatabaseElements}
+                    databaseName={databaseName}
                 />
             </div>
         </div>

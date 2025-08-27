@@ -3,7 +3,17 @@
 import { useState, useEffect } from "react";
 import { Search, X, AlertCircle, Info, Database } from "lucide-react";
 
-const DataElementSearch = ({ onStructureSelect }) => {
+const DataElementSearch = ({
+    onStructureSelect,
+    // Database filter props
+    databaseFilterEnabled,
+    setDatabaseFilterEnabled,
+    databaseElements,
+    setDatabaseElements,
+    loadingDatabaseElements,
+    setLoadingDatabaseElements,
+    databaseName,
+}) => {
     const [searchTerm, setSearchTerm] = useState("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -11,12 +21,6 @@ const DataElementSearch = ({ onStructureSelect }) => {
     const [matchingElements, setMatchingElements] = useState([]);
     const [isPartialSearch, setIsPartialSearch] = useState(false);
     const [recentSearches, setRecentSearches] = useState([]);
-
-    // Database filter state
-    const [databaseFilterEnabled, setDatabaseFilterEnabled] = useState(true);
-    const [databaseElements, setDatabaseElements] = useState(new Map()); // Changed to Map to store full element objects
-    const [loadingDatabaseElements, setLoadingDatabaseElements] =
-        useState(false);
     const [totalElementCount, setTotalElementCount] = useState(0);
 
     useEffect(() => {
@@ -65,67 +69,6 @@ const DataElementSearch = ({ onStructureSelect }) => {
             "",
             window.location.pathname + window.location.search
         );
-    };
-
-    // Fetch database elements when filter is enabled
-    useEffect(() => {
-        if (databaseFilterEnabled && databaseElements.size === 0) {
-            fetchDatabaseElements();
-        }
-    }, [databaseFilterEnabled, databaseElements.size]);
-
-    const fetchDatabaseElements = async () => {
-        setLoadingDatabaseElements(true);
-        try {
-            const response = await fetch(
-                "https://spinup-002b0f.spinup.yale.edu/api/dataStructures/database"
-            );
-            if (response.ok) {
-                const data = await response.json();
-
-                const allElements = new Map(); // Store full element objects
-
-                if (
-                    data &&
-                    data.dataStructures &&
-                    typeof data.dataStructures === "object"
-                ) {
-                    // Extract all unique elements from all structures
-                    Object.values(data.dataStructures).forEach((structure) => {
-                        if (
-                            structure.dataElements &&
-                            Array.isArray(structure.dataElements)
-                        ) {
-                            structure.dataElements.forEach((element) => {
-                                if (element.name) {
-                                    // Store full element object with lowercase name as key
-                                    allElements.set(
-                                        element.name.toLowerCase(),
-                                        element
-                                    );
-                                }
-                            });
-                        }
-                    });
-                }
-
-                console.log(
-                    `Found ${allElements.size} unique database elements`
-                );
-                setDatabaseElements(allElements);
-            } else {
-                console.error(
-                    "Failed to fetch database elements, status:",
-                    response.status
-                );
-                setDatabaseElements(new Map());
-            }
-        } catch (error) {
-            console.error("Error fetching database elements:", error);
-            setDatabaseElements(new Map());
-        } finally {
-            setLoadingDatabaseElements(false);
-        }
     };
 
     const updateRecentSearches = (newTerm) => {

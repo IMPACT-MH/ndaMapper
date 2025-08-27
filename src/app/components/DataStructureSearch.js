@@ -30,146 +30,14 @@ const DataStructureSearch = ({
     onFileChange,
     onClear,
     validatorState,
-    // New props for database filtering
+    // Database filter props
     databaseFilterEnabled,
     setDatabaseFilterEnabled,
     databaseStructures,
-    setDatabaseStructures,
     databaseName,
-    setDatabaseName,
 }) => {
     const [headers, setHeaders] = useState([]);
     const [isExpanded, setIsExpanded] = useState(false);
-    const [loadingDatabaseStructures, setLoadingDatabaseStructures] =
-        useState(false);
-
-    // Fetch database structures when component mounts or filter is toggled
-    useEffect(() => {
-        if (databaseFilterEnabled && databaseStructures.length === 0) {
-            fetchDatabaseStructures();
-        }
-    }, [databaseFilterEnabled]);
-
-    const fetchDatabaseStructures = async () => {
-        setLoadingDatabaseStructures(true);
-        try {
-            const response = await fetch(
-                "https://spinup-002b0f.spinup.yale.edu/api/dataStructures/database"
-            );
-            if (response.ok) {
-                const data = await response.json();
-
-                let structureNames = [];
-
-                // Handle the specific format: { dataStructures: { "aces01": {...}, "structure2": {...} } }
-                if (
-                    data &&
-                    data.dataStructures &&
-                    typeof data.dataStructures === "object"
-                ) {
-                    structureNames = Object.keys(data.dataStructures);
-                } else {
-                    console.warn("Unexpected API response format:", data);
-                    setDatabaseStructures([]);
-                    return;
-                }
-
-                console.log(
-                    `Found ${structureNames.length} database structures:`,
-                    structureNames
-                );
-                setDatabaseStructures(structureNames);
-                // setDatabaseName(data.databaseName);
-            } else {
-                console.error(
-                    "Failed to fetch database structures, status:",
-                    response.status
-                );
-                setDatabaseStructures([]);
-            }
-        } catch (error) {
-            console.error("Error fetching database structures:", error);
-            setDatabaseStructures([]);
-        } finally {
-            setLoadingDatabaseStructures(false);
-        }
-    };
-
-    // Helper function to check if a data element exists in the database version of the structure
-    const isElementInDatabase = (elementName) => {
-        if (
-            !databaseFilterEnabled ||
-            !selectedStructure ||
-            !databaseStructures.length === 0
-        ) {
-            return false;
-        }
-
-        // Get the database API response (we need to store this when we fetch it)
-        // For now, we'll need to fetch the database structure details
-        // This could be optimized by storing the full database response
-        return false; // Placeholder until we implement the check
-    };
-
-    // New state to store database structure details
-    const [databaseStructureDetails, setDatabaseStructureDetails] =
-        useState(null);
-
-    // Fetch database structure details when a structure is selected
-    useEffect(() => {
-        if (
-            selectedStructure &&
-            databaseFilterEnabled &&
-            databaseStructures.includes(
-                selectedStructure.shortName.toLowerCase()
-            )
-        ) {
-            fetchDatabaseStructureDetails();
-        } else {
-            setDatabaseStructureDetails(null);
-        }
-    }, [selectedStructure, databaseFilterEnabled, databaseStructures]);
-
-    const fetchDatabaseStructureDetails = async () => {
-        try {
-            const response = await fetch(
-                "https://spinup-002b0f.spinup.yale.edu/api/dataStructures/database"
-            );
-            if (response.ok) {
-                const data = await response.json();
-                if (data && data.dataStructures && selectedStructure) {
-                    // Find the structure that matches (case-insensitive)
-                    const matchingStructureKey = Object.keys(
-                        data.dataStructures
-                    ).find(
-                        (key) =>
-                            key.toLowerCase() ===
-                            selectedStructure.shortName.toLowerCase()
-                    );
-
-                    if (matchingStructureKey) {
-                        setDatabaseStructureDetails(
-                            data.dataStructures[matchingStructureKey]
-                        );
-                    }
-                }
-            }
-        } catch (error) {
-            console.error("Error fetching database structure details:", error);
-        }
-    };
-
-    // Updated helper function to check if a data element exists in the database
-    const isElementInDatabaseUpdated = (elementName) => {
-        if (!databaseFilterEnabled || !databaseStructureDetails) {
-            return false;
-        }
-
-        return databaseStructureDetails.dataElements.some(
-            (dbElement) =>
-                dbElement.name.toLowerCase() === elementName.toLowerCase()
-        );
-    };
 
     // Clear headers when CSV file is removed
     useEffect(() => {
@@ -235,9 +103,9 @@ const DataStructureSearch = ({
                                     <span className="text-sm font-medium text-gray-700">
                                         Show only {databaseName} structures
                                     </span>
-                                    {loadingDatabaseStructures && (
+                                    {/* {loadingDatabaseStructures && (
                                         <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-500"></div>
-                                    )}
+                                    )} */}
                                 </div>
                             </label>
                             {databaseFilterEnabled &&
@@ -666,9 +534,10 @@ const DataStructureSearch = ({
                                                                                             element.name
                                                                                         );
                                                                                     const isInDatabase =
-                                                                                        isElementInDatabaseUpdated(
-                                                                                            element.name
-                                                                                        );
+                                                                                        // isElementInDatabaseUpdated(
+                                                                                        //     element.name
+                                                                                        // );
+                                                                                        false; // Placeholder until we implement the check
 
                                                                                     return (
                                                                                         <tr
