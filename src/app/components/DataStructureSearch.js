@@ -36,6 +36,7 @@ const DataStructureSearch = ({
     databaseStructures,
     databaseName,
     loadingDatabaseStructures,
+    databaseElements,
 }) => {
     const [headers, setHeaders] = useState([]);
     const [isExpanded, setIsExpanded] = useState(false);
@@ -535,10 +536,11 @@ const DataStructureSearch = ({
                                                                                             element.name
                                                                                         );
                                                                                     const isInDatabase =
-                                                                                        // isElementInDatabaseUpdated(
-                                                                                        //     element.name
-                                                                                        // );
-                                                                                        false; // Placeholder until we implement the check
+                                                                                        databaseElements &&
+                                                                                        databaseElements.has &&
+                                                                                        databaseElements.has(
+                                                                                            element.name.toLowerCase()
+                                                                                        );
 
                                                                                     return (
                                                                                         <tr

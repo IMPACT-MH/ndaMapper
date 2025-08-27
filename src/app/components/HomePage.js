@@ -587,6 +587,7 @@ const HomePage = () => {
                     databaseStructures={databaseStructures}
                     databaseName={databaseName}
                     loadingDatabaseStructures={loadingDatabaseStructures}
+                    databaseElements={databaseElements}
                 />
             </div>
 
