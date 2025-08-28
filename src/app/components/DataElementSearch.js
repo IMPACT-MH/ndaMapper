@@ -810,6 +810,10 @@ const DataElementSearch = ({
                                 key={index}
                                 className="p-4 hover:bg-gray-50 cursor-pointer transition-colors"
                                 onClick={async () => {
+                                    // Show loading state immediately
+                                    setElement({ ...match, loading: true });
+                                    setIsPartialSearch(false);
+
                                     try {
                                         const response = await fetch(
                                             `https://nda.nih.gov/api/datadictionary/dataelement/${match.name}`
@@ -818,7 +822,6 @@ const DataElementSearch = ({
                                             const fullData =
                                                 await response.json();
                                             setElement(fullData);
-                                            setIsPartialSearch(false);
 
                                             // Push to browser history
                                             pushHistoryState("element", {
@@ -835,7 +838,6 @@ const DataElementSearch = ({
                                             err
                                         );
                                         setElement(match);
-                                        setIsPartialSearch(false);
 
                                         // Push to browser history even with fallback data
                                         pushHistoryState("element", {
@@ -1042,7 +1044,14 @@ const DataElementSearch = ({
                             <h3 className="text-lg font-medium text-gray-800 mb-2">
                                 Used in Data Structures
                             </h3>
-                            {element.dataStructures?.length > 0 ? (
+                            {element.loading ? (
+                                <div className="bg-gray-50 p-3 rounded flex items-center justify-center">
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500 mr-2"></div>
+                                    <span className="text-gray-600">
+                                        Loading data structures...
+                                    </span>
+                                </div>
+                            ) : element.dataStructures?.length > 0 ? (
                                 <div className="bg-gray-50 p-3 rounded max-h-64 overflow-y-auto">
                                     <ul className="space-y-1">
                                         {element.dataStructures.map(
