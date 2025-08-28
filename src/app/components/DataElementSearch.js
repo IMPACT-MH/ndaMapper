@@ -655,7 +655,13 @@ const DataElementSearch = ({
                             className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
                         />
                         <div className="flex items-center space-x-2">
-                            <Database className="w-4 h-4 text-blue-600" />
+                            <div className="relative group">
+                                <Database className="w-4 h-4 text-blue-600 cursor-help" />
+                                <div className="absolute bottom-full left-0 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-10">
+                                    Filter to show only elements that exist in
+                                    the IMPACT-MH database
+                                </div>
+                            </div>
                             <span className="text-sm font-medium text-gray-700">
                                 Show only IMPACT-MH elements
                             </span>
@@ -865,10 +871,13 @@ const DataElementSearch = ({
                                                 </span>
                                             )}
                                             {match.inDatabase && (
-                                                <Database
-                                                    className="w-4 h-4 text-blue-500"
-                                                    title="Available in database"
-                                                />
+                                                <div className="relative group">
+                                                    <Database className="w-4 h-4 text-blue-500 cursor-help" />
+                                                    <div className="absolute bottom-full left-0 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-10">
+                                                        This element exists in
+                                                        the IMPACT-MH database
+                                                    </div>
+                                                </div>
                                             )}
                                         </h3>
                                     </div>
@@ -929,7 +938,13 @@ const DataElementSearch = ({
                 databaseFilterEnabled &&
                 totalElementCount > 0 && (
                     <div className="bg-blue-50 p-4 rounded-lg flex items-start gap-3">
-                        <Database className="w-5 h-5 text-blue-500 mt-1 flex-shrink-0" />
+                        <div className="relative group">
+                            <Database className="w-5 h-5 text-blue-500 mt-1 flex-shrink-0 cursor-help" />
+                            <div className="absolute bottom-full left-0 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-10">
+                                Database filter is enabled - showing only
+                                IMPACT-MH elements
+                            </div>
+                        </div>
                         <div>
                             <h4 className="font-medium text-blue-800">
                                 No Database Matches Found
