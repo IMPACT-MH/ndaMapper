@@ -19,7 +19,7 @@ const DataCategorySearch = ({
     const [searchTerm, setSearchTerm] = useState("");
 
     // Grouping and filtering states
-    const [groupBy, setGroupBy] = useState("category"); // "category" or "dataType"
+    const [groupBy, setGroupBy] = useState("dataType"); // "category" or "dataType"
     const [expandedGroups, setExpandedGroups] = useState(new Set());
     const [selectedFilters, setSelectedFilters] = useState({
         categories: new Set(),
@@ -199,24 +199,32 @@ const DataCategorySearch = ({
             .includes(shortName?.toLowerCase());
     };
 
-    const hasStructuresInDatabase = (categoryOrDataType) => {
-        if (!databaseStructures.length) return false;
-        return filteredStructures.some((structure) => {
+    // Pre-compute which categories and data types have structures in the database
+    const categoriesInDatabase = new Set();
+    const dataTypesInDatabase = new Set();
+
+    if (databaseStructures.length > 0) {
+        allStructures.forEach((structure) => {
             const isInDatabase = databaseStructures
                 .map((name) => name.toLowerCase())
                 .includes(structure.shortName.toLowerCase());
 
-            if (groupBy === "category") {
-                return (
-                    structure.categories?.includes(categoryOrDataType) &&
-                    isInDatabase
+            if (isInDatabase) {
+                structure.categories?.forEach((cat) =>
+                    categoriesInDatabase.add(cat)
                 );
-            } else {
-                return (
-                    structure.dataType === categoryOrDataType && isInDatabase
-                );
+                if (structure.dataType) {
+                    dataTypesInDatabase.add(structure.dataType);
+                }
             }
         });
+    }
+
+    const hasStructuresInDatabase = (categoryOrDataType) => {
+        return (
+            categoriesInDatabase.has(categoryOrDataType) ||
+            dataTypesInDatabase.has(categoryOrDataType)
+        );
     };
 
     const groupedStructures = groupStructures(filteredStructures);
@@ -296,8 +304,8 @@ const DataCategorySearch = ({
                             onChange={(e) => setGroupBy(e.target.value)}
                             className="border border-gray-300 rounded px-3 py-1 text-sm focus:ring-2 focus:ring-blue-500"
                         >
-                            <option value="category">Category</option>
                             <option value="dataType">Data Type</option>
+                            <option value="category">Category</option>
                         </select>
                     </div>
 
