@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Search, X, Database, ChevronRight, ChevronDown } from "lucide-react";
+import { DATA_PORTAL } from "@/const.js";
 
 const DataCategorySearch = ({
     onStructureSelect,
@@ -227,6 +228,115 @@ const DataCategorySearch = ({
         );
     };
 
+    const downloadApiAsCsv = async () => {
+        try {
+            // Fetch from both APIs
+            const [impactResponse, ndaResponse] = await Promise.all([
+                fetch(DATA_PORTAL),
+                fetch("https://nda.nih.gov/api/datadictionary/datastructure"),
+            ]);
+
+            if (!impactResponse.ok) {
+                throw new Error("Failed to fetch IMPACT-MH data");
+            }
+            if (!ndaResponse.ok) {
+                throw new Error("Failed to fetch NDA data");
+            }
+
+            const impactData = await impactResponse.json();
+            const ndaData = await ndaResponse.json();
+
+            console.log("IMPACT API Response:", impactData);
+            console.log("NDA API Response:", ndaData);
+
+            // Create a map of NDA structures for quick lookup
+            const ndaStructuresMap = {};
+            ndaData.forEach((ndaStructure) => {
+                ndaStructuresMap[ndaStructure.shortName] = ndaStructure;
+            });
+
+            // Flatten the JSON data into CSV format
+            let flattenedData = [];
+
+            if (impactData && typeof impactData === "object") {
+                // Extract the dataStructures object
+                const dataStructures = impactData.dataStructures || {};
+
+                // Flatten each structure into a row
+                Object.keys(dataStructures).forEach((structureName) => {
+                    const impactStructure = dataStructures[structureName];
+                    const ndaStructure = ndaStructuresMap[structureName];
+
+                    // Create a row for this structure
+                    const row = {
+                        structureName: structureName,
+                        categories: ndaStructure?.categories
+                            ? ndaStructure.categories.join("; ")
+                            : "",
+                        dataType: ndaStructure?.dataType || "",
+                        status: ndaStructure?.status || "",
+                        title: ndaStructure?.title || "",
+                        source: ndaStructure?.source || "NDA",
+                        inImpactDatabase: "Yes",
+                    };
+
+                    flattenedData.push(row);
+                });
+            }
+
+            // Convert flattened data to CSV format
+            if (flattenedData && flattenedData.length > 0) {
+                const headers = Object.keys(flattenedData[0]);
+                const csvContent = [
+                    headers.join(","),
+                    ...flattenedData.map((row) =>
+                        headers
+                            .map((header) => {
+                                const value = row[header];
+                                // Handle arrays and other values
+                                let stringValue;
+                                if (value === null || value === undefined) {
+                                    stringValue = "";
+                                } else if (Array.isArray(value)) {
+                                    stringValue = value.join("; ");
+                                } else {
+                                    stringValue = String(value);
+                                }
+
+                                // Escape quotes and wrap in quotes if contains comma or newline
+                                const escapedValue = stringValue.replace(
+                                    /"/g,
+                                    '""'
+                                );
+                                return escapedValue.includes(",") ||
+                                    escapedValue.includes("\n") ||
+                                    escapedValue.includes('"')
+                                    ? `"${escapedValue}"`
+                                    : escapedValue;
+                            })
+                            .join(",")
+                    ),
+                ].join("\n");
+
+                // Create and download the file
+                const blob = new Blob([csvContent], { type: "text/csv" });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "impact-api-data.csv";
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            } else {
+                alert("No data available to download");
+            }
+        } catch (error) {
+            console.error("Error downloading CSV:", error);
+            alert("Failed to download CSV: " + error.message);
+        }
+    };
+
     const groupedStructures = groupStructures(filteredStructures);
     const totalCount = filteredStructures.length;
     const activeFilterCount =
@@ -328,6 +438,13 @@ const DataCategorySearch = ({
                             Clear all filters ({activeFilterCount})
                         </button>
                     )}
+
+                    <button
+                        onClick={downloadApiAsCsv}
+                        className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors text-sm font-medium"
+                    >
+                        Download API Data as CSV
+                    </button>
                 </div>
             </div>
 
