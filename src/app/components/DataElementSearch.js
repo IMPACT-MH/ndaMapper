@@ -942,6 +942,8 @@ const DataElementSearch = ({
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     setDatabaseFilterEnabled(false);
+                                    // Trigger a new search with database filter disabled
+                                    handleSearchWithFilter(false);
                                 }}
                                 className="mt-2 px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600"
                             >
