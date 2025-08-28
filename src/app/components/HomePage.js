@@ -200,6 +200,28 @@ const HomePage = () => {
         }
     };
 
+    const handleElementDetailStructureSelect = async (structureName) => {
+        setActiveTab(Tabs.STRUCTURE_SEARCH);
+        // Don't update search term when coming from element detail view
+
+        try {
+            const response = await fetch(
+                `https://nda.nih.gov/api/datadictionary/v2/datastructure?searchTerm=${structureName}`
+            );
+            if (response.ok) {
+                const structures = await response.json();
+                const exactMatch = structures.find(
+                    (s) => s.shortName === structureName
+                );
+                if (exactMatch) {
+                    handleStructureSelect(exactMatch);
+                }
+            }
+        } catch (err) {
+            console.error("Error fetching structure:", err);
+        }
+    };
+
     const handleCategoryStructureSelect = async (structureName) => {
         setActiveTab(Tabs.STRUCTURE_SEARCH);
         setSearchTerm(structureName);
@@ -662,6 +684,9 @@ const HomePage = () => {
             >
                 <DataElementSearch
                     onStructureSelect={handleElementStructureSelect}
+                    onElementDetailStructureSelect={
+                        handleElementDetailStructureSelect
+                    }
                     // Pass database filter props
                     databaseFilterEnabled={databaseFilterEnabled}
                     setDatabaseFilterEnabled={setDatabaseFilterEnabled}

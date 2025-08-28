@@ -5,6 +5,7 @@ import { Search, X, AlertCircle, Info, Database } from "lucide-react";
 
 const DataElementSearch = ({
     onStructureSelect,
+    onElementDetailStructureSelect,
     // Database filter props
     databaseFilterEnabled,
     setDatabaseFilterEnabled,
@@ -1062,7 +1063,7 @@ const DataElementSearch = ({
                                                     key={index}
                                                     className="font-mono text-sm hover:bg-blue-50 p-1 rounded cursor-pointer text-blue-600 hover:text-blue-800 transition-colors"
                                                     onClick={() =>
-                                                        onStructureSelect(
+                                                        onElementDetailStructureSelect(
                                                             structure
                                                         )
                                                     }
