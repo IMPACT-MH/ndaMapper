@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Search, X, Database, ChevronRight, ChevronDown } from "lucide-react";
 import { DATA_PORTAL } from "@/const.js";
+import CategoryTagManagement from "./CategoryTagManagement";
 
 const DataCategorySearch = ({
     onStructureSelect,
@@ -18,6 +19,8 @@ const DataCategorySearch = ({
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [searchTerm, setSearchTerm] = useState("");
+    const [structureTags, setStructureTags] = useState({});
+
 
     // Grouping and filtering states
     const [groupBy, setGroupBy] = useState("dataType"); // "category" or "dataType"
@@ -30,6 +33,13 @@ const DataCategorySearch = ({
     // Available filter options
     const [availableCategories, setAvailableCategories] = useState(new Set());
     const [availableDataTypes, setAvailableDataTypes] = useState(new Set());
+
+    const handleTagsUpdate = (structureShortName, updatedTags) => {
+        setStructureTags(prev => ({
+            ...prev,
+            [structureShortName]: updatedTags
+    }   ));
+    };
 
     // Fetch all data structures on component mount
     useEffect(() => {
@@ -46,7 +56,7 @@ const DataCategorySearch = ({
         databaseFilterEnabled,
         databaseStructures,
     ]);
-
+    
     const fetchAllStructures = async () => {
         setLoading(true);
         setError(null);
@@ -652,6 +662,17 @@ const DataCategorySearch = ({
                                                                             structure.title
                                                                         }
                                                                     </p>
+
+                                                                    <div className="mt-2" onClick={(e) => e.stopPropagation()}>
+                                                                        <CategoryTagManagement
+                                                                            structure={structure}
+                                                                            structureId={structure.id || structure.shortName}
+                                                                            structureTags={structureTags[structure.shortName] || []}
+                                                                            onTagsUpdate={(tags) => handleTagsUpdate(structure.shortName, tags)}
+                                                                            apiBaseUrl="https://spinup-002b0f.spinup.yale.edu/api"
+                                                                        />
+                                                                    </div>
+
                                                                     <div className="flex flex-wrap gap-2 mt-2">
                                                                         {structure.categories?.map(
                                                                             (
