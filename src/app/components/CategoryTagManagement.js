@@ -88,14 +88,63 @@ const CategoryTagManagement = ({
     }
   };
 
+const [dataStructuresMap, setDataStructuresMap] = useState({});
+const [isLoadingStructures, setIsLoadingStructures] = useState(true);
+
+// Fetch existing data structures on component mount
+useEffect(() => {
+  const fetchDataStructures = async () => {
+    setIsLoadingStructures(true);
+    try {
+      const response = await fetch(`${apiBaseUrl}/dataStructures/database`);
+      const data = await response.json();
+
+      console.log('Raw API response:', data);
+      console.log('Type of data:', typeof data);
+      console.log('Is array?', Array.isArray(data));
+
+       // The response format is: { dataStructures: { shortName: structureObj, ... } }
+      if (data && data.dataStructures) {
+        console.log('Loaded data structures:', Object.keys(data.dataStructures));
+        setDataStructuresMap(data.dataStructures); // It's already in the right format!
+      } else {
+        console.error('Unexpected response format:', data);
+      }
+      
+    } catch (err) {
+      console.error('Error fetching data structures:', err);
+    } finally {
+      setIsLoadingStructures(false);
+    }
+  };
+  
+  if (apiBaseUrl) {
+    fetchDataStructures();
+  }
+}, [apiBaseUrl]);
+
   const assignTag = async (tagId) => {
     try {
+
+    if (isLoadingStructures) {
+      throw new Error('Loading data structures, please try again in a moment...');
+    }
+
+      const existingStructure = dataStructuresMap[structure.shortName];  
+        
+      if (!existingStructure) {
+            console.error('Available structures:', Object.keys(dataStructuresMap));
+            throw new Error(`Data structure "${structure.shortName}" not found in backend. Available: ${Object.keys(dataStructuresMap).join(', ')}`);
+          }
+          
+      console.log('Found structure:', existingStructure);
+
       const response = await fetch(`${apiBaseUrl}/tags/assign`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           tagId: tagId,
-          dataStructureId: structureId || structure.id || structure.shortName
+          dataStructureId: existingStructure.dataStructureId
         })
       });
       
@@ -113,12 +162,18 @@ const CategoryTagManagement = ({
 
   const removeTag = async (tagId) => {
     try {
+      const existingStructure = dataStructuresMap[structure.shortName];
+
+      if (!existingStructure) {
+        throw new Error(`Data structure "${structure.shortName}" not found`);
+      }
+    
       const response = await fetch(`${apiBaseUrl}/tags/remove`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           tagId: tagId,
-          dataStructureId: structureId || structure.id || structure.shortName
+          dataStructureId: existingStructure.dataStructureId
         })
       });
       
