@@ -9,7 +9,9 @@ const CategoryTagManagement = ({
   structureId, // The actual ID for your database
   structureTags: initialTags = [],
   onTagsUpdate,
-  apiBaseUrl="https://spinup-002b0f.spinup.yale.edu/api/"
+  apiBaseUrl="https://spinup-002b0f.spinup.yale.edu/api/",
+   dataStructuresMap = {}, 
+  isLoadingStructures = false  
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [availableTags, setAvailableTags] = useState([]);
@@ -17,7 +19,6 @@ const CategoryTagManagement = ({
   const [selectedTags, setSelectedTags] = useState(new Set());
   const [searchTerm, setSearchTerm] = useState("");
   const [newTagName, setNewTagName] = useState("");
-  const [newTagDescription, setNewTagDescription] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -59,7 +60,6 @@ const CategoryTagManagement = ({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           name: newTagName.trim(),
-          description: newTagDescription.trim() || `Category: ${newTagName.trim()}`
         })
       });
       
@@ -78,7 +78,6 @@ const CategoryTagManagement = ({
       
       // Clear inputs
       setNewTagName("");
-      setNewTagDescription("");
       
       return newTag;
     } catch (err) {
@@ -88,40 +87,6 @@ const CategoryTagManagement = ({
     }
   };
 
-const [dataStructuresMap, setDataStructuresMap] = useState({});
-const [isLoadingStructures, setIsLoadingStructures] = useState(true);
-
-// Fetch existing data structures on component mount
-useEffect(() => {
-  const fetchDataStructures = async () => {
-    setIsLoadingStructures(true);
-    try {
-      const response = await fetch(`${apiBaseUrl}/dataStructures/database`);
-      const data = await response.json();
-
-      console.log('Raw API response:', data);
-      console.log('Type of data:', typeof data);
-      console.log('Is array?', Array.isArray(data));
-
-       // The response format is: { dataStructures: { shortName: structureObj, ... } }
-      if (data && data.dataStructures) {
-        console.log('Loaded data structures:', Object.keys(data.dataStructures));
-        setDataStructuresMap(data.dataStructures); // It's already in the right format!
-      } else {
-        console.error('Unexpected response format:', data);
-      }
-      
-    } catch (err) {
-      console.error('Error fetching data structures:', err);
-    } finally {
-      setIsLoadingStructures(false);
-    }
-  };
-  
-  if (apiBaseUrl) {
-    fetchDataStructures();
-  }
-}, [apiBaseUrl]);
 
   const assignTag = async (tagId) => {
     try {
@@ -131,7 +96,7 @@ useEffect(() => {
     }
 
       const existingStructure = dataStructuresMap[structure.shortName];  
-        
+
       if (!existingStructure) {
             console.error('Available structures:', Object.keys(dataStructuresMap));
             throw new Error(`Data structure "${structure.shortName}" not found in backend. Available: ${Object.keys(dataStructuresMap).join(', ')}`);
@@ -277,40 +242,40 @@ useEffect(() => {
 
   return (
     <>
-      {/* Tags Display */}
-      <div className="flex flex-wrap gap-2 items-center">
-        {structureTags.map(tag => (
-          <span
-            key={tag.id}
-            className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs"
-          >
-            {tag.name}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                if (window.confirm(`Remove "${tag.name}" tag?`)) {
-                  removeTag(tag.id);
-                }
-              }}
-              className="ml-1 hover:text-blue-900"
-              aria-label={`Remove ${tag.name} tag`}
-            >
-              <X className="w-3 h-3" />
-            </button>
-          </span>
-        ))}
-        
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            setIsModalOpen(true);
-          }}
-          className="inline-flex items-center gap-1 px-2 py-1 border border-dashed border-gray-400 text-gray-600 rounded text-xs hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-        >
-          <Plus className="w-3 h-3" />
-          Add Category
-        </button>
-      </div>
+{/* Tags Display */}
+<div className="flex flex-wrap gap-2 items-center">
+  {console.log('structureTags:', structureTags)}
+  {structureTags.map(tag => (
+    <span
+      key={tag.id}
+      className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs"
+    >
+      {tag.name}
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          if (window.confirm(`Remove "${tag.name}" tag?`)) {
+            removeTag(tag.id);
+          }
+        }}
+        className="ml-1 hover:text-blue-900 hover:bg-blue-200 rounded-full p-0.5 transition-colors"
+        aria-label={`Remove ${tag.name} tag`}
+      >
+        <X className="w-3 h-3" />
+      </button>
+    </span>
+  ))}
+  <button
+    onClick={(e) => {
+      e.stopPropagation();
+      setIsModalOpen(true);
+    }}
+    className="inline-flex items-center gap-1 px-2 py-1 border border-dashed border-gray-400 text-gray-600 rounded text-xs hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+  >
+    <Plus className="w-3 h-3" />
+    Add Category
+  </button>
+</div>
 
       {/* Modal */}
       {isModalOpen && (
@@ -388,6 +353,33 @@ useEffect(() => {
                 </div>
               )}
 
+
+              {filteredAvailableTags.map(tag => (
+                <button
+                  key={tag.id}
+                  onClick={() => {
+                    // ... toggle logic
+                  }}
+                  className={`inline-flex flex-col items-start px-3 py-1.5 rounded-lg text-sm transition-all ${
+                    selectedTags.has(tag.id)
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-white text-gray-700 border border-gray-300 hover:border-blue-400 hover:bg-blue-50'
+                  }`}
+                >
+                  <span className="font-medium">{tag.name}</span>
+                  {tag.category && (
+                    <span className="text-xs opacity-70">
+                      {tag.category}
+                    </span>
+                  )}
+                  {tag.dataStructures && (
+                    <span className="text-xs opacity-70">
+                      ({tag.dataStructures.length} structures)
+                    </span>
+                  )}
+                </button>
+              ))}
+
               {/* Available Tags */}
               {loading ? (
                 <div className="text-center py-4">
@@ -448,13 +440,6 @@ useEffect(() => {
                     value={newTagName}
                     onChange={(e) => setNewTagName(e.target.value)}
                     placeholder="Category name..."
-                    className="w-full px-3 py-2 border rounded-lg focus:border-blue-500 focus:outline-none text-sm"
-                  />
-                  <input
-                    type="text"
-                    value={newTagDescription}
-                    onChange={(e) => setNewTagDescription(e.target.value)}
-                    placeholder="Description (optional)..."
                     className="w-full px-3 py-2 border rounded-lg focus:border-blue-500 focus:outline-none text-sm"
                   />
                   <button

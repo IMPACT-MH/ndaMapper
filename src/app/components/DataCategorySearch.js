@@ -41,6 +41,31 @@ const DataCategorySearch = ({
     }   ));
     };
 
+    // In DataCategorySearch.js (around line 40, after your other state declarations)
+const [dataStructuresMap, setDataStructuresMap] = useState({});
+const [isLoadingStructures, setIsLoadingStructures] = useState(false);
+
+// Add this useEffect to fetch once
+useEffect(() => {
+  const fetchDataStructures = async () => {
+    setIsLoadingStructures(true);
+    try {
+      const response = await fetch('https://spinup-002b0f.spinup.yale.edu/api/dataStructures/database');
+      const data = await response.json();
+      
+      if (data && data.dataStructures) {
+        setDataStructuresMap(data.dataStructures);
+      }
+    } catch (err) {
+      console.error('Error fetching data structures:', err);
+    } finally {
+      setIsLoadingStructures(false);
+    }
+  };
+  
+  fetchDataStructures();
+}, []);
+
     // Fetch all data structures on component mount
     useEffect(() => {
         fetchAllStructures();
@@ -56,6 +81,9 @@ const DataCategorySearch = ({
         databaseFilterEnabled,
         databaseStructures,
     ]);
+
+    const [ndaCategories, setNdaCategories] = useState([]);
+    const [ndaDataTypes, setNdaDataTypes] = useState([]);
     
     const fetchAllStructures = async () => {
         setLoading(true);
@@ -670,6 +698,8 @@ const DataCategorySearch = ({
                                                                             structureTags={structureTags[structure.shortName] || []}
                                                                             onTagsUpdate={(tags) => handleTagsUpdate(structure.shortName, tags)}
                                                                             apiBaseUrl="https://spinup-002b0f.spinup.yale.edu/api"
+                                                                            dataStructuresMap={dataStructuresMap}  
+                                                                            isLoadingStructures={isLoadingStructures}  
                                                                         />
                                                                     </div>
 
