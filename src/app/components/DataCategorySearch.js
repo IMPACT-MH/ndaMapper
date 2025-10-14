@@ -899,103 +899,133 @@ useEffect(() => {
                 </div>
             )}
 
-             {/* Social Assessment Modal */}
-                    {isSocialModalOpen && modalStructure && (
-                        <div 
-                            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+             {/* Categories NIH Modal */}
+                {isSocialModalOpen && modalStructure && (
+                    <div 
+                        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+                        onClick={() => setIsSocialModalOpen(false)}
+                    >
+                    <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex justify-between items-center p-5 border-b">
+                            <div>
+                                <h2 className="text-xl font-semibold">Categories</h2>
+                            </div>
+                            <button onClick={() => setIsSocialModalOpen(false)} className="text-gray-400 hover:text-gray-600">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                
+                    <div className="flex-1 overflow-y-auto p-5">
+                        <div className="mb-4">
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                                <input
+                                    type="text"
+                                    value={modalSearchTerm}
+                                    onChange={(e) => setModalSearchTerm(e.target.value)}
+                                    placeholder="Search categories..."
+                                    className="w-full pl-10 pr-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
+                                />
+                            </div>
+                        </div>
+
+                        {modalLoading && (
+                            <div className="text-center py-8">
+                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+                            </div>
+                        )}
+
+                        {modalError && (
+                            <div className="p-3 bg-red-50 text-red-700 rounded-lg text-sm">{modalError}</div>
+                        )}
+
+                        {!modalLoading && !modalError && (
+                            <div className="space-y-2">
+                                {socialAssessments
+                                    .filter(a => !modalSearchTerm || 
+                                        a.shortName?.toLowerCase().includes(modalSearchTerm.toLowerCase()))
+                                    .map(assessment => (
+                                        <button
+                                            key={assessment.shortName}
+                                            onClick={() => {
+                                                setSelectedSocial(prev => {
+                                                    const newSet = new Set(prev);
+                                                    if (newSet.has(assessment.shortName)) {
+                                                        newSet.delete(assessment.shortName);
+                                                    } else {
+                                                        newSet.add(assessment.shortName);
+                                                    }
+                                                    return newSet;
+                                                });
+                                            }}
+                                            className={`w-full text-left p-3 rounded-lg transition-all ${
+                                                selectedSocial.has(assessment.shortName)
+                                                    ? 'bg-blue-500 text-white'
+                                                    : 'bg-white border border-gray-300 hover:border-blue-400'
+                                            }`}
+                                        >
+                                            <div className="font-medium font-mono text-sm">{assessment.shortName}</div>
+                                        </button>
+                                    ))}
+                            </div>
+                        )}
+                    </div>
+                    <div className="flex justify-end gap-3 p-5 border-t">
+                        <button
                             onClick={() => setIsSocialModalOpen(false)}
+                            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
                         >
-                            <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
-                                <div className="flex justify-between items-center p-5 border-b">
-                                    <div>
-                                        <h2 className="text-xl font-semibold">Social Assessments</h2>
-                                        <p className="text-sm text-gray-500 mt-1">{modalStructure.title}</p>
-                                    </div>
-                                    <button onClick={() => setIsSocialModalOpen(false)} className="text-gray-400 hover:text-gray-600">
-                                        <X className="w-5 h-5" />
-                                    </button>
-                                </div>
-                                
-                                <div className="flex-1 overflow-y-auto p-5">
-                                    <div className="mb-4">
-                                        <div className="relative">
-                                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                                            <input
-                                                type="text"
-                                                value={modalSearchTerm}
-                                                onChange={(e) => setModalSearchTerm(e.target.value)}
-                                                placeholder="Search assessments..."
-                                                className="w-full pl-10 pr-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
-                                            />
-                                        </div>
-                                    </div>
+                            Cancel
+                        </button>
+                        <button
+                            onClick={async () => {
+                                try {
+                                    const selectedCategories = Array.from(selectedSocial);
+                                    
+                                    console.log("Saving categories for", modalStructure.shortName, ":", selectedCategories);
+                                    
+                                     const existingStructure = dataStructuresMap[modalStructure.shortName];
+            
+                                    if (!existingStructure) {
+                                        throw new Error(`Data structure "${modalStructure.shortName}" not found in backend`);
+                                    }
 
-                                    {modalLoading && (
-                                        <div className="text-center py-8">
-                                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
-                                        </div>
-                                    )}
-
-                                    {modalError && (
-                                        <div className="p-3 bg-red-50 text-red-700 rounded-lg text-sm">{modalError}</div>
-                                    )}
-
-                                    {!modalLoading && !modalError && (
-                                        <div className="space-y-2">
-                                            {socialAssessments
-                                                .filter(a => !modalSearchTerm || 
-                                                    a.shortName?.toLowerCase().includes(modalSearchTerm.toLowerCase()) ||
-                                                    a.title?.toLowerCase().includes(modalSearchTerm.toLowerCase()))
-                                                .map(assessment => (
-                                                    <button
-                                                        key={assessment.shortName}
-                                                        onClick={() => {
-                                                            setSelectedSocial(prev => {
-                                                                const newSet = new Set(prev);
-                                                                if (newSet.has(assessment.shortName)) {
-                                                                    newSet.delete(assessment.shortName);
-                                                                } else {
-                                                                    newSet.add(assessment.shortName);
-                                                                }
-                                                                return newSet;
-                                                            });
-                                                        }}
-                                                        className={`w-full text-left p-3 rounded-lg transition-all ${
-                                                            selectedSocial.has(assessment.shortName)
-                                                                ? 'bg-blue-500 text-white'
-                                                                : 'bg-white border border-gray-300 hover:border-blue-400'
-                                                        }`}
-                                                    >
-                                                        <div className="font-medium font-mono text-sm">{assessment.shortName}</div>
-                                                        <div className="text-sm mt-1 opacity-90">{assessment.title}</div>
-                                                    </button>
-                                                ))}
-                                        </div>
-                                    )}
-                        </div>
-
-                        <div className="flex justify-end gap-3 p-5 border-t">
-                            <button
-                                onClick={() => setIsSocialModalOpen(false)}
-                                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={() => {
-                                    console.log("Selected social:", Array.from(selectedSocial));
+                                    const response = await fetch(`https://spinup-002b0f.spinup.yale.edu/api/dataStructures/database/${existingStructure.dataStructureId}`, {
+                                        method: 'PUT',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ 
+                                            categories: selectedCategories 
+                                        })
+                                    });
+                                    
+                                    if (!response.ok) {
+                                        const errorData = await response.json();
+                                        throw new Error(errorData.error || 'Failed to update categories');
+                                    }
+                                    
+                                    setAllStructures(prev => prev.map(s => 
+                                        s.shortName === modalStructure.shortName 
+                                            ? { ...s, categories: selectedCategories }
+                                            : s
+                                    ));
+                                    
                                     setIsSocialModalOpen(false);
-                                }}
-                                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
-                            >
-                                Save Changes
-                            </button>
-                        </div>
+                                    setSelectedSocial(new Set());
+                                } catch (err) {
+                                    console.error("Error saving categories:", err);
+                                    setModalError("Failed to save categories");
+                                }
+                            }}
+                            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+                        >
+                            Save Changes
+                        </button>
                     </div>
                 </div>
+            </div>
             )}
 
-        {/* Clinical Assessment Modal */}
+        {/* Data Types NIH Modal */}
             {isClinicalModalOpen && modalStructure && (
                 <div 
                     className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
@@ -1004,8 +1034,7 @@ useEffect(() => {
                     <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
                         <div className="flex justify-between items-center p-5 border-b">
                             <div>
-                                <h2 className="text-xl font-semibold">Clinical Assessments</h2>
-                                <p className="text-sm text-gray-500 mt-1">{modalStructure.title}</p>
+                                <h2 className="text-xl font-semibold">Data Types</h2>
                             </div>
                             <button onClick={() => setIsClinicalModalOpen(false)} className="text-gray-400 hover:text-gray-600">
                                 <X className="w-5 h-5" />
@@ -1020,7 +1049,7 @@ useEffect(() => {
                                         type="text"
                                         value={modalSearchTerm}
                                         onChange={(e) => setModalSearchTerm(e.target.value)}
-                                        placeholder="Search assessments..."
+                                        placeholder="Search data types..."
                                         className="w-full pl-10 pr-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
                                     />
                                 </div>
@@ -1040,8 +1069,7 @@ useEffect(() => {
                                 <div className="space-y-2">
                                     {clinicalAssessments
                                         .filter(a => !modalSearchTerm || 
-                                            a.shortName?.toLowerCase().includes(modalSearchTerm.toLowerCase()) ||
-                                            a.title?.toLowerCase().includes(modalSearchTerm.toLowerCase()))
+                                            a.shortName?.toLowerCase().includes(modalSearchTerm.toLowerCase()))
                                         .map(assessment => (
                                             <button
                                                 key={assessment.shortName}
@@ -1063,7 +1091,6 @@ useEffect(() => {
                                                 }`}
                                             >
                                                 <div className="font-medium font-mono text-sm">{assessment.shortName}</div>
-                                                <div className="text-sm mt-1 opacity-90">{assessment.title}</div>
                                             </button>
                                         ))}
                                 </div>
@@ -1071,21 +1098,71 @@ useEffect(() => {
                         </div>
 
                         <div className="flex justify-end gap-3 p-5 border-t">
-                            <button
-                                onClick={() => setIsClinicalModalOpen(false)}
-                                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={() => {
-                                    console.log("Selected clinical:", Array.from(selectedClinical));
-                                    setIsClinicalModalOpen(false);
-                                }}
-                                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
-                            >
-                                Save Changes
-                            </button>
+                       <button
+    onClick={async () => {
+        try {
+            const selectedDataType = Array.from(selectedClinical)[0];
+            
+            if (!selectedDataType) {
+                setModalError("Please select a data type");
+                return;
+            }
+            
+            console.log("Modal structure:", modalStructure);
+            console.log("dataStructuresMap:", dataStructuresMap);
+            
+            // Get the dataStructureId from the dataStructuresMap
+            const existingStructure = dataStructuresMap[modalStructure.shortName];
+            
+            console.log("Existing structure:", existingStructure);
+            
+            if (!existingStructure) {
+                throw new Error(`Data structure "${modalStructure.shortName}" not found in backend`);
+            }
+            
+            const url = `https://spinup-002b0f.spinup.yale.edu/api/dataStructures/database/${existingStructure.dataStructureId}`;
+            console.log("Calling URL:", url);
+            
+            const body = { dataType: selectedDataType };
+            console.log("Request body:", body);
+            
+            // Update the structure via API
+            const response = await fetch(url, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+            
+            console.log("Response status:", response.status);
+            console.log("Response ok:", response.ok);
+            
+            if (!response.ok) {
+                const responseText = await response.text();
+                console.log("Error response text:", responseText);
+                throw new Error(`Failed to update data type: ${response.status} - ${responseText}`);
+            }
+            
+            const result = await response.json();
+            console.log("Success result:", result);
+            
+            // Update local state to reflect changes immediately
+            setAllStructures(prev => prev.map(s => 
+                s.shortName === modalStructure.shortName 
+                    ? { ...s, dataType: selectedDataType }
+                    : s
+            ));
+            
+            setIsClinicalModalOpen(false);
+            setSelectedClinical(new Set());
+        } catch (err) {
+            console.error("Error saving data type:", err);
+            setModalError("Failed to save data type: " + err.message);
+        }
+    }}
+    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+>
+    Save Changes
+</button>
                         </div>
                     </div>
                 </div>
