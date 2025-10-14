@@ -41,9 +41,19 @@ const DataCategorySearch = ({
     }   ));
     };
 
-    // In DataCategorySearch.js (around line 40, after your other state declarations)
-const [dataStructuresMap, setDataStructuresMap] = useState({});
-const [isLoadingStructures, setIsLoadingStructures] = useState(false);
+    const [dataStructuresMap, setDataStructuresMap] = useState({});
+    const [isLoadingStructures, setIsLoadingStructures] = useState(false);
+
+    const [isSocialModalOpen, setIsSocialModalOpen] = useState(false);
+    const [isClinicalModalOpen, setIsClinicalModalOpen] = useState(false);
+    const [modalStructure, setModalStructure] = useState(null);
+    const [socialAssessments, setSocialAssessments] = useState([]);
+    const [clinicalAssessments, setClinicalAssessments] = useState([]);
+    const [selectedSocial, setSelectedSocial] = useState(new Set());
+    const [selectedClinical, setSelectedClinical] = useState(new Set());
+    const [modalSearchTerm, setModalSearchTerm] = useState("");
+    const [modalLoading, setModalLoading] = useState(false);
+    const [modalError, setModalError] = useState(null);
 
 // Add this useEffect to fetch once
 useEffect(() => {
@@ -380,6 +390,99 @@ useEffect(() => {
     const activeFilterCount =
         selectedFilters.categories.size + selectedFilters.dataTypes.size;
 
+    const fetchSocialAssessments = async () => {
+    setModalLoading(true);
+    setModalError(null);
+    try {
+        const response = await fetch(
+            'https://nda.nih.gov/api/datadictionary/datastructure'
+        );
+        if (!response.ok) throw new Error("Failed to fetch categories");
+        const data = await response.json();
+
+        console.log("Raw data:", data);
+
+       // Extract all unique categories
+        const uniqueCategories = new Set();
+        data.forEach(structure => {
+            if (structure.categories && Array.isArray(structure.categories)) {
+                structure.categories.forEach(cat => {
+                    if (cat) uniqueCategories.add(cat);
+                });
+            }
+        });
+        
+        console.log("Unique categories:", Array.from(uniqueCategories)); // Debug
+        
+        // Convert to array of objects with shortName and title
+        const categoryList = Array.from(uniqueCategories).sort().map(cat => ({
+            shortName: cat,
+            title: cat
+        }));
+        
+        console.log("Category list:", categoryList); // Debug
+        
+        setSocialAssessments(categoryList);
+            } catch (err) {
+        console.error("Error fetching categories:", err);
+        setModalError("Failed to load categories");
+    } finally {
+        setModalLoading(false);
+    }
+};
+
+    const fetchClinicalAssessments = async () => {
+        setModalLoading(true);
+        setModalError(null);
+        try {
+            const response = await fetch(
+                'https://nda.nih.gov/api/datadictionary/datastructure'
+            );
+            if (!response.ok) throw new Error("Failed to fetch dataType");
+            const data = await response.json();
+
+            console.log("Raw data:", data);
+
+        // Extract all unique dataTypes
+        const uniqueDataTypes = new Set();
+        data.forEach(structure => {
+            if (structure.dataType) {
+                uniqueDataTypes.add(structure.dataType);
+            }
+        });
+        
+            console.log("Unique data types:", Array.from(uniqueDataTypes));
+
+        // Convert to array of objects with shortName and title
+        const dataTypeList = Array.from(uniqueDataTypes).sort().map(dt => ({
+            shortName: dt,
+            title: dt
+        }));
+        
+            console.log("Data type list:", dataTypeList);
+
+           setClinicalAssessments(dataTypeList);
+        } catch (err) {
+            console.error("Error fetching clinical dataType:", err);
+            setModalError("Failed to load clinical dataType");
+        } finally {
+            setModalLoading(false);
+        }
+    };
+
+    const handleOpenSocialModal = (structure) => {
+        setModalStructure(structure);
+        setIsSocialModalOpen(true);
+        fetchSocialAssessments();
+    };
+
+    const handleOpenClinicalModal = (structure) => {
+        setModalStructure(structure);
+        setIsClinicalModalOpen(true);
+        fetchClinicalAssessments();
+    };
+
+
     return (
         <div className="space-y-6">
             <div className="mb-8">
@@ -703,7 +806,7 @@ useEffect(() => {
                                                                         />
                                                                     </div>
 
-                                                                    <div className="flex flex-wrap gap-2 mt-2">
+                                                                    {/* <div className="flex flex-wrap gap-2 mt-2">
                                                                         {structure.categories?.map(
                                                                             (
                                                                                 category
@@ -730,7 +833,34 @@ useEffect(() => {
                                                                                 structure.status
                                                                             }
                                                                         </span>
-                                                                    </div>
+                                                                    </div> */}
+
+                                                                <div className="flex flex-wrap gap-2 mt-2" onClick={(e) => e.stopPropagation()}>
+                                                                    {structure.categories?.map((category) => (
+                                                                        <span
+                                                                            key={category}
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                handleOpenSocialModal(structure);
+                                                                            }}
+                                                                            className="text-xs px-2 py-1 rounded bg-blue-100 text-blue-800 cursor-pointer hover:bg-blue-200 transition-colors"
+                                                                        >
+                                                                            {category}
+                                                                        </span>
+                                                                    ))}
+                                                                    <span 
+                                                                        className="text-xs bg-gray-100 text-gray-800 px-2 py-1 rounded cursor-pointer hover:bg-gray-200 transition-colors"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            handleOpenClinicalModal(structure);
+                                                                        }}
+                                                                    >
+                                                                        {structure.dataType}
+                                                                    </span>
+                                                                    <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+                                                                        {structure.status}
+                                                                    </span>
+                                                                </div>
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -768,6 +898,199 @@ useEffect(() => {
                     </div>
                 </div>
             )}
+
+             {/* Social Assessment Modal */}
+                    {isSocialModalOpen && modalStructure && (
+                        <div 
+                            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+                            onClick={() => setIsSocialModalOpen(false)}
+                        >
+                            <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+                                <div className="flex justify-between items-center p-5 border-b">
+                                    <div>
+                                        <h2 className="text-xl font-semibold">Social Assessments</h2>
+                                        <p className="text-sm text-gray-500 mt-1">{modalStructure.title}</p>
+                                    </div>
+                                    <button onClick={() => setIsSocialModalOpen(false)} className="text-gray-400 hover:text-gray-600">
+                                        <X className="w-5 h-5" />
+                                    </button>
+                                </div>
+                                
+                                <div className="flex-1 overflow-y-auto p-5">
+                                    <div className="mb-4">
+                                        <div className="relative">
+                                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                                            <input
+                                                type="text"
+                                                value={modalSearchTerm}
+                                                onChange={(e) => setModalSearchTerm(e.target.value)}
+                                                placeholder="Search assessments..."
+                                                className="w-full pl-10 pr-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {modalLoading && (
+                                        <div className="text-center py-8">
+                                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+                                        </div>
+                                    )}
+
+                                    {modalError && (
+                                        <div className="p-3 bg-red-50 text-red-700 rounded-lg text-sm">{modalError}</div>
+                                    )}
+
+                                    {!modalLoading && !modalError && (
+                                        <div className="space-y-2">
+                                            {socialAssessments
+                                                .filter(a => !modalSearchTerm || 
+                                                    a.shortName?.toLowerCase().includes(modalSearchTerm.toLowerCase()) ||
+                                                    a.title?.toLowerCase().includes(modalSearchTerm.toLowerCase()))
+                                                .map(assessment => (
+                                                    <button
+                                                        key={assessment.shortName}
+                                                        onClick={() => {
+                                                            setSelectedSocial(prev => {
+                                                                const newSet = new Set(prev);
+                                                                if (newSet.has(assessment.shortName)) {
+                                                                    newSet.delete(assessment.shortName);
+                                                                } else {
+                                                                    newSet.add(assessment.shortName);
+                                                                }
+                                                                return newSet;
+                                                            });
+                                                        }}
+                                                        className={`w-full text-left p-3 rounded-lg transition-all ${
+                                                            selectedSocial.has(assessment.shortName)
+                                                                ? 'bg-blue-500 text-white'
+                                                                : 'bg-white border border-gray-300 hover:border-blue-400'
+                                                        }`}
+                                                    >
+                                                        <div className="font-medium font-mono text-sm">{assessment.shortName}</div>
+                                                        <div className="text-sm mt-1 opacity-90">{assessment.title}</div>
+                                                    </button>
+                                                ))}
+                                        </div>
+                                    )}
+                        </div>
+
+                        <div className="flex justify-end gap-3 p-5 border-t">
+                            <button
+                                onClick={() => setIsSocialModalOpen(false)}
+                                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={() => {
+                                    console.log("Selected social:", Array.from(selectedSocial));
+                                    setIsSocialModalOpen(false);
+                                }}
+                                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+                            >
+                                Save Changes
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+        {/* Clinical Assessment Modal */}
+            {isClinicalModalOpen && modalStructure && (
+                <div 
+                    className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+                    onClick={() => setIsClinicalModalOpen(false)}
+                >
+                    <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex justify-between items-center p-5 border-b">
+                            <div>
+                                <h2 className="text-xl font-semibold">Clinical Assessments</h2>
+                                <p className="text-sm text-gray-500 mt-1">{modalStructure.title}</p>
+                            </div>
+                            <button onClick={() => setIsClinicalModalOpen(false)} className="text-gray-400 hover:text-gray-600">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        
+                        <div className="flex-1 overflow-y-auto p-5">
+                            <div className="mb-4">
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                                    <input
+                                        type="text"
+                                        value={modalSearchTerm}
+                                        onChange={(e) => setModalSearchTerm(e.target.value)}
+                                        placeholder="Search assessments..."
+                                        className="w-full pl-10 pr-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
+                                    />
+                                </div>
+                            </div>
+
+                            {modalLoading && (
+                                <div className="text-center py-8">
+                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+                                </div>
+                            )}
+
+                            {modalError && (
+                                <div className="p-3 bg-red-50 text-red-700 rounded-lg text-sm">{modalError}</div>
+                            )}
+
+                            {!modalLoading && !modalError && (
+                                <div className="space-y-2">
+                                    {clinicalAssessments
+                                        .filter(a => !modalSearchTerm || 
+                                            a.shortName?.toLowerCase().includes(modalSearchTerm.toLowerCase()) ||
+                                            a.title?.toLowerCase().includes(modalSearchTerm.toLowerCase()))
+                                        .map(assessment => (
+                                            <button
+                                                key={assessment.shortName}
+                                                onClick={() => {
+                                                    setSelectedClinical(prev => {
+                                                        const newSet = new Set(prev);
+                                                        if (newSet.has(assessment.shortName)) {
+                                                            newSet.delete(assessment.shortName);
+                                                        } else {
+                                                            newSet.add(assessment.shortName);
+                                                        }
+                                                        return newSet;
+                                                    });
+                                                }}
+                                                className={`w-full text-left p-3 rounded-lg transition-all ${
+                                                    selectedClinical.has(assessment.shortName)
+                                                        ? 'bg-purple-500 text-white'
+                                                        : 'bg-white border border-gray-300 hover:border-purple-400'
+                                                }`}
+                                            >
+                                                <div className="font-medium font-mono text-sm">{assessment.shortName}</div>
+                                                <div className="text-sm mt-1 opacity-90">{assessment.title}</div>
+                                            </button>
+                                        ))}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="flex justify-end gap-3 p-5 border-t">
+                            <button
+                                onClick={() => setIsClinicalModalOpen(false)}
+                                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={() => {
+                                    console.log("Selected clinical:", Array.from(selectedClinical));
+                                    setIsClinicalModalOpen(false);
+                                }}
+                                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+                            >
+                                Save Changes
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            
         </div>
     );
 };
