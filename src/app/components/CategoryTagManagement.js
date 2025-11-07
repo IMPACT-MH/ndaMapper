@@ -22,7 +22,9 @@ const CategoryTagManagement = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-      useEffect(() => {
+  const [clickedNdaCategory, setClickedNdaCategory] = useState(null);
+
+  useEffect(() => {
     setStructureTags(initialTags);
   }, [initialTags]);
 
@@ -162,46 +164,48 @@ const CategoryTagManagement = ({
     }
   };
 
-  const handleSaveChanges = async () => {
-    setLoading(true);
-    setError(null);
+const handleSaveChanges = async () => {
+  setLoading(true);
+  setError(null);
+  
+  try {
+
+    // Get current tag IDs
+    const currentTagIds = new Set(structureTags.map(t => t.id));
     
-    try {
-      // Get current tag IDs
-      const currentTagIds = new Set(structureTags.map(t => t.id));
-      
-      // Find tags to add and remove
-      const toAdd = Array.from(selectedTags).filter(id => !currentTagIds.has(id));
-      const toRemove = Array.from(currentTagIds).filter(id => !selectedTags.has(id));
-      
-      // Process removals
-      for (const tagId of toRemove) {
-        await removeTag(tagId);
-      }
-      
-      // Process additions
-      for (const tagId of toAdd) {
-        await assignTag(tagId);
-      }
-      
-      // Update structure tags
-      const newStructureTags = availableTags.filter(tag => selectedTags.has(tag.id));
-      setStructureTags(newStructureTags);
-      
-      // Notify parent
-      if (onTagsUpdate) {
-        onTagsUpdate(newStructureTags);
-      }
-      
-      // Close modal
-      setIsModalOpen(false);
-      setSelectedTags(new Set());
-    } catch (err) {
-      setError("Failed to save changes: " + err.message);
-    } finally {
-      setLoading(false);
+    // Find tags to add and remove
+    const toAdd = Array.from(selectedTags).filter(id => !currentTagIds.has(id));
+    const toRemove = Array.from(currentTagIds).filter(id => !selectedTags.has(id));
+    
+    // Process removals
+    for (const tagId of toRemove) {
+      await removeTag(tagId);
     }
-  };
+    
+    // Process additions
+    for (const tagId of toAdd) {
+      await assignTag(tagId);
+    }
+    
+    // Update structure tags
+    const newStructureTags = availableTags.filter(tag => selectedTags.has(tag.id));
+    setStructureTags(newStructureTags);
+    
+    // Notify parent
+    if (onTagsUpdate) {
+      onTagsUpdate(newStructureTags);
+    }
+    
+    // Close modal
+    setIsModalOpen(false);
+    setSelectedTags(new Set());
+    setClickedNdaCategory(null);
+  } catch (err) {
+    setError("Failed to save changes: " + err.message);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const deleteTag = async (tagId) => {
   if (!confirm('Are you sure you want to permanently delete this tag?')) {
@@ -235,7 +239,12 @@ const CategoryTagManagement = ({
   }
 };
 
-  // Filter available tags based on search
+  const handleNdaCategoryClick = (category) => {
+      setClickedNdaCategory(category);
+      setIsModalOpen(true);
+    };
+
+
   const filteredAvailableTags = availableTags.filter(tag => 
     !searchTerm || tag.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -243,8 +252,11 @@ const CategoryTagManagement = ({
   return (
     <>
 {/* Tags Display */}
+  {/* Tags Display */}
 <div className="flex flex-wrap gap-2 items-center">
   {console.log('structureTags:', structureTags)}
+  
+  {/* Display Custom Tags (from your API) */}
   {structureTags.map(tag => (
     <span
       key={tag.id}
@@ -265,15 +277,55 @@ const CategoryTagManagement = ({
       </button>
     </span>
   ))}
+
+  {/* Display NDA Categories - hide if custom tags exist, turn purple if modified */}
+  {structure?.categories?.map((category) => {
+    const hasCustomTags = structureTags && structureTags.length > 0;
+    
+    // Hide category if custom tags exist
+    if (hasCustomTags) return null;
+    
+    return (
+      <span
+        key={category}
+        onClick={(e) => {
+          e.stopPropagation();
+          setClickedNdaCategory(category);
+          setIsModalOpen(true);
+        }}
+        className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs cursor-pointer hover:bg-blue-200 transition-colors"
+        title="Click to add custom category tags"
+      >
+        {category}
+      </span>
+    );
+  })}
+  
+  {/* Show purple badge if categories were replaced with custom tags */}
+  {structureTags && structureTags.length > 0 && structure?.categories?.length > 0 && (
+    <span
+      onClick={(e) => {
+        e.stopPropagation();
+        setIsModalOpen(true);
+      }}
+      className="inline-flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs cursor-pointer hover:bg-purple-200 transition-colors"
+      title="Custom category tags (click to modify)"
+    >
+      {structure.categories[0]} {/* Show original category name */}
+      <span className="text-xs opacity-70">★</span>
+    </span>
+  )}
+  
   <button
     onClick={(e) => {
       e.stopPropagation();
+      setClickedNdaCategory(null);
       setIsModalOpen(true);
     }}
     className="inline-flex items-center gap-1 px-2 py-1 border border-dashed border-gray-400 text-gray-600 rounded text-xs hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50 transition-colors"
   >
     <Plus className="w-3 h-3" />
-    Add Category
+    Add Tag
   </button>
 </div>
 
@@ -284,20 +336,24 @@ const CategoryTagManagement = ({
           onClick={(e) => {
             if (e.target === e.currentTarget) {
               setIsModalOpen(false);
+              setClickedNdaCategory(null);
             }
           }}
         >
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col">
             {/* Modal Header */}
             <div className="flex justify-between items-center p-5 border-b">
               <div>
-                <h2 className="text-xl font-semibold">Manage Categories</h2>
+                <h2 className="text-xl font-semibold">Manage Custom Tags</h2>
                 <p className="text-sm text-gray-500 mt-1">
                   {structure?.title || structure?.shortName}
                 </p>
               </div>
               <button
-                onClick={() => setIsModalOpen(false)}
+                onClick={() => {
+                  setIsModalOpen(false);
+                  setClickedNdaCategory(null);
+                }}
                 className="text-gray-400 hover:text-gray-600"
                 aria-label="Close modal"
               >
@@ -315,7 +371,7 @@ const CategoryTagManagement = ({
                     type="text"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Search categories..."
+                    placeholder="Search custom tags..."
                     className="w-full pl-10 pr-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
                   />
                 </div>
@@ -339,7 +395,9 @@ const CategoryTagManagement = ({
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              deleteTag(tag.id);
+                              if (confirm(`Permanently delete "${tag.name}" tag?`)) {
+                                deleteTag(tag.id);
+                              }
                             }}
                             className="ml-1 hover:bg-blue-200 rounded-full w-4 h-4 flex items-center justify-center text-blue-600 hover:text-blue-800 font-bold"
                             title="Delete tag"
@@ -353,33 +411,6 @@ const CategoryTagManagement = ({
                 </div>
               )}
 
-
-              {filteredAvailableTags.map(tag => (
-                <button
-                  key={tag.id}
-                  onClick={() => {
-                    // ... toggle logic
-                  }}
-                  className={`inline-flex flex-col items-start px-3 py-1.5 rounded-lg text-sm transition-all ${
-                    selectedTags.has(tag.id)
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-white text-gray-700 border border-gray-300 hover:border-blue-400 hover:bg-blue-50'
-                  }`}
-                >
-                  <span className="font-medium">{tag.name}</span>
-                  {tag.category && (
-                    <span className="text-xs opacity-70">
-                      {tag.category}
-                    </span>
-                  )}
-                  {tag.dataStructures && (
-                    <span className="text-xs opacity-70">
-                      ({tag.dataStructures.length} structures)
-                    </span>
-                  )}
-                </button>
-              ))}
-
               {/* Available Tags */}
               {loading ? (
                 <div className="text-center py-4">
@@ -388,7 +419,7 @@ const CategoryTagManagement = ({
               ) : (
                 <div className="mb-4">
                   <h3 className="text-sm font-semibold text-gray-700 mb-2">
-                    Available Categories
+                    Available Custom Tags
                   </h3>
                   <div className="bg-gray-50 rounded-lg p-3 max-h-64 overflow-y-auto">
                     <div className="flex flex-wrap gap-2">
@@ -422,7 +453,7 @@ const CategoryTagManagement = ({
                           </button>
                         ))
                       ) : (
-                        <p className="text-gray-500 text-sm">No categories found</p>
+                        <p className="text-gray-500 text-sm">No tags found</p>
                       )}
                     </div>
                   </div>
@@ -432,22 +463,28 @@ const CategoryTagManagement = ({
               {/* Create New Tag */}
               <div className="border-t pt-4">
                 <h3 className="text-sm font-semibold text-gray-700 mb-2">
-                  Create New Category
+                  Create New Custom Tag
                 </h3>
                 <div className="space-y-2">
                   <input
                     type="text"
                     value={newTagName}
                     onChange={(e) => setNewTagName(e.target.value)}
-                    placeholder="Category name..."
+                    placeholder="Tag name..."
                     className="w-full px-3 py-2 border rounded-lg focus:border-blue-500 focus:outline-none text-sm"
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter' && newTagName.trim()) {
+                        createTag();
+                      }
+                    }}
                   />
                   <button
                     onClick={createTag}
                     disabled={!newTagName.trim() || loading}
                     className="w-full px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:bg-gray-300 transition-colors text-sm font-medium"
                   >
-                    Create & Add to List
+                    <Plus className="w-4 h-4 inline mr-2" />
+                    Create & Add to Selection
                   </button>
                 </div>
               </div>
@@ -466,6 +503,7 @@ const CategoryTagManagement = ({
                 onClick={() => {
                   setIsModalOpen(false);
                   setSelectedTags(new Set());
+                  setClickedNdaCategory(null);
                   setError(null);
                 }}
                 className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
