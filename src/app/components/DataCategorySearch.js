@@ -291,7 +291,7 @@ const DataCategorySearch = ({
                             }
                             dataTypeTagsMap[shortName].push(tag);
                         } else {
-                            // Category tags (no tagType or empty string)
+                            // Category tags (tagType === "Category" or empty string/null/undefined)
                             if (!categoryTagsMap[shortName]) {
                                 categoryTagsMap[shortName] = [];
                             }
@@ -713,6 +713,7 @@ const DataCategorySearch = ({
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     name: newTagName.trim(),
+                    tagType: "Category",
                 }),
             });
 
