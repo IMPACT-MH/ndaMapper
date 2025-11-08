@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import {
     Search,
     X,
@@ -62,6 +63,10 @@ const DataCategorySearch = ({
     const [structureDataTypeTags, setStructureDataTypeTags] = useState({});
     // Track removed original categories (keyed by structure shortName, value is Set of category names)
     const [removedOriginalCategories, setRemovedOriginalCategories] = useState(
+        {}
+    );
+    // Track removed original data types (keyed by structure shortName, value is boolean)
+    const [removedOriginalDataTypes, setRemovedOriginalDataTypes] = useState(
         {}
     );
 
@@ -398,7 +403,10 @@ const DataCategorySearch = ({
                         selectedFilters.dataTypes.has(tag.name)
                     );
                 } else {
-                    // No custom tags, check original data type
+                    // No custom tags, check original data type (if not removed)
+                    if (isDataTypeRemoved(structure.shortName)) {
+                        return false;
+                    }
                     return selectedFilters.dataTypes.has(structure.dataType);
                 }
             });
@@ -462,8 +470,15 @@ const DataCategorySearch = ({
                         groupKeys.push(tag.name);
                     });
                 } else {
-                    // No custom tags, use original data type
-                    groupKeys = [structure.dataType || "Unknown"];
+                    // No custom tags, use original data type (if not removed)
+                    if (
+                        !isDataTypeRemoved(structure.shortName) &&
+                        structure.dataType
+                    ) {
+                        groupKeys = [structure.dataType];
+                    } else {
+                        groupKeys = ["Unknown"];
+                    }
                 }
             }
 
@@ -594,6 +609,18 @@ const DataCategorySearch = ({
             removedOriginalCategories[structureShortName]?.has(categoryName) ||
             false
         );
+    };
+
+    const removeOriginalDataType = (structureShortName) => {
+        setRemovedOriginalDataTypes((prev) => {
+            const updated = { ...prev };
+            updated[structureShortName] = true;
+            return updated;
+        });
+    };
+
+    const isDataTypeRemoved = (structureShortName) => {
+        return removedOriginalDataTypes[structureShortName] || false;
     };
 
     const downloadApiAsCsv = async () => {
@@ -1097,12 +1124,12 @@ const DataCategorySearch = ({
         <div className="space-y-6">
             <div className="mb-8">
                 <h1 className="text-3xl font-bold mb-4">Data Dictionary</h1>
-                <p className="text-gray-600 mb-6">
+                <p className="text-gray-600 -mb-2">
                     Browse all NDA data structures by category and data type
                 </p>
 
                 {/* Database Filter Checkbox */}
-                <div className="mb-4">
+                <div className="-mb-3">
                     <label className="flex items-center space-x-3 cursor-pointer">
                         <input
                             type="checkbox"
@@ -1110,24 +1137,30 @@ const DataCategorySearch = ({
                             onChange={(e) =>
                                 setDatabaseFilterEnabled(e.target.checked)
                             }
-                            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 flex-shrink-0 self-center"
                         />
                         <div className="flex items-center space-x-2">
-                            <Database className="w-4 h-4 text-blue-600" />
-                            <span className="text-sm font-medium text-gray-700">
-                                Show only {databaseName} dictionary
-                            </span>
+                            <div className="w-32 h-32 relative flex items-center justify-center self-center">
+                                <Image
+                                    src="/impact.png"
+                                    alt="IMPACT Logo"
+                                    width={128}
+                                    height={128}
+                                    className="object-contain"
+                                />
+                            </div>
                             {loadingDatabaseStructures && (
                                 <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-500"></div>
                             )}
                         </div>
+                        {databaseFilterEnabled &&
+                            databaseStructures.length > 0 && (
+                                <p className="text-xs text-gray-500 ml-2">
+                                    Filtering by {databaseStructures.length}{" "}
+                                    available structures
+                                </p>
+                            )}
                     </label>
-                    {databaseFilterEnabled && databaseStructures.length > 0 && (
-                        <p className="text-xs text-gray-500 mt-1 ml-7">
-                            Filtering by {databaseStructures.length} available
-                            structures
-                        </p>
-                    )}
                 </div>
 
                 {/* Search Input */}
@@ -1610,7 +1643,14 @@ const DataCategorySearch = ({
                                                                                             )
                                                                                         );
                                                                                     } else {
-                                                                                        // Show original NDA data type
+                                                                                        // Show original NDA data type (if not removed)
+                                                                                        if (
+                                                                                            isDataTypeRemoved(
+                                                                                                structure.shortName
+                                                                                            )
+                                                                                        ) {
+                                                                                            return null;
+                                                                                        }
                                                                                         return (
                                                                                             <span
                                                                                                 className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-gray-100 text-gray-700 hover:bg-gray-200"
@@ -1680,7 +1720,14 @@ const DataCategorySearch = ({
                                                                                             )
                                                                                         );
                                                                                     } else {
-                                                                                        // Show original NDA data type
+                                                                                        // Show original NDA data type (if not removed)
+                                                                                        if (
+                                                                                            isDataTypeRemoved(
+                                                                                                structure.shortName
+                                                                                            )
+                                                                                        ) {
+                                                                                            return null;
+                                                                                        }
                                                                                         return (
                                                                                             <span
                                                                                                 className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-gray-100 text-gray-700 hover:bg-gray-200"
@@ -2409,7 +2456,7 @@ const DataCategorySearch = ({
                         <div className="flex justify-between items-center p-5 border-b">
                             <div>
                                 <h2 className="text-xl font-semibold">
-                                    Manage Data Types
+                                    Manage Data Type
                                 </h2>
                                 <p className="text-sm text-gray-500 mt-1">
                                     {modalStructure.title +
@@ -2444,9 +2491,45 @@ const DataCategorySearch = ({
                                     <h3 className="text-sm font-semibold text-gray-700 mb-2">
                                         Original NDA Data Type
                                     </h3>
-                                    <span className="text-xs px-2 py-1 bg-gray-200 text-gray-700 rounded">
-                                        {modalStructure.dataType}
-                                    </span>
+                                    <p className="text-xs text-gray-600 mb-3">
+                                        Toggle visibility of original data type
+                                    </p>
+                                    <label className="flex items-center gap-2 cursor-pointer hover:bg-gray-100 p-2 rounded transition-colors">
+                                        <input
+                                            type="checkbox"
+                                            checked={
+                                                !isDataTypeRemoved(
+                                                    modalStructure.shortName
+                                                )
+                                            }
+                                            onChange={(e) => {
+                                                if (e.target.checked) {
+                                                    // Restore data type
+                                                    setRemovedOriginalDataTypes(
+                                                        (prev) => {
+                                                            const updated = {
+                                                                ...prev,
+                                                            };
+                                                            delete updated[
+                                                                modalStructure
+                                                                    .shortName
+                                                            ];
+                                                            return updated;
+                                                        }
+                                                    );
+                                                } else {
+                                                    // Remove data type
+                                                    removeOriginalDataType(
+                                                        modalStructure.shortName
+                                                    );
+                                                }
+                                            }}
+                                            className="w-4 h-4 text-gray-600 border-gray-300 rounded focus:ring-gray-500"
+                                        />
+                                        <span className="text-sm text-gray-700">
+                                            {modalStructure.dataType}
+                                        </span>
+                                    </label>
                                 </div>
                             )}
 
@@ -2454,7 +2537,7 @@ const DataCategorySearch = ({
                             {selectedDataTypeTags.size > 0 && (
                                 <div className="mb-4 p-3 bg-gray-50 rounded-lg">
                                     <h3 className="text-sm font-semibold text-gray-700 mb-2">
-                                        Selected Custom Data Types (
+                                        Selected Custom Data Type Tags (
                                         {selectedDataTypeTags.size})
                                     </h3>
                                     <div className="flex flex-wrap gap-2">
@@ -2503,7 +2586,7 @@ const DataCategorySearch = ({
                             {!tagLoading && (
                                 <div className="mb-4">
                                     <h3 className="text-sm font-semibold text-gray-700 mb-2">
-                                        Available Custom Data Types
+                                        Available Custom Data Type Tags
                                     </h3>
                                     <div className="mb-4">
                                         <div className="relative">
@@ -2713,7 +2796,7 @@ const DataCategorySearch = ({
                             {/* Create New Data Type Tag */}
                             <div className="border-t pt-4">
                                 <h3 className="text-sm font-semibold text-gray-700 mb-2">
-                                    Create New Data Type Tag
+                                    Create New Custom Data Type Tag
                                 </h3>
                                 <div className="space-y-2">
                                     <input
