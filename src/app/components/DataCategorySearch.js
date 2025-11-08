@@ -1,7 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, X, Database, ChevronRight, ChevronDown, Plus } from "lucide-react";
+import {
+    Search,
+    X,
+    Database,
+    ChevronRight,
+    ChevronDown,
+    Plus,
+} from "lucide-react";
 import { DATA_PORTAL } from "@/const.js";
 import CategoryTagManagement from "./CategoryTagManagement";
 
@@ -34,23 +41,23 @@ const DataCategorySearch = ({
     const [availableDataTypes, setAvailableDataTypes] = useState(new Set());
 
     const handleTagsUpdate = (structureShortName, updatedTags) => {
-        setStructureTags(prev => ({
+        setStructureTags((prev) => ({
             ...prev,
-            [structureShortName]: updatedTags
-    }   ));
+            [structureShortName]: updatedTags,
+        }));
     };
 
-     const handleDataTypeTagsUpdate = (structureShortName, updatedTags) => {
-        setStructureDataTypeTags(prev => ({
+    const handleDataTypeTagsUpdate = (structureShortName, updatedTags) => {
+        setStructureDataTypeTags((prev) => ({
             ...prev,
-            [structureShortName]: updatedTags
+            [structureShortName]: updatedTags,
         }));
-    }; 
+    };
 
     const [dataStructuresMap, setDataStructuresMap] = useState({});
-    const apiBaseUrl = "https://spinup-002b0f.spinup.yale.edu/api";
+    const apiBaseUrl = "/api/spinup";
 
-    const [structureTags, setStructureTags] = useState({}); 
+    const [structureTags, setStructureTags] = useState({});
     const [structureDataTypeTags, setStructureDataTypeTags] = useState({});
 
     // Modal states
@@ -61,7 +68,7 @@ const DataCategorySearch = ({
     const [modalError, setModalError] = useState(null);
     const [modalLoading, setModalLoading] = useState(false);
 
-     // state variables for categories tags
+    // state variables for categories tags
     const [availableTags, setAvailableTags] = useState([]);
     const [selectedSocialTags, setSelectedSocialTags] = useState(new Set());
     const [newTagName, setNewTagName] = useState("");
@@ -75,47 +82,77 @@ const DataCategorySearch = ({
     const [isLoadingStructures, setIsLoadingStructures] = useState(false);
     const [clinicalAssessments, setClinicalAssessments] = useState([]);
     const [selectedClinical, setSelectedClinical] = useState(new Set());
-    const filteredAvailableTags = availableTags.filter(tag => 
-        !modalSearchTerm || tag.name.toLowerCase().includes(modalSearchTerm.toLowerCase())
+    const filteredAvailableTags = availableTags.filter(
+        (tag) =>
+            !modalSearchTerm ||
+            tag.name.toLowerCase().includes(modalSearchTerm.toLowerCase())
     );
 
+    // Add this useEffect to fetch once
+    useEffect(() => {
+        const fetchDataStructures = async () => {
+            setIsLoadingStructures(true);
+            try {
+                const response = await fetch("/api/spinup/dataStructures");
+                const data = await response.json();
 
-// Add this useEffect to fetch once
-useEffect(() => {
-  const fetchDataStructures = async () => {
-    setIsLoadingStructures(true);
-    try {
-      const response = await fetch('https://spinup-002b0f.spinup.yale.edu/api/dataStructures/database');
-      const data = await response.json();
-      
-      if (data && data.dataStructures) {
-        setDataStructuresMap(data.dataStructures);
-      }
-    } catch (err) {
-      console.error('Error fetching data structures:', err);
-    } finally {
-      setIsLoadingStructures(false);
-    }
-  };
-  
-  fetchDataStructures();
-}, []);
+                if (data && data.dataStructures) {
+                    // Convert object/array to map keyed by shortName (case-insensitive)
+                    const map = {};
+                    const structures = Array.isArray(data.dataStructures)
+                        ? data.dataStructures
+                        : Object.values(data.dataStructures);
+
+                    structures.forEach((structure) => {
+                        const key =
+                            structure.shortName?.toLowerCase() ||
+                            structure.name?.toLowerCase();
+                        if (key) {
+                            map[key] = structure;
+                            // Also store with original case for backwards compatibility
+                            if (structure.shortName) {
+                                map[structure.shortName] = structure;
+                            }
+                        }
+                    });
+                    setDataStructuresMap(map);
+                }
+            } catch (err) {
+                console.error("Error fetching data structures:", err);
+            } finally {
+                setIsLoadingStructures(false);
+            }
+        };
+
+        fetchDataStructures();
+    }, []);
 
     // Save to localStorage when modified
-    localStorage.setItem('modifiedDataTypes', JSON.stringify(modifiedDataTypes));
+    localStorage.setItem(
+        "modifiedDataTypes",
+        JSON.stringify(modifiedDataTypes)
+    );
 
     // Load on mount
     useEffect(() => {
-    const saved = localStorage.getItem('modifiedDataTypes');
-    if (saved) {
-        setModifiedDataTypes(JSON.parse(saved));
-    }
+        const saved = localStorage.getItem("modifiedDataTypes");
+        if (saved) {
+            setModifiedDataTypes(JSON.parse(saved));
+        }
     }, []);
 
     // Fetch all data structures on component mount
     useEffect(() => {
         fetchAllStructures();
-        fetchStructureTags();
+    }, []);
+
+    // Fetch structure tags in the background (non-blocking)
+    useEffect(() => {
+        // Delay tag fetching slightly to let structures load first
+        const timer = setTimeout(() => {
+            fetchStructureTags();
+        }, 500);
+        return () => clearTimeout(timer);
     }, []);
 
     // Apply filtering when search term, filters, or database filter changes
@@ -131,7 +168,7 @@ useEffect(() => {
 
     const [ndaCategories, setNdaCategories] = useState([]);
     const [ndaDataTypes, setNdaDataTypes] = useState([]);
-    
+
     const fetchAllStructures = async () => {
         setLoading(true);
         setError(null);
@@ -181,73 +218,93 @@ useEffect(() => {
                 return; // Don't throw, just return
             }
             const allTags = await response.json();
-            console.log('Raw tags from API:', allTags);
-            console.log('First tag details:', JSON.stringify(allTags[0], null, 2)); // SEE FULL STRUCTURE
 
-              // Fetch data structures for each tag
-            const tagsWithStructures = await Promise.all(
-                allTags.map(async (tag) => {
-                    try {
-                        const dsResponse = await fetch(`${apiBaseUrl}/tags/${tag.id}/dataStructures`);
-                        if (dsResponse.ok) {
-                            const dsData = await dsResponse.json();
-                            // dsData should have format: { tag: {...}, dataStructures: [...] }
-                            return {
-                                ...tag,
-                                dataStructures: dsData.dataStructures || []
-                            };
+            if (!Array.isArray(allTags) || allTags.length === 0) {
+                return;
+            }
+
+            // Batch requests to avoid overwhelming the API
+            const BATCH_SIZE = 10;
+            const BATCH_DELAY = 100; // 100ms delay between batches
+            const tagsWithStructures = [];
+
+            for (let i = 0; i < allTags.length; i += BATCH_SIZE) {
+                const batch = allTags.slice(i, i + BATCH_SIZE);
+                const batchResults = await Promise.all(
+                    batch.map(async (tag) => {
+                        try {
+                            const dsResponse = await fetch(
+                                `${apiBaseUrl}/tags/${tag.id}/dataStructures`
+                            );
+                            if (dsResponse.ok) {
+                                const dsData = await dsResponse.json();
+                                return {
+                                    ...tag,
+                                    dataStructures: dsData.dataStructures || [],
+                                };
+                            }
+                            return { ...tag, dataStructures: [] };
+                        } catch (err) {
+                            console.warn(
+                                `Failed to fetch data structures for tag ${tag.name}:`,
+                                err
+                            );
+                            return { ...tag, dataStructures: [] };
                         }
-                        return { ...tag, dataStructures: [] };
-                    } catch (err) {
-                        console.warn(`Failed to fetch data structures for tag ${tag.name}:`, err);
-                        return { ...tag, dataStructures: [] };
-                    }
-                })
-            );
-            
-            console.log('Tags with structures:', tagsWithStructures);
-            
+                    })
+                );
+                tagsWithStructures.push(...batchResults);
+
+                // Add delay between batches (except for the last batch)
+                if (i + BATCH_SIZE < allTags.length) {
+                    await new Promise((resolve) =>
+                        setTimeout(resolve, BATCH_DELAY)
+                    );
+                }
+            }
+
             // Build a map of structure shortName -> tags
             const categoryTagsMap = {};
             const dataTypeTagsMap = {};
-            
-            tagsWithStructures.forEach(tag => {
-            if (tag.dataStructures && Array.isArray(tag.dataStructures) && tag.dataStructures.length > 0) {
-                tag.dataStructures.forEach(ds => {
-                    const shortName = ds.shortName;
-                    
-                    if (!shortName) {
-                        console.warn('Missing shortName for data structure:', ds);
-                        return;
-                    }
-                    
-                    // Separate by tag type
-                    if (tag.tagType === 'Data Type') {
-                        if (!dataTypeTagsMap[shortName]) {
-                            dataTypeTagsMap[shortName] = [];
+
+            tagsWithStructures.forEach((tag) => {
+                if (
+                    tag.dataStructures &&
+                    Array.isArray(tag.dataStructures) &&
+                    tag.dataStructures.length > 0
+                ) {
+                    tag.dataStructures.forEach((ds) => {
+                        const shortName = ds.shortName;
+
+                        if (!shortName) {
+                            console.warn(
+                                "Missing shortName for data structure:",
+                                ds
+                            );
+                            return;
                         }
-                        dataTypeTagsMap[shortName].push(tag);
-                    } else {
-                        // Category tags (no tagType or empty string)
-                        if (!categoryTagsMap[shortName]) {
-                            categoryTagsMap[shortName] = [];
+
+                        // Separate by tag type
+                        if (tag.tagType === "Data Type") {
+                            if (!dataTypeTagsMap[shortName]) {
+                                dataTypeTagsMap[shortName] = [];
+                            }
+                            dataTypeTagsMap[shortName].push(tag);
+                        } else {
+                            // Category tags (no tagType or empty string)
+                            if (!categoryTagsMap[shortName]) {
+                                categoryTagsMap[shortName] = [];
+                            }
+                            categoryTagsMap[shortName].push(tag);
                         }
-                        categoryTagsMap[shortName].push(tag);
-                    }
-                });
-            }
-        });
-        
-        console.log('Built category tags map:', categoryTagsMap);
-        console.log('Built data type tags map:', dataTypeTagsMap);
+                    });
+                }
+            });
 
             setStructureTags(categoryTagsMap);
             setStructureDataTypeTags(dataTypeTagsMap);
-            
-            console.log('Loaded category tags:', categoryTagsMap);
-            console.log('Loaded data type tags:', dataTypeTagsMap);
         } catch (err) {
-            console.error('Error fetching structure tags:', err);
+            console.error("Error fetching structure tags:", err);
             // Don't throw - just log the error and continue
         }
     };
@@ -286,7 +343,11 @@ useEffect(() => {
         }
 
         // Apply database filter
-        if (databaseFilterEnabled && databaseStructures.length > 0) {
+        if (
+            databaseFilterEnabled &&
+            databaseStructures &&
+            databaseStructures.length > 0
+        ) {
             const databaseStructuresLower = databaseStructures.map((name) =>
                 name.toLowerCase()
             );
@@ -512,7 +573,9 @@ useEffect(() => {
             const response = await fetch(`${apiBaseUrl}/tags`);
             if (!response.ok) throw new Error("Failed to fetch tags");
             const data = await response.json();
-            const categoryTags = data.filter(tag => !tag.tagType || tag.tagType !== 'Data Type');
+            const categoryTags = data.filter(
+                (tag) => !tag.tagType || tag.tagType !== "Data Type"
+            );
             setAvailableTags(categoryTags);
         } catch (err) {
             console.error("Error fetching tags:", err);
@@ -523,20 +586,22 @@ useEffect(() => {
     };
 
     const fetchDataTypeTags = async () => {
-    setTagLoading(true);
-    try {
-        const response = await fetch(`https://spinup-002b0f.spinup.yale.edu/api/tags`);
-        if (!response.ok) throw new Error("Failed to fetch data type tags");
-        const data = await response.json();
-        const dataTypeTags = data.filter(tag => tag.tagType === 'Data Type');
-        setAvailableDataTypeTags(dataTypeTags);
-    } catch (err) {
-        console.error("Error fetching data type tags:", err);
-        setModalError("Failed to load data type tags");
-    } finally {
-        setTagLoading(false);
-    }
-};
+        setTagLoading(true);
+        try {
+            const response = await fetch(`/api/spinup/tags`);
+            if (!response.ok) throw new Error("Failed to fetch data type tags");
+            const data = await response.json();
+            const dataTypeTags = data.filter(
+                (tag) => tag.tagType === "Data Type"
+            );
+            setAvailableDataTypeTags(dataTypeTags);
+        } catch (err) {
+            console.error("Error fetching data type tags:", err);
+            setModalError("Failed to load data type tags");
+        } finally {
+            setTagLoading(false);
+        }
+    };
 
     const createTag = async () => {
         if (!newTagName.trim()) return;
@@ -545,33 +610,33 @@ useEffect(() => {
             const response = await fetch(`${apiBaseUrl}/tags`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ 
+                body: JSON.stringify({
                     name: newTagName.trim(),
-                })
+                }),
             });
-            
+
             if (!response.ok) {
                 const errorData = await response.json();
                 throw new Error(errorData.error || "Failed to create tag");
             }
-            
-            const newTag = await response.json();
-            
-            setAvailableTags(prev => [...prev, newTag]);
 
-            setSelectedSocialTags(prev => new Set([...prev, newTag.id]));
+            const newTag = await response.json();
+
+            setAvailableTags((prev) => [...prev, newTag]);
+
+            setSelectedSocialTags((prev) => new Set([...prev, newTag.id]));
 
             setNewTagName("");
-            
+
             // // Add to appropriate selected set
             // if (isCategoriesModalOpen) {
             //     setSelectedSocialTags(prev => new Set([...prev, newTag.id]));
             // } else if (isDataTypesModalOpen) {
             //     setSelectedClinicalTags(prev => new Set([...prev, newTag.id]));
             // }
-            
+
             // setNewTagName("");
-            
+
             return newTag;
         } catch (err) {
             console.error("Error creating tag:", err);
@@ -584,31 +649,33 @@ useEffect(() => {
         if (!newDataTypeTagName.trim()) return;
 
         try {
-            const response = await fetch(`https://spinup-002b0f.spinup.yale.edu/api/tags`, {
+            const response = await fetch(`/api/spinup/tags`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ 
+                body: JSON.stringify({
                     name: newDataTypeTagName.trim(),
-                    tagType: "Data Type" // Mark this as a data type tag
-                })
+                    tagType: "Data Type", // Mark this as a data type tag
+                }),
             });
-            
+
             if (!response.ok) {
                 const errorData = await response.json();
-                throw new Error(errorData.error || "Failed to create data type tag");
+                throw new Error(
+                    errorData.error || "Failed to create data type tag"
+                );
             }
-            
+
             const newTag = await response.json();
-            
+
             // Update available tags
-            setAvailableDataTypeTags(prev => [...prev, newTag]);
-            
+            setAvailableDataTypeTags((prev) => [...prev, newTag]);
+
             // Add to selected
-            setSelectedDataTypeTags(prev => new Set([...prev, newTag.id]));
-            
+            setSelectedDataTypeTags((prev) => new Set([...prev, newTag.id]));
+
             // Clear input
             setNewDataTypeTagName("");
-            
+
             return newTag;
         } catch (err) {
             console.error("Error creating data type tag:", err);
@@ -618,14 +685,18 @@ useEffect(() => {
     };
 
     const deleteTag = async (tagId) => {
-        if (!confirm('Are you sure you want to permanently delete this tag? This will remove it from all data structures.')) {
+        if (
+            !confirm(
+                "Are you sure you want to permanently delete this tag? This will remove it from all data structures."
+            )
+        ) {
             return;
         }
 
         try {
             const response = await fetch(`${apiBaseUrl}/tags/${tagId}`, {
                 method: "DELETE",
-                headers: { "Content-Type": "application/json" }
+                headers: { "Content-Type": "application/json" },
             });
 
             if (!response.ok) {
@@ -634,39 +705,40 @@ useEffect(() => {
             }
 
             // Remove from available tags lists
-            setAvailableTags(prev => prev.filter(t => t.id !== tagId));
-            setAvailableDataTypeTags(prev => prev.filter(t => t.id !== tagId));
-            
+            setAvailableTags((prev) => prev.filter((t) => t.id !== tagId));
+            setAvailableDataTypeTags((prev) =>
+                prev.filter((t) => t.id !== tagId)
+            );
+
             // Remove from selected tags Sets
-            setSelectedSocialTags(prev => {
+            setSelectedSocialTags((prev) => {
                 const newSet = new Set(prev);
                 newSet.delete(tagId);
                 return newSet;
             });
-            
-            setSelectedDataTypeTags(prev => {
+
+            setSelectedDataTypeTags((prev) => {
                 const newSet = new Set(prev);
                 newSet.delete(tagId);
                 return newSet;
             });
-            
+
             // Remove from structure tags
-            setStructureTags(prev => {
+            setStructureTags((prev) => {
                 const updated = {};
-                Object.keys(prev).forEach(key => {
-                    updated[key] = prev[key].filter(t => t.id !== tagId);
+                Object.keys(prev).forEach((key) => {
+                    updated[key] = prev[key].filter((t) => t.id !== tagId);
                 });
                 return updated;
             });
-            
-            setStructureDataTypeTags(prev => {
+
+            setStructureDataTypeTags((prev) => {
                 const updated = {};
-                Object.keys(prev).forEach(key => {
-                    updated[key] = prev[key].filter(t => t.id !== tagId);
+                Object.keys(prev).forEach((key) => {
+                    updated[key] = prev[key].filter((t) => t.id !== tagId);
                 });
                 return updated;
             });
-            
         } catch (err) {
             console.error("Error deleting tag:", err);
             alert(`Failed to delete tag: ${err.message}`);
@@ -678,32 +750,34 @@ useEffect(() => {
         setModalError(null);
         try {
             const response = await fetch(
-                'https://nda.nih.gov/api/datadictionary/datastructure'
+                "https://nda.nih.gov/api/datadictionary/datastructure"
             );
             if (!response.ok) throw new Error("Failed to fetch dataType");
             const data = await response.json();
 
             console.log("Raw data:", data);
 
-        // Extract all unique dataTypes
-        const uniqueDataTypes = new Set();
-        data.forEach(structure => {
-            if (structure.dataType) {
-                uniqueDataTypes.add(structure.dataType);
-            }
-        });
-        
+            // Extract all unique dataTypes
+            const uniqueDataTypes = new Set();
+            data.forEach((structure) => {
+                if (structure.dataType) {
+                    uniqueDataTypes.add(structure.dataType);
+                }
+            });
+
             console.log("Unique data types:", Array.from(uniqueDataTypes));
 
-        // Convert to array of objects with shortName and title
-        const dataTypeList = Array.from(uniqueDataTypes).sort().map(dt => ({
-            shortName: dt,
-            title: dt
-        }));
-        
+            // Convert to array of objects with shortName and title
+            const dataTypeList = Array.from(uniqueDataTypes)
+                .sort()
+                .map((dt) => ({
+                    shortName: dt,
+                    title: dt,
+                }));
+
             console.log("Data type list:", dataTypeList);
 
-           setClinicalAssessments(dataTypeList);
+            setClinicalAssessments(dataTypeList);
         } catch (err) {
             console.error("Error fetching clinical dataType:", err);
             setModalError("Failed to load clinical dataType");
@@ -712,32 +786,37 @@ useEffect(() => {
         }
     };
 
-   const handleOpenCategoriesModal = (structure) => {
+    const handleOpenCategoriesModal = (structure) => {
         setModalStructure(structure);
         setIsCategoriesModalOpen(true);
         setModalError(null);
         fetchTags();
         // Initialize with structure's existing tags if any
         if (structureTags[structure.shortName]) {
-            setSelectedSocialTags(new Set(structureTags[structure.shortName].map(t => t.id)));
+            setSelectedSocialTags(
+                new Set(structureTags[structure.shortName].map((t) => t.id))
+            );
         } else {
             setSelectedSocialTags(new Set());
         }
     };
 
-       const handleOpenDataTypesModal = (structure) => {
+    const handleOpenDataTypesModal = (structure) => {
         setModalStructure(structure);
         setIsDataTypesModalOpen(true);
         setModalError(null);
         fetchDataTypeTags(); // Fetch data type tags
         // Initialize with structure's existing data type tags if any
         if (structureDataTypeTags[structure.shortName]) {
-            setSelectedDataTypeTags(new Set(structureDataTypeTags[structure.shortName].map(t => t.id)));
+            setSelectedDataTypeTags(
+                new Set(
+                    structureDataTypeTags[structure.shortName].map((t) => t.id)
+                )
+            );
         } else {
             setSelectedDataTypeTags(new Set());
         }
     };
-
 
     return (
         <div className="space-y-6">
@@ -1050,85 +1129,163 @@ useEffect(() => {
                                                                         }
                                                                     </p>
 
-                                                                <div className="flex flex-wrap gap-2 mt-2" onClick={(e) => e.stopPropagation()}>
-                                                                    {/* Category Tags - clickable to open categories modal */}
-                                                                    {(() => {
-                                                                        const hasCustomCategoryTags = structureTags[structure.shortName]?.length > 0;
-                                                                        
-                                                                        if (hasCustomCategoryTags) {
-                                                                        // Show custom category tags with purple styling
-                                                                        return structureTags[structure.shortName].map(tag => (
-                                                                            <span
-                                                                            key={tag.id}
-                                                                            onClick={(e) => {
-                                                                                e.stopPropagation();
-                                                                                handleOpenCategoriesModal(structure);
-                                                                            }}
-                                                                            className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-orange-100 text-orange-700 hover:bg-orange-200"                                                                            title="Custom category tags (click to modify)"
-                                                                            >
-                                                                            {tag.name}
-                                                                            <span className="ml-1 text-xs opacity-70">★</span>
-                                                                            </span>
-                                                                        ));
-                                                                        } else {
-                                                                        // Show original NDA categories
-                                                                        return structure.categories?.map((category) => (
-                                                                            <span
-                                                                            key={category}
-                                                                            onClick={(e) => {
-                                                                                e.stopPropagation();
-                                                                                handleOpenCategoriesModal(structure);
-                                                                            }}
-                                                                            className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-blue-100 text-blue-800 hover:bg-blue-200"
-                                                                            title="Click to add custom category tags"
-                                                                            >
-                                                                            {category}
-                                                                            </span>
-                                                                        ));
+                                                                    <div
+                                                                        className="flex flex-wrap gap-2 mt-2"
+                                                                        onClick={(
+                                                                            e
+                                                                        ) =>
+                                                                            e.stopPropagation()
                                                                         }
-                                                                    })()}
-                                                                    
-                                                                    {/* Data Type Tags - clickable to open data types modal */}
-                                                                    {(() => {
-                                                                        const hasCustomDataTypeTags = structureDataTypeTags[structure.shortName]?.length > 0;
-                                                                        
-                                                                        if (hasCustomDataTypeTags) {
-                                                                        // Show custom data type tags with purple styling
-                                                                        return structureDataTypeTags[structure.shortName].map(tag => (
-                                                                            <span
-                                                                            key={tag.id}
-                                                                            onClick={(e) => {
-                                                                                e.stopPropagation();
-                                                                                handleOpenDataTypesModal(structure);
-                                                                            }}
-                                                                            className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-purple-100 text-purple-700 hover:bg-purple-200"
-                                                                            title="Custom data type tags (click to modify)"
-                                                                            >
-                                                                            {tag.name}
-                                                                            <span className="ml-1 text-xs opacity-70">★</span>
-                                                                            </span>
-                                                                        ));
-                                                                        } else {
-                                                                        // Show original NDA data type
-                                                                        return (
-                                                                            <span 
-                                                                            className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-gray-100 text-gray-800 hover:bg-gray-200"
-                                                                            onClick={(e) => {
-                                                                                e.stopPropagation();
-                                                                                handleOpenDataTypesModal(structure);
-                                                                            }}
-                                                                            title="Click to add custom data type tags"
-                                                                            >
-                                                                            {structure.dataType}
-                                                                            </span>
-                                                                        );
-                                                                        }
-                                                                    })()}
-                                                                    
-                                                                    {/* Status Badge */}
-                                                                    <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
-                                                                        {structure.status}
-                                                                    </span>
+                                                                    >
+                                                                        {/* Category Tags - clickable to open categories modal */}
+                                                                        {(() => {
+                                                                            const hasCustomCategoryTags =
+                                                                                structureTags[
+                                                                                    structure
+                                                                                        .shortName
+                                                                                ]
+                                                                                    ?.length >
+                                                                                0;
+
+                                                                            if (
+                                                                                hasCustomCategoryTags
+                                                                            ) {
+                                                                                // Show custom category tags with purple styling
+                                                                                return structureTags[
+                                                                                    structure
+                                                                                        .shortName
+                                                                                ].map(
+                                                                                    (
+                                                                                        tag
+                                                                                    ) => (
+                                                                                        <span
+                                                                                            key={
+                                                                                                tag.id
+                                                                                            }
+                                                                                            onClick={(
+                                                                                                e
+                                                                                            ) => {
+                                                                                                e.stopPropagation();
+                                                                                                handleOpenCategoriesModal(
+                                                                                                    structure
+                                                                                                );
+                                                                                            }}
+                                                                                            className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-orange-100 text-orange-700 hover:bg-orange-200"
+                                                                                            title="Custom category tags (click to modify)"
+                                                                                        >
+                                                                                            {
+                                                                                                tag.name
+                                                                                            }
+                                                                                            <span className="ml-1 text-xs opacity-70">
+                                                                                                ★
+                                                                                            </span>
+                                                                                        </span>
+                                                                                    )
+                                                                                );
+                                                                            } else {
+                                                                                // Show original NDA categories
+                                                                                return structure.categories?.map(
+                                                                                    (
+                                                                                        category
+                                                                                    ) => (
+                                                                                        <span
+                                                                                            key={
+                                                                                                category
+                                                                                            }
+                                                                                            onClick={(
+                                                                                                e
+                                                                                            ) => {
+                                                                                                e.stopPropagation();
+                                                                                                handleOpenCategoriesModal(
+                                                                                                    structure
+                                                                                                );
+                                                                                            }}
+                                                                                            className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-blue-100 text-blue-800 hover:bg-blue-200"
+                                                                                            title="Click to add custom category tags"
+                                                                                        >
+                                                                                            {
+                                                                                                category
+                                                                                            }
+                                                                                        </span>
+                                                                                    )
+                                                                                );
+                                                                            }
+                                                                        })()}
+
+                                                                        {/* Data Type Tags - clickable to open data types modal */}
+                                                                        {(() => {
+                                                                            const hasCustomDataTypeTags =
+                                                                                structureDataTypeTags[
+                                                                                    structure
+                                                                                        .shortName
+                                                                                ]
+                                                                                    ?.length >
+                                                                                0;
+
+                                                                            if (
+                                                                                hasCustomDataTypeTags
+                                                                            ) {
+                                                                                // Show custom data type tags with purple styling
+                                                                                return structureDataTypeTags[
+                                                                                    structure
+                                                                                        .shortName
+                                                                                ].map(
+                                                                                    (
+                                                                                        tag
+                                                                                    ) => (
+                                                                                        <span
+                                                                                            key={
+                                                                                                tag.id
+                                                                                            }
+                                                                                            onClick={(
+                                                                                                e
+                                                                                            ) => {
+                                                                                                e.stopPropagation();
+                                                                                                handleOpenDataTypesModal(
+                                                                                                    structure
+                                                                                                );
+                                                                                            }}
+                                                                                            className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-purple-100 text-purple-700 hover:bg-purple-200"
+                                                                                            title="Custom data type tags (click to modify)"
+                                                                                        >
+                                                                                            {
+                                                                                                tag.name
+                                                                                            }
+                                                                                            <span className="ml-1 text-xs opacity-70">
+                                                                                                ★
+                                                                                            </span>
+                                                                                        </span>
+                                                                                    )
+                                                                                );
+                                                                            } else {
+                                                                                // Show original NDA data type
+                                                                                return (
+                                                                                    <span
+                                                                                        className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-gray-100 text-gray-800 hover:bg-gray-200"
+                                                                                        onClick={(
+                                                                                            e
+                                                                                        ) => {
+                                                                                            e.stopPropagation();
+                                                                                            handleOpenDataTypesModal(
+                                                                                                structure
+                                                                                            );
+                                                                                        }}
+                                                                                        title="Click to add custom data type tags"
+                                                                                    >
+                                                                                        {
+                                                                                            structure.dataType
+                                                                                        }
+                                                                                    </span>
+                                                                                );
+                                                                            }
+                                                                        })()}
+
+                                                                        {/* Status Badge */}
+                                                                        <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+                                                                            {
+                                                                                structure.status
+                                                                            }
+                                                                        </span>
                                                                     </div>
                                                                 </div>
                                                             </div>
@@ -1168,583 +1325,842 @@ useEffect(() => {
                 </div>
             )}
 
-{/* Categories Modal */}
-{isCategoriesModalOpen && modalStructure && (
-    <div 
-        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-        onClick={() => setIsCategoriesModalOpen(false)}
-    >
-        <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
-            <div className="flex justify-between items-center p-5 border-b">
-                <div>
-                    <h2 className="text-xl font-semibold">Manage Custom Categories</h2>
-                    <p className="text-sm text-gray-500 mt-1">
-                        {modalStructure.title || modalStructure.shortName}
-                    </p>
-                </div>
-                <button onClick={() => setIsCategoriesModalOpen(false)} className="text-gray-400 hover:text-gray-600">
-                    <X className="w-5 h-5" />
-                </button>
-            </div>
-        
-            <div className="flex-1 overflow-y-auto p-5">
-                <div className="mb-4">
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                        <input
-                            type="text"
-                            value={modalSearchTerm}
-                            onChange={(e) => setModalSearchTerm(e.target.value)}
-                            placeholder="Search custom categories..."
-                            className="w-full pl-10 pr-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
-                        />
-                    </div>
-                </div>
-
-                {modalLoading && (
-                    <div className="text-center py-8">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
-                    </div>
-                )}
-
-                {modalError && (
-                    <div className="p-3 bg-red-50 text-red-700 rounded-lg text-sm">{modalError}</div>
-                )}
-
-                {/* Original NDA Categories Info */}
-                {modalStructure.categories && modalStructure.categories.length > 0 && (
-                    <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                        <h3 className="text-sm font-semibold text-gray-700 mb-2">
-                            Original NDA Categories
-                        </h3>
-                        <div className="flex flex-wrap gap-2">
-                            {modalStructure.categories.map(cat => (
-                                <span key={cat} className="text-xs px-2 py-1 bg-gray-200 text-gray-700 rounded">
-                                    {cat}
-                                </span>
-                            ))}
+            {/* Categories Modal */}
+            {isCategoriesModalOpen && modalStructure && (
+                <div
+                    className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+                    onClick={() => setIsCategoriesModalOpen(false)}
+                >
+                    <div
+                        className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[80vh] flex flex-col"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="flex justify-between items-center p-5 border-b">
+                            <div>
+                                <h2 className="text-xl font-semibold">
+                                    Manage Custom Categories
+                                </h2>
+                                <p className="text-sm text-gray-500 mt-1">
+                                    {modalStructure.title ||
+                                        modalStructure.shortName}
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => setIsCategoriesModalOpen(false)}
+                                className="text-gray-400 hover:text-gray-600"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
                         </div>
-                    </div>
-                )}
 
-                {/* Selected Tags Preview */}
-                {selectedSocialTags.size > 0 && (
-                    <div className="mb-4 p-3 bg-blue-50 rounded-lg">
-                        <h3 className="text-sm font-semibold text-blue-700 mb-2">
-                            Selected Custom Categories ({selectedSocialTags.size})
-                        </h3>
-                        <div className="flex flex-wrap gap-2">
-                            {Array.from(selectedSocialTags).map(tagId => {
-                                const tag = availableTags.find(t => t.id === tagId);
-                                return tag ? (
-                                    <div
-                                        key={tag.id}
-                                        className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
-                                    >
-                                        <span>{tag.name}</span>
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setSelectedSocialTags(prev => {
-                                                    const newSet = new Set(prev);
-                                                    newSet.delete(tag.id);
-                                                    return newSet;
-                                                });
-                                            }}
-                                            className="ml-1 hover:bg-blue-200 rounded-full w-4 h-4 flex items-center justify-center text-blue-600 hover:text-blue-800 font-bold"
-                                            title="Remove from selection"
-                                        >
-                                            ×
-                                        </button>
-                                    </div>
-                                ) : null;
-                            })}
-                        </div>
-                    </div>
-                )}
+                        <div className="flex-1 overflow-y-auto p-5">
+                            <div className="mb-4">
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                                    <input
+                                        type="text"
+                                        value={modalSearchTerm}
+                                        onChange={(e) =>
+                                            setModalSearchTerm(e.target.value)
+                                        }
+                                        placeholder="Search custom categories..."
+                                        className="w-full pl-10 pr-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
+                                    />
+                                </div>
+                            </div>
 
-                {/* Available Tags */}
-                {!tagLoading && (
-                    <div className="mb-4">
-                        <h3 className="text-sm font-semibold text-gray-700 mb-2">
-                            Available Custom Category Tags
-                        </h3>
-                        <div className="bg-gray-50 rounded-lg p-3 max-h-64 overflow-y-auto">
-                            <div className="flex flex-wrap gap-2">
-                                {filteredAvailableTags.length > 0 ? (
-                                    filteredAvailableTags.map(tag => (
-                                        <div key={tag.id} className="inline-flex items-center group">
-                                            <button
-                                                onClick={() => {
-                                                    setSelectedSocialTags(prev => {
-                                                        const newSet = new Set(prev);
-                                                        if (newSet.has(tag.id)) {
-                                                            newSet.delete(tag.id);
-                                                        } else {
-                                                            newSet.add(tag.id);
-                                                        }
-                                                        return newSet;
-                                                    });
-                                                }}
-                                                className={`inline-flex items-center px-3 py-1.5 rounded-l-full text-sm transition-all ${
-                                                    selectedSocialTags.has(tag.id)
-                                                        ? 'bg-blue-500 text-white'
-                                                        : 'bg-white text-gray-700 border border-gray-300 hover:border-blue-400 hover:bg-blue-50'
-                                                }`}
-                                            >
-                                                {tag.name}
-                                                {tag.dataStructures && (
-                                                    <span className="ml-2 text-xs opacity-70">
-                                                        ({tag.dataStructures.length})
+                            {modalLoading && (
+                                <div className="text-center py-8">
+                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+                                </div>
+                            )}
+
+                            {modalError && (
+                                <div className="p-3 bg-red-50 text-red-700 rounded-lg text-sm">
+                                    {modalError}
+                                </div>
+                            )}
+
+                            {/* Original NDA Categories Info */}
+                            {modalStructure.categories &&
+                                modalStructure.categories.length > 0 && (
+                                    <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                                        <h3 className="text-sm font-semibold text-gray-700 mb-2">
+                                            Original NDA Categories
+                                        </h3>
+                                        <div className="flex flex-wrap gap-2">
+                                            {modalStructure.categories.map(
+                                                (cat) => (
+                                                    <span
+                                                        key={cat}
+                                                        className="text-xs px-2 py-1 bg-gray-200 text-gray-700 rounded"
+                                                    >
+                                                        {cat}
                                                     </span>
-                                                )}
-                                            </button>
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    deleteTag(tag.id);
-                                                }}
-                                                className={`px-2 py-1.5 rounded-r-full text-sm transition-all border-l-0 ${
-                                                    selectedSocialTags.has(tag.id)
-                                                        ? 'bg-blue-500 text-white hover:bg-red-600'
-                                                        : 'bg-white text-gray-700 border border-gray-300 hover:bg-red-50 hover:text-red-600 hover:border-red-400'
-                                                }`}
-                                                title="Delete tag permanently"
-                                            >
-                                                ×
-                                            </button>
+                                                )
+                                            )}
                                         </div>
-                                    ))
-                                ) : (
-                                    <p className="text-gray-500 text-sm">No custom category tags found</p>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* Create New Tag */}
-                <div className="border-t pt-4">
-                    <h3 className="text-sm font-semibold text-gray-700 mb-2">
-                        Create New Custom Category Tag
-                    </h3>
-                    <div className="space-y-2">
-                        <input
-                            type="text"
-                            value={newTagName}
-                            onChange={(e) => setNewTagName(e.target.value)}
-                            placeholder="Category tag name..."
-                            className="w-full px-3 py-2 border rounded-lg focus:border-blue-500 focus:outline-none text-sm"
-                            onKeyPress={(e) => {
-                                if (e.key === 'Enter' && newTagName.trim()) {
-                                    createTag();
-                                }
-                            }}
-                        />
-                        <button
-                            onClick={createTag}
-                            disabled={!newTagName.trim() || tagLoading}
-                            className="w-full px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:bg-gray-300 transition-colors text-sm font-medium"
-                        >
-                            <Plus className="w-4 h-4 inline mr-2" />
-                            Create & Add to Selection
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <div className="flex justify-end gap-3 p-5 border-t">
-                <button
-                    onClick={() => {
-                        setIsCategoriesModalOpen(false);
-                        setSelectedSocialTags(new Set());
-                        setNewTagName("");
-                        setModalSearchTerm("");
-                    }}
-                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
-                >
-                    Cancel
-                </button>
-                <button
-                    onClick={async () => {
-                        try {
-                            setModalLoading(true);
-                            const selectedTagIds = Array.from(selectedSocialTags);
-                            
-                            const existingStructure = dataStructuresMap[modalStructure.shortName];
-
-                            if (!existingStructure) {
-                                throw new Error(`Data structure "${modalStructure.shortName}" not found in backend`);
-                            }
-
-                            // Get current tag IDs for this structure
-                            const currentTagIds = new Set(
-                                (structureTags[modalStructure.shortName] || []).map(t => t.id)
-                            );
-                            
-                            // Find tags to add and remove
-                            const toAdd = selectedTagIds.filter(id => !currentTagIds.has(id));
-                            const toRemove = Array.from(currentTagIds).filter(id => !selectedTagIds.includes(id));
-                            
-                            // Process removals
-                            for (const tagId of toRemove) {
-                                const response = await fetch(`https://spinup-002b0f.spinup.yale.edu/api/tags/remove`, {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({
-                                        tagId: tagId,
-                                        dataStructureId: existingStructure.dataStructureId
-                                    })
-                                });
-                                
-                                if (!response.ok) {
-                                    const errorData = await response.json();
-                                    throw new Error(errorData.error || 'Failed to remove tag');
-                                }
-                            }
-                            
-                            // Process additions
-                            for (const tagId of toAdd) {
-                                const response = await fetch(`https://spinup-002b0f.spinup.yale.edu/api/tags/assign`, {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({
-                                        tagId: tagId,
-                                        dataStructureId: existingStructure.dataStructureId
-                                    })
-                                });
-                                
-                                if (!response.ok) {
-                                    const errorData = await response.json();
-                                    throw new Error(errorData.error || 'Failed to assign tag');
-                                }
-                            }
-
-                            // Update local state
-                            const newTags = availableTags.filter(tag => selectedTagIds.includes(tag.id));
-                            setStructureTags(prev => ({
-                                ...prev,
-                                [modalStructure.shortName]: newTags
-                            }));
-
-                            setIsCategoriesModalOpen(false);
-                            setSelectedSocialTags(new Set());
-                            setNewTagName("");
-                            setModalSearchTerm("");
-                        } catch (err) {
-                            console.error("Error saving category tags:", err);
-                            setModalError("Failed to save category tags: " + err.message);
-                        } finally {
-                            setModalLoading(false);
-                        }
-                    }}
-                    disabled={modalLoading}
-                    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-300"
-                        >
-                            {modalLoading ? 'Saving...' : 'Save Changes'}
-                        </button>
-                    </div>
-                </div>
-            </div>
-        )}
-
-   {/* Data Types Modal */}
-    {isDataTypesModalOpen && modalStructure && (
-    <div 
-        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-        onClick={() => setIsDataTypesModalOpen(false)}
-    >
-        <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
-            <div className="flex justify-between items-center p-5 border-b">
-                <div>
-                    <h2 className="text-xl font-semibold">Manage Data Types</h2>
-                    <p className="text-sm text-gray-500 mt-1">
-                        {modalStructure.title || modalStructure.shortName}
-                    </p>
-                </div>
-                <button onClick={() => setIsDataTypesModalOpen(false)} className="text-gray-400 hover:text-gray-600">
-                    <X className="w-5 h-5" />
-                </button>
-            </div>
-            
-            <div className="flex-1 overflow-y-auto p-5">
-                <div className="mb-4">
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                        <input
-                            type="text"
-                            value={modalSearchTerm}
-                            onChange={(e) => setModalSearchTerm(e.target.value)}
-                            placeholder="Search custom data types..."
-                            className="w-full pl-10 pr-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
-                        />
-                    </div>
-                </div>
-
-                {modalLoading && (
-                    <div className="text-center py-8">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
-                    </div>
-                )}
-
-                {modalError && (
-                    <div className="p-3 bg-red-50 text-red-700 rounded-lg text-sm">{modalError}</div>
-                )}
-
-                {/* Original NDA Data Type Info */}
-                {modalStructure.dataType && (
-                    <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                        <h3 className="text-sm font-semibold text-gray-700 mb-2">
-                            Original NDA Data Type
-                        </h3>
-                        <span className="text-xs px-2 py-1 bg-gray-200 text-gray-700 rounded">
-                            {modalStructure.dataType}
-                        </span>
-                    </div>
-                )}
-
-                {/* Selected Data Type Tags Preview */}
-                {selectedDataTypeTags.size > 0 && (
-                    <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                        <h3 className="text-sm font-semibold text-gray-700 mb-2">
-                            Selected Custom Data Types ({selectedDataTypeTags.size})
-                        </h3>
-                        <div className="flex flex-wrap gap-2">
-                            {Array.from(selectedDataTypeTags).map(tagId => {
-                                const tag = availableDataTypeTags.find(t => t.id === tagId);
-                                return tag ? (
-                                    <div
-                                        key={tag.id}
-                                        className="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-sm"
-                                    >
-                                        <span>{tag.name}</span>
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setSelectedDataTypeTags(prev => {
-                                                    const newSet = new Set(prev);
-                                                    newSet.delete(tag.id);
-                                                    return newSet;
-                                                });
-                                            }}
-                                            className="ml-1 hover:bg-gray-200 rounded-full w-4 h-4 flex items-center justify-center text-gray-600 hover:text-gray-800 font-bold"
-                                            title="Remove from selection"
-                                        >
-                                            ×
-                                        </button>
                                     </div>
-                                ) : null;
-                            })}
-                        </div>
-                    </div>
-                )}
-
-                {/* Available Data Type Tags */}
-                {!tagLoading && (
-                    <div className="mb-4">
-                        <h3 className="text-sm font-semibold text-gray-700 mb-2">
-                            Available Custom Data Types
-                        </h3>
-                        <div className="bg-gray-50 rounded-lg p-3 max-h-64 overflow-y-auto">
-                            <div className="flex flex-wrap gap-2">
-                                {availableDataTypeTags
-                                    .filter(tag => !modalSearchTerm || tag.name.toLowerCase().includes(modalSearchTerm.toLowerCase()))
-                                    .length > 0 ? (
-                                    availableDataTypeTags
-                                        .filter(tag => !modalSearchTerm || tag.name.toLowerCase().includes(modalSearchTerm.toLowerCase()))
-                                        .map(tag => (
-                                            <div key={tag.id} className="inline-flex items-center group">
-                                                <button
-                                                    onClick={() => {
-                                                        setSelectedDataTypeTags(prev => {
-                                                            const newSet = new Set(prev);
-                                                            if (newSet.has(tag.id)) {
-                                                                newSet.delete(tag.id);
-                                                            } else {
-                                                                newSet.add(tag.id);
-                                                            }
-                                                            return newSet;
-                                                        });
-                                                    }}
-                                                    className={`inline-flex items-center px-3 py-1.5 rounded-l-full text-sm transition-all ${
-                                                        selectedDataTypeTags.has(tag.id)
-                                                            ? 'bg-gray-500 text-white'
-                                                            : 'bg-white text-gray-700 border border-gray-300 hover:border-gray-400 hover:bg-gray-50'
-                                                    }`}
-                                                >
-                                                    {tag.name}
-                                                    {tag.dataStructures && (
-                                                        <span className="ml-2 text-xs opacity-70">
-                                                            ({tag.dataStructures.length})
-                                                        </span>
-                                                    )}
-                                                </button>
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        deleteTag(tag.id);
-                                                    }}
-                                                    className={`px-2 py-1.5 rounded-r-full text-sm transition-all border-l-0 ${
-                                                        selectedDataTypeTags.has(tag.id)
-                                                            ? 'bg-gray-500 text-white hover:bg-red-600'
-                                                            : 'bg-white text-gray-700 border border-gray-300 hover:bg-red-50 hover:text-red-600 hover:border-red-400'
-                                                    }`}
-                                                    title="Delete tag permanently"
-                                                >
-                                                    ×
-                                                </button>
-                                            </div>
-                                        ))
-                                ) : (
-                                    <p className="text-gray-500 text-sm">No custom data type tags found</p>
                                 )}
+
+                            {/* Selected Tags Preview */}
+                            {selectedSocialTags.size > 0 && (
+                                <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+                                    <h3 className="text-sm font-semibold text-blue-700 mb-2">
+                                        Selected Custom Categories (
+                                        {selectedSocialTags.size})
+                                    </h3>
+                                    <div className="flex flex-wrap gap-2">
+                                        {Array.from(selectedSocialTags).map(
+                                            (tagId) => {
+                                                const tag = availableTags.find(
+                                                    (t) => t.id === tagId
+                                                );
+                                                return tag ? (
+                                                    <div
+                                                        key={tag.id}
+                                                        className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
+                                                    >
+                                                        <span>{tag.name}</span>
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setSelectedSocialTags(
+                                                                    (prev) => {
+                                                                        const newSet =
+                                                                            new Set(
+                                                                                prev
+                                                                            );
+                                                                        newSet.delete(
+                                                                            tag.id
+                                                                        );
+                                                                        return newSet;
+                                                                    }
+                                                                );
+                                                            }}
+                                                            className="ml-1 hover:bg-blue-200 rounded-full w-4 h-4 flex items-center justify-center text-blue-600 hover:text-blue-800 font-bold"
+                                                            title="Remove from selection"
+                                                        >
+                                                            ×
+                                                        </button>
+                                                    </div>
+                                                ) : null;
+                                            }
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Available Tags */}
+                            {!tagLoading && (
+                                <div className="mb-4">
+                                    <h3 className="text-sm font-semibold text-gray-700 mb-2">
+                                        Available Custom Category Tags
+                                    </h3>
+                                    <div className="bg-gray-50 rounded-lg p-3 max-h-64 overflow-y-auto">
+                                        <div className="flex flex-wrap gap-2">
+                                            {filteredAvailableTags.length >
+                                            0 ? (
+                                                filteredAvailableTags.map(
+                                                    (tag) => (
+                                                        <div
+                                                            key={tag.id}
+                                                            className="inline-flex items-center group"
+                                                        >
+                                                            <button
+                                                                onClick={() => {
+                                                                    setSelectedSocialTags(
+                                                                        (
+                                                                            prev
+                                                                        ) => {
+                                                                            const newSet =
+                                                                                new Set(
+                                                                                    prev
+                                                                                );
+                                                                            if (
+                                                                                newSet.has(
+                                                                                    tag.id
+                                                                                )
+                                                                            ) {
+                                                                                newSet.delete(
+                                                                                    tag.id
+                                                                                );
+                                                                            } else {
+                                                                                newSet.add(
+                                                                                    tag.id
+                                                                                );
+                                                                            }
+                                                                            return newSet;
+                                                                        }
+                                                                    );
+                                                                }}
+                                                                className={`inline-flex items-center px-3 py-1.5 rounded-l-full text-sm transition-all ${
+                                                                    selectedSocialTags.has(
+                                                                        tag.id
+                                                                    )
+                                                                        ? "bg-blue-500 text-white"
+                                                                        : "bg-white text-gray-700 border border-gray-300 hover:border-blue-400 hover:bg-blue-50"
+                                                                }`}
+                                                            >
+                                                                {tag.name}
+                                                                {tag.dataStructures && (
+                                                                    <span className="ml-2 text-xs opacity-70">
+                                                                        (
+                                                                        {
+                                                                            tag
+                                                                                .dataStructures
+                                                                                .length
+                                                                        }
+                                                                        )
+                                                                    </span>
+                                                                )}
+                                                            </button>
+                                                            <button
+                                                                onClick={(
+                                                                    e
+                                                                ) => {
+                                                                    e.stopPropagation();
+                                                                    deleteTag(
+                                                                        tag.id
+                                                                    );
+                                                                }}
+                                                                className={`px-2 py-1.5 rounded-r-full text-sm transition-all border-l-0 ${
+                                                                    selectedSocialTags.has(
+                                                                        tag.id
+                                                                    )
+                                                                        ? "bg-blue-500 text-white hover:bg-red-600"
+                                                                        : "bg-white text-gray-700 border border-gray-300 hover:bg-red-50 hover:text-red-600 hover:border-red-400"
+                                                                }`}
+                                                                title="Delete tag permanently"
+                                                            >
+                                                                ×
+                                                            </button>
+                                                        </div>
+                                                    )
+                                                )
+                                            ) : (
+                                                <p className="text-gray-500 text-sm">
+                                                    No custom category tags
+                                                    found
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Create New Tag */}
+                            <div className="border-t pt-4">
+                                <h3 className="text-sm font-semibold text-gray-700 mb-2">
+                                    Create New Custom Category Tag
+                                </h3>
+                                <div className="space-y-2">
+                                    <input
+                                        type="text"
+                                        value={newTagName}
+                                        onChange={(e) =>
+                                            setNewTagName(e.target.value)
+                                        }
+                                        placeholder="Category tag name..."
+                                        className="w-full px-3 py-2 border rounded-lg focus:border-blue-500 focus:outline-none text-sm"
+                                        onKeyPress={(e) => {
+                                            if (
+                                                e.key === "Enter" &&
+                                                newTagName.trim()
+                                            ) {
+                                                createTag();
+                                            }
+                                        }}
+                                    />
+                                    <button
+                                        onClick={createTag}
+                                        disabled={
+                                            !newTagName.trim() || tagLoading
+                                        }
+                                        className="w-full px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:bg-gray-300 transition-colors text-sm font-medium"
+                                    >
+                                        <Plus className="w-4 h-4 inline mr-2" />
+                                        Create & Add to Selection
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                )}
 
-                {/* Create New Data Type Tag */}
-                <div className="border-t pt-4">
-                    <h3 className="text-sm font-semibold text-gray-700 mb-2">
-                        Create New Custom Data Type Tag
-                    </h3>
-                    <div className="space-y-2">
-                        <input
-                            type="text"
-                            value={newDataTypeTagName}
-                            onChange={(e) => setNewDataTypeTagName(e.target.value)}
-                            placeholder="Data type tag name..."
-                            className="w-full px-3 py-2 border rounded-lg focus:border-blue-500 focus:outline-none text-sm"
-                            onKeyPress={(e) => {
-                                if (e.key === 'Enter' && newDataTypeTagName.trim()) {
-                                    createDataTypeTag();
-                                }
-                            }}
-                        />
-                        <button
-                            onClick={createDataTypeTag}
-                            disabled={!newDataTypeTagName.trim() || tagLoading}
-                            className="w-full px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:bg-gray-300 transition-colors text-sm font-medium"
-                        >
-                            <Plus className="w-4 h-4 inline mr-2" />
-                            Create & Add to Selection
-                        </button>
+                        <div className="flex justify-end gap-3 p-5 border-t">
+                            <button
+                                onClick={() => {
+                                    setIsCategoriesModalOpen(false);
+                                    setSelectedSocialTags(new Set());
+                                    setNewTagName("");
+                                    setModalSearchTerm("");
+                                }}
+                                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    try {
+                                        setModalLoading(true);
+                                        const selectedTagIds =
+                                            Array.from(selectedSocialTags);
+
+                                        const existingStructure =
+                                            dataStructuresMap[
+                                                modalStructure.shortName
+                                            ];
+
+                                        if (!existingStructure) {
+                                            throw new Error(
+                                                `Data structure "${modalStructure.shortName}" not found in backend`
+                                            );
+                                        }
+
+                                        // Get current tag IDs for this structure
+                                        const currentTagIds = new Set(
+                                            (
+                                                structureTags[
+                                                    modalStructure.shortName
+                                                ] || []
+                                            ).map((t) => t.id)
+                                        );
+
+                                        // Find tags to add and remove
+                                        const toAdd = selectedTagIds.filter(
+                                            (id) => !currentTagIds.has(id)
+                                        );
+                                        const toRemove = Array.from(
+                                            currentTagIds
+                                        ).filter(
+                                            (id) => !selectedTagIds.includes(id)
+                                        );
+
+                                        // Process removals
+                                        for (const tagId of toRemove) {
+                                            const response = await fetch(
+                                                `/api/spinup/tags/remove`,
+                                                {
+                                                    method: "POST",
+                                                    headers: {
+                                                        "Content-Type":
+                                                            "application/json",
+                                                    },
+                                                    body: JSON.stringify({
+                                                        tagId: tagId,
+                                                        dataStructureId:
+                                                            existingStructure.dataStructureId,
+                                                    }),
+                                                }
+                                            );
+
+                                            if (!response.ok) {
+                                                const errorData =
+                                                    await response.json();
+                                                throw new Error(
+                                                    errorData.error ||
+                                                        "Failed to remove tag"
+                                                );
+                                            }
+                                        }
+
+                                        // Process additions
+                                        for (const tagId of toAdd) {
+                                            const response = await fetch(
+                                                `/api/spinup/tags/assign`,
+                                                {
+                                                    method: "POST",
+                                                    headers: {
+                                                        "Content-Type":
+                                                            "application/json",
+                                                    },
+                                                    body: JSON.stringify({
+                                                        tagId: tagId,
+                                                        dataStructureId:
+                                                            existingStructure.dataStructureId,
+                                                    }),
+                                                }
+                                            );
+
+                                            if (!response.ok) {
+                                                const errorData =
+                                                    await response.json();
+                                                throw new Error(
+                                                    errorData.error ||
+                                                        "Failed to assign tag"
+                                                );
+                                            }
+                                        }
+
+                                        // Update local state
+                                        const newTags = availableTags.filter(
+                                            (tag) =>
+                                                selectedTagIds.includes(tag.id)
+                                        );
+                                        setStructureTags((prev) => ({
+                                            ...prev,
+                                            [modalStructure.shortName]: newTags,
+                                        }));
+
+                                        setIsCategoriesModalOpen(false);
+                                        setSelectedSocialTags(new Set());
+                                        setNewTagName("");
+                                        setModalSearchTerm("");
+                                    } catch (err) {
+                                        console.error(
+                                            "Error saving category tags:",
+                                            err
+                                        );
+                                        setModalError(
+                                            "Failed to save category tags: " +
+                                                err.message
+                                        );
+                                    } finally {
+                                        setModalLoading(false);
+                                    }
+                                }}
+                                disabled={modalLoading}
+                                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-300"
+                            >
+                                {modalLoading ? "Saving..." : "Save Changes"}
+                            </button>
+                        </div>
                     </div>
                 </div>
-            </div>
+            )}
 
-            <div className="flex justify-end gap-3 p-5 border-t">
-                <button
-                    onClick={() => {
-                        setIsDataTypesModalOpen(false);
-                        setSelectedDataTypeTags(new Set());
-                        setNewDataTypeTagName("");
-                        setModalSearchTerm("");
-                    }}
-                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+            {/* Data Types Modal */}
+            {isDataTypesModalOpen && modalStructure && (
+                <div
+                    className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+                    onClick={() => setIsDataTypesModalOpen(false)}
                 >
-                    Cancel
-                </button>
-                <button
-                    onClick={async () => {
-                        try {
-                            setModalLoading(true);
-                            const selectedTagIds = Array.from(selectedDataTypeTags);
-                            
-                            const existingStructure = dataStructuresMap[modalStructure.shortName];
+                    <div
+                        className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[80vh] flex flex-col"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="flex justify-between items-center p-5 border-b">
+                            <div>
+                                <h2 className="text-xl font-semibold">
+                                    Manage Data Types
+                                </h2>
+                                <p className="text-sm text-gray-500 mt-1">
+                                    {modalStructure.title ||
+                                        modalStructure.shortName}
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => setIsDataTypesModalOpen(false)}
+                                className="text-gray-400 hover:text-gray-600"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
 
-                            if (!existingStructure) {
-                                throw new Error(`Data structure "${modalStructure.shortName}" not found in backend`);
-                            }
+                        <div className="flex-1 overflow-y-auto p-5">
+                            <div className="mb-4">
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                                    <input
+                                        type="text"
+                                        value={modalSearchTerm}
+                                        onChange={(e) =>
+                                            setModalSearchTerm(e.target.value)
+                                        }
+                                        placeholder="Search custom data types..."
+                                        className="w-full pl-10 pr-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
+                                    />
+                                </div>
+                            </div>
 
-                            // Get current data type tag IDs for this structure
-                            // const currentDataTypeTags = (structureTags[modalStructure.shortName] || [])
-                            //     .filter(t => t.tagType === 'Data Type');
-                            // const currentTagIds = new Set(currentDataTypeTags.map(t => t.id));
-                            
-                             const currentTagIds = new Set(
-                                (structureDataTypeTags[modalStructure.shortName] || []).map(t => t.id)
-                            );
-                            
-                            // Find tags to add and remove
-                            const toAdd = selectedTagIds.filter(id => !currentTagIds.has(id));
-                            const toRemove = Array.from(currentTagIds).filter(id => !selectedTagIds.includes(id));
-                            
-                            // Process removals
-                            for (const tagId of toRemove) {
-                                const response = await fetch(`${apiBaseUrl}/tags/remove`, {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({
-                                        tagId: tagId,
-                                        dataStructureId: existingStructure.dataStructureId
-                                    })
-                                });
-                                
-                                if (!response.ok) {
-                                    const errorData = await response.json();
-                                    throw new Error(errorData.error || 'Failed to remove tag');
-                                }
-                            }
-                            
-                            // Process additions
-                            for (const tagId of toAdd) {
-                                    const response = await fetch(`${apiBaseUrl}/tags/assign`, {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({
-                                        tagId: tagId,
-                                        dataStructureId: existingStructure.dataStructureId
-                                    })
-                                });
-                                
-                                if (!response.ok) {
-                                    const errorData = await response.json();
-                                    throw new Error(errorData.error || 'Failed to assign tag');
-                                }
-                            }
+                            {modalLoading && (
+                                <div className="text-center py-8">
+                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+                                </div>
+                            )}
 
-                            // Update local state - merge category and data type tags
-                            // const categoryTags = (structureTags[modalStructure.shortName] || [])
-                            //     .filter(t => t.tagType !== 'Data Type');
-                            // const newDataTypeTags = availableDataTypeTags.filter(tag => selectedTagIds.includes(tag.id));
-                            // const allTags = [...categoryTags, ...newDataTypeTags];
-                            
-                            // handleTagsUpdate(modalStructure.shortName, allTags);
-                            const newDataTypeTags = availableDataTypeTags.filter(tag => selectedTagIds.includes(tag.id));
-                            setStructureDataTypeTags(prev => ({
-                                ...prev,
-                                [modalStructure.shortName]: newDataTypeTags
-                            }));
+                            {modalError && (
+                                <div className="p-3 bg-red-50 text-red-700 rounded-lg text-sm">
+                                    {modalError}
+                                </div>
+                            )}
 
-                            // Mark as modified
-                            setModifiedDataTypes(prev => ({
-                                ...prev,
-                                [modalStructure.shortName]: true
-                            }));
-                            
-                            setIsDataTypesModalOpen(false);
-                            setSelectedDataTypeTags(new Set());
-                            setNewDataTypeTagName("");
-                            setModalSearchTerm("");
-                        } catch (err) {
-                            console.error("Error saving data type tags:", err);
-                            setModalError("Failed to save data type tags: " + err.message);
-                        } finally {
-                            setModalLoading(false);
-                        }
-                    }}
-                    disabled={modalLoading}
-                    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-300"
-                >
-                    {modalLoading ? 'Saving...' : 'Save Changes'}
-                </button>
-            </div>
+                            {/* Original NDA Data Type Info */}
+                            {modalStructure.dataType && (
+                                <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                                    <h3 className="text-sm font-semibold text-gray-700 mb-2">
+                                        Original NDA Data Type
+                                    </h3>
+                                    <span className="text-xs px-2 py-1 bg-gray-200 text-gray-700 rounded">
+                                        {modalStructure.dataType}
+                                    </span>
+                                </div>
+                            )}
+
+                            {/* Selected Data Type Tags Preview */}
+                            {selectedDataTypeTags.size > 0 && (
+                                <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                                    <h3 className="text-sm font-semibold text-gray-700 mb-2">
+                                        Selected Custom Data Types (
+                                        {selectedDataTypeTags.size})
+                                    </h3>
+                                    <div className="flex flex-wrap gap-2">
+                                        {Array.from(selectedDataTypeTags).map(
+                                            (tagId) => {
+                                                const tag =
+                                                    availableDataTypeTags.find(
+                                                        (t) => t.id === tagId
+                                                    );
+                                                return tag ? (
+                                                    <div
+                                                        key={tag.id}
+                                                        className="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-sm"
+                                                    >
+                                                        <span>{tag.name}</span>
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setSelectedDataTypeTags(
+                                                                    (prev) => {
+                                                                        const newSet =
+                                                                            new Set(
+                                                                                prev
+                                                                            );
+                                                                        newSet.delete(
+                                                                            tag.id
+                                                                        );
+                                                                        return newSet;
+                                                                    }
+                                                                );
+                                                            }}
+                                                            className="ml-1 hover:bg-gray-200 rounded-full w-4 h-4 flex items-center justify-center text-gray-600 hover:text-gray-800 font-bold"
+                                                            title="Remove from selection"
+                                                        >
+                                                            ×
+                                                        </button>
+                                                    </div>
+                                                ) : null;
+                                            }
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Available Data Type Tags */}
+                            {!tagLoading && (
+                                <div className="mb-4">
+                                    <h3 className="text-sm font-semibold text-gray-700 mb-2">
+                                        Available Custom Data Types
+                                    </h3>
+                                    <div className="bg-gray-50 rounded-lg p-3 max-h-64 overflow-y-auto">
+                                        <div className="flex flex-wrap gap-2">
+                                            {availableDataTypeTags.filter(
+                                                (tag) =>
+                                                    !modalSearchTerm ||
+                                                    tag.name
+                                                        .toLowerCase()
+                                                        .includes(
+                                                            modalSearchTerm.toLowerCase()
+                                                        )
+                                            ).length > 0 ? (
+                                                availableDataTypeTags
+                                                    .filter(
+                                                        (tag) =>
+                                                            !modalSearchTerm ||
+                                                            tag.name
+                                                                .toLowerCase()
+                                                                .includes(
+                                                                    modalSearchTerm.toLowerCase()
+                                                                )
+                                                    )
+                                                    .map((tag) => (
+                                                        <div
+                                                            key={tag.id}
+                                                            className="inline-flex items-center group"
+                                                        >
+                                                            <button
+                                                                onClick={() => {
+                                                                    setSelectedDataTypeTags(
+                                                                        (
+                                                                            prev
+                                                                        ) => {
+                                                                            const newSet =
+                                                                                new Set(
+                                                                                    prev
+                                                                                );
+                                                                            if (
+                                                                                newSet.has(
+                                                                                    tag.id
+                                                                                )
+                                                                            ) {
+                                                                                newSet.delete(
+                                                                                    tag.id
+                                                                                );
+                                                                            } else {
+                                                                                newSet.add(
+                                                                                    tag.id
+                                                                                );
+                                                                            }
+                                                                            return newSet;
+                                                                        }
+                                                                    );
+                                                                }}
+                                                                className={`inline-flex items-center px-3 py-1.5 rounded-l-full text-sm transition-all ${
+                                                                    selectedDataTypeTags.has(
+                                                                        tag.id
+                                                                    )
+                                                                        ? "bg-gray-500 text-white"
+                                                                        : "bg-white text-gray-700 border border-gray-300 hover:border-gray-400 hover:bg-gray-50"
+                                                                }`}
+                                                            >
+                                                                {tag.name}
+                                                                {tag.dataStructures && (
+                                                                    <span className="ml-2 text-xs opacity-70">
+                                                                        (
+                                                                        {
+                                                                            tag
+                                                                                .dataStructures
+                                                                                .length
+                                                                        }
+                                                                        )
+                                                                    </span>
+                                                                )}
+                                                            </button>
+                                                            <button
+                                                                onClick={(
+                                                                    e
+                                                                ) => {
+                                                                    e.stopPropagation();
+                                                                    deleteTag(
+                                                                        tag.id
+                                                                    );
+                                                                }}
+                                                                className={`px-2 py-1.5 rounded-r-full text-sm transition-all border-l-0 ${
+                                                                    selectedDataTypeTags.has(
+                                                                        tag.id
+                                                                    )
+                                                                        ? "bg-gray-500 text-white hover:bg-red-600"
+                                                                        : "bg-white text-gray-700 border border-gray-300 hover:bg-red-50 hover:text-red-600 hover:border-red-400"
+                                                                }`}
+                                                                title="Delete tag permanently"
+                                                            >
+                                                                ×
+                                                            </button>
+                                                        </div>
+                                                    ))
+                                            ) : (
+                                                <p className="text-gray-500 text-sm">
+                                                    No custom data type tags
+                                                    found
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Create New Data Type Tag */}
+                            <div className="border-t pt-4">
+                                <h3 className="text-sm font-semibold text-gray-700 mb-2">
+                                    Create New Custom Data Type Tag
+                                </h3>
+                                <div className="space-y-2">
+                                    <input
+                                        type="text"
+                                        value={newDataTypeTagName}
+                                        onChange={(e) =>
+                                            setNewDataTypeTagName(
+                                                e.target.value
+                                            )
+                                        }
+                                        placeholder="Data type tag name..."
+                                        className="w-full px-3 py-2 border rounded-lg focus:border-blue-500 focus:outline-none text-sm"
+                                        onKeyPress={(e) => {
+                                            if (
+                                                e.key === "Enter" &&
+                                                newDataTypeTagName.trim()
+                                            ) {
+                                                createDataTypeTag();
+                                            }
+                                        }}
+                                    />
+                                    <button
+                                        onClick={createDataTypeTag}
+                                        disabled={
+                                            !newDataTypeTagName.trim() ||
+                                            tagLoading
+                                        }
+                                        className="w-full px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:bg-gray-300 transition-colors text-sm font-medium"
+                                    >
+                                        <Plus className="w-4 h-4 inline mr-2" />
+                                        Create & Add to Selection
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex justify-end gap-3 p-5 border-t">
+                            <button
+                                onClick={() => {
+                                    setIsDataTypesModalOpen(false);
+                                    setSelectedDataTypeTags(new Set());
+                                    setNewDataTypeTagName("");
+                                    setModalSearchTerm("");
+                                }}
+                                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    try {
+                                        setModalLoading(true);
+                                        const selectedTagIds =
+                                            Array.from(selectedDataTypeTags);
+
+                                        const existingStructure =
+                                            dataStructuresMap[
+                                                modalStructure.shortName
+                                            ];
+
+                                        if (!existingStructure) {
+                                            throw new Error(
+                                                `Data structure "${modalStructure.shortName}" not found in backend`
+                                            );
+                                        }
+
+                                        // Get current data type tag IDs for this structure
+                                        // const currentDataTypeTags = (structureTags[modalStructure.shortName] || [])
+                                        //     .filter(t => t.tagType === 'Data Type');
+                                        // const currentTagIds = new Set(currentDataTypeTags.map(t => t.id));
+
+                                        const currentTagIds = new Set(
+                                            (
+                                                structureDataTypeTags[
+                                                    modalStructure.shortName
+                                                ] || []
+                                            ).map((t) => t.id)
+                                        );
+
+                                        // Find tags to add and remove
+                                        const toAdd = selectedTagIds.filter(
+                                            (id) => !currentTagIds.has(id)
+                                        );
+                                        const toRemove = Array.from(
+                                            currentTagIds
+                                        ).filter(
+                                            (id) => !selectedTagIds.includes(id)
+                                        );
+
+                                        // Process removals
+                                        for (const tagId of toRemove) {
+                                            const response = await fetch(
+                                                `${apiBaseUrl}/tags/remove`,
+                                                {
+                                                    method: "POST",
+                                                    headers: {
+                                                        "Content-Type":
+                                                            "application/json",
+                                                    },
+                                                    body: JSON.stringify({
+                                                        tagId: tagId,
+                                                        dataStructureId:
+                                                            existingStructure.dataStructureId,
+                                                    }),
+                                                }
+                                            );
+
+                                            if (!response.ok) {
+                                                const errorData =
+                                                    await response.json();
+                                                throw new Error(
+                                                    errorData.error ||
+                                                        "Failed to remove tag"
+                                                );
+                                            }
+                                        }
+
+                                        // Process additions
+                                        for (const tagId of toAdd) {
+                                            const response = await fetch(
+                                                `${apiBaseUrl}/tags/assign`,
+                                                {
+                                                    method: "POST",
+                                                    headers: {
+                                                        "Content-Type":
+                                                            "application/json",
+                                                    },
+                                                    body: JSON.stringify({
+                                                        tagId: tagId,
+                                                        dataStructureId:
+                                                            existingStructure.dataStructureId,
+                                                    }),
+                                                }
+                                            );
+
+                                            if (!response.ok) {
+                                                const errorData =
+                                                    await response.json();
+                                                throw new Error(
+                                                    errorData.error ||
+                                                        "Failed to assign tag"
+                                                );
+                                            }
+                                        }
+
+                                        // Update local state - merge category and data type tags
+                                        // const categoryTags = (structureTags[modalStructure.shortName] || [])
+                                        //     .filter(t => t.tagType !== 'Data Type');
+                                        // const newDataTypeTags = availableDataTypeTags.filter(tag => selectedTagIds.includes(tag.id));
+                                        // const allTags = [...categoryTags, ...newDataTypeTags];
+
+                                        // handleTagsUpdate(modalStructure.shortName, allTags);
+                                        const newDataTypeTags =
+                                            availableDataTypeTags.filter(
+                                                (tag) =>
+                                                    selectedTagIds.includes(
+                                                        tag.id
+                                                    )
+                                            );
+                                        setStructureDataTypeTags((prev) => ({
+                                            ...prev,
+                                            [modalStructure.shortName]:
+                                                newDataTypeTags,
+                                        }));
+
+                                        // Mark as modified
+                                        setModifiedDataTypes((prev) => ({
+                                            ...prev,
+                                            [modalStructure.shortName]: true,
+                                        }));
+
+                                        setIsDataTypesModalOpen(false);
+                                        setSelectedDataTypeTags(new Set());
+                                        setNewDataTypeTagName("");
+                                        setModalSearchTerm("");
+                                    } catch (err) {
+                                        console.error(
+                                            "Error saving data type tags:",
+                                            err
+                                        );
+                                        setModalError(
+                                            "Failed to save data type tags: " +
+                                                err.message
+                                        );
+                                    } finally {
+                                        setModalLoading(false);
+                                    }
+                                }}
+                                disabled={modalLoading}
+                                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-300"
+                            >
+                                {modalLoading ? "Saving..." : "Save Changes"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
-    </div>
-)}
-    </div>
-   );
+    );
 };
 
 export default DataCategorySearch;
