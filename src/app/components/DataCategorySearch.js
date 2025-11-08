@@ -8,6 +8,7 @@ import {
     ChevronRight,
     ChevronDown,
     Plus,
+    Pencil,
 } from "lucide-react";
 import { DATA_PORTAL } from "@/const.js";
 import CategoryTagManagement from "./CategoryTagManagement";
@@ -72,11 +73,15 @@ const DataCategorySearch = ({
     const [availableTags, setAvailableTags] = useState([]);
     const [selectedSocialTags, setSelectedSocialTags] = useState(new Set());
     const [newTagName, setNewTagName] = useState("");
+    const [editingCategoryTagId, setEditingCategoryTagId] = useState(null);
+    const [editingCategoryTagName, setEditingCategoryTagName] = useState("");
 
     // state variables for data type tags
     const [availableDataTypeTags, setAvailableDataTypeTags] = useState([]);
     const [selectedDataTypeTags, setSelectedDataTypeTags] = useState(new Set());
     const [newDataTypeTagName, setNewDataTypeTagName] = useState("");
+    const [editingDataTypeTagId, setEditingDataTypeTagId] = useState(null);
+    const [editingDataTypeTagName, setEditingDataTypeTagName] = useState("");
 
     const [tagLoading, setTagLoading] = useState(false);
     const [isLoadingStructures, setIsLoadingStructures] = useState(false);
@@ -783,6 +788,66 @@ const DataCategorySearch = ({
             console.error("Error creating data type tag:", err);
             setModalError(err.message);
             throw err;
+        }
+    };
+
+    const updateTag = async (tagId, newName, isDataType = false) => {
+        if (!newName.trim()) {
+            setEditingCategoryTagId(null);
+            setEditingDataTypeTagId(null);
+            return;
+        }
+
+        try {
+            const response = await fetch(`${apiBaseUrl}/tags/${tagId}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name: newName.trim() }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || "Failed to update tag");
+            }
+
+            const updatedTag = await response.json();
+
+            // Update in available tags lists
+            if (isDataType) {
+                setAvailableDataTypeTags((prev) =>
+                    prev.map((t) => (t.id === tagId ? updatedTag : t))
+                );
+                setEditingDataTypeTagId(null);
+            } else {
+                setAvailableTags((prev) =>
+                    prev.map((t) => (t.id === tagId ? updatedTag : t))
+                );
+                setEditingCategoryTagId(null);
+            }
+
+            // Update in structure tags
+            setStructureTags((prev) => {
+                const updated = {};
+                Object.keys(prev).forEach((key) => {
+                    updated[key] = prev[key].map((t) =>
+                        t.id === tagId ? updatedTag : t
+                    );
+                });
+                return updated;
+            });
+
+            setStructureDataTypeTags((prev) => {
+                const updated = {};
+                Object.keys(prev).forEach((key) => {
+                    updated[key] = prev[key].map((t) =>
+                        t.id === tagId ? updatedTag : t
+                    );
+                });
+                return updated;
+            });
+        } catch (err) {
+            console.error("Error updating tag:", err);
+            alert(`Failed to update tag: ${err.message}`);
         }
     };
 
@@ -1631,54 +1696,130 @@ const DataCategorySearch = ({
                                                             key={tag.id}
                                                             className="inline-flex items-center group"
                                                         >
-                                                            <button
-                                                                onClick={() => {
-                                                                    setSelectedSocialTags(
-                                                                        (
-                                                                            prev
-                                                                        ) => {
-                                                                            const newSet =
-                                                                                new Set(
-                                                                                    prev
-                                                                                );
-                                                                            if (
-                                                                                newSet.has(
-                                                                                    tag.id
-                                                                                )
-                                                                            ) {
-                                                                                newSet.delete(
-                                                                                    tag.id
-                                                                                );
-                                                                            } else {
-                                                                                newSet.add(
-                                                                                    tag.id
-                                                                                );
-                                                                            }
-                                                                            return newSet;
-                                                                        }
-                                                                    );
-                                                                }}
-                                                                className={`inline-flex items-center px-3 py-1.5 rounded-l-full text-sm transition-all ${
-                                                                    selectedSocialTags.has(
-                                                                        tag.id
-                                                                    )
-                                                                        ? "bg-blue-500 text-white"
-                                                                        : "bg-white text-gray-700 border border-gray-300 hover:border-blue-400 hover:bg-blue-50"
-                                                                }`}
-                                                            >
-                                                                {tag.name}
-                                                                {tag.dataStructures && (
-                                                                    <span className="ml-2 text-xs opacity-70">
-                                                                        (
-                                                                        {
-                                                                            tag
-                                                                                .dataStructures
-                                                                                .length
-                                                                        }
+                                                            {editingCategoryTagId ===
+                                                            tag.id ? (
+                                                                <input
+                                                                    type="text"
+                                                                    value={
+                                                                        editingCategoryTagName
+                                                                    }
+                                                                    onChange={(
+                                                                        e
+                                                                    ) =>
+                                                                        setEditingCategoryTagName(
+                                                                            e
+                                                                                .target
+                                                                                .value
                                                                         )
-                                                                    </span>
-                                                                )}
-                                                            </button>
+                                                                    }
+                                                                    onBlur={() => {
+                                                                        updateTag(
+                                                                            tag.id,
+                                                                            editingCategoryTagName,
+                                                                            false
+                                                                        );
+                                                                    }}
+                                                                    onKeyDown={(
+                                                                        e
+                                                                    ) => {
+                                                                        if (
+                                                                            e.key ===
+                                                                            "Enter"
+                                                                        ) {
+                                                                            updateTag(
+                                                                                tag.id,
+                                                                                editingCategoryTagName,
+                                                                                false
+                                                                            );
+                                                                        } else if (
+                                                                            e.key ===
+                                                                            "Escape"
+                                                                        ) {
+                                                                            setEditingCategoryTagId(
+                                                                                null
+                                                                            );
+                                                                        }
+                                                                    }}
+                                                                    autoFocus
+                                                                    className="px-3 py-1.5 rounded-l-full text-sm border border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                                    onClick={(
+                                                                        e
+                                                                    ) =>
+                                                                        e.stopPropagation()
+                                                                    }
+                                                                />
+                                                            ) : (
+                                                                <>
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            setSelectedSocialTags(
+                                                                                (
+                                                                                    prev
+                                                                                ) => {
+                                                                                    const newSet =
+                                                                                        new Set(
+                                                                                            prev
+                                                                                        );
+                                                                                    if (
+                                                                                        newSet.has(
+                                                                                            tag.id
+                                                                                        )
+                                                                                    ) {
+                                                                                        newSet.delete(
+                                                                                            tag.id
+                                                                                        );
+                                                                                    } else {
+                                                                                        newSet.add(
+                                                                                            tag.id
+                                                                                        );
+                                                                                    }
+                                                                                    return newSet;
+                                                                                }
+                                                                            );
+                                                                        }}
+                                                                        className={`inline-flex items-center px-3 py-1.5 rounded-l-full text-sm transition-all relative ${
+                                                                            selectedSocialTags.has(
+                                                                                tag.id
+                                                                            )
+                                                                                ? "bg-blue-500 text-white"
+                                                                                : "bg-white text-gray-700 border border-gray-300 hover:border-blue-400 hover:bg-blue-50"
+                                                                        }`}
+                                                                    >
+                                                                        {
+                                                                            tag.name
+                                                                        }
+                                                                        {tag.dataStructures && (
+                                                                            <span className="ml-2 text-xs opacity-70">
+                                                                                (
+                                                                                {
+                                                                                    tag
+                                                                                        .dataStructures
+                                                                                        .length
+                                                                                }
+
+                                                                                )
+                                                                            </span>
+                                                                        )}
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={(
+                                                                            e
+                                                                        ) => {
+                                                                            e.stopPropagation();
+                                                                            setEditingCategoryTagId(
+                                                                                tag.id
+                                                                            );
+                                                                            setEditingCategoryTagName(
+                                                                                tag.name
+                                                                            );
+                                                                        }}
+                                                                        className="ml-1 px-2 py-1.5 opacity-0 group-hover:opacity-100 transition-opacity rounded-full hover:bg-gray-100"
+                                                                        title="Edit tag name"
+                                                                    >
+                                                                        <Pencil className="w-3 h-3" />
+                                                                    </button>
+                                                                </>
+                                                            )}
                                                             <button
                                                                 onClick={(
                                                                     e
@@ -2041,54 +2182,130 @@ const DataCategorySearch = ({
                                                             key={tag.id}
                                                             className="inline-flex items-center group"
                                                         >
-                                                            <button
-                                                                onClick={() => {
-                                                                    setSelectedDataTypeTags(
-                                                                        (
-                                                                            prev
-                                                                        ) => {
-                                                                            const newSet =
-                                                                                new Set(
-                                                                                    prev
-                                                                                );
-                                                                            if (
-                                                                                newSet.has(
-                                                                                    tag.id
-                                                                                )
-                                                                            ) {
-                                                                                newSet.delete(
-                                                                                    tag.id
-                                                                                );
-                                                                            } else {
-                                                                                newSet.add(
-                                                                                    tag.id
-                                                                                );
-                                                                            }
-                                                                            return newSet;
-                                                                        }
-                                                                    );
-                                                                }}
-                                                                className={`inline-flex items-center px-3 py-1.5 rounded-l-full text-sm transition-all ${
-                                                                    selectedDataTypeTags.has(
-                                                                        tag.id
-                                                                    )
-                                                                        ? "bg-gray-500 text-white"
-                                                                        : "bg-white text-gray-700 border border-gray-300 hover:border-gray-400 hover:bg-gray-50"
-                                                                }`}
-                                                            >
-                                                                {tag.name}
-                                                                {tag.dataStructures && (
-                                                                    <span className="ml-2 text-xs opacity-70">
-                                                                        (
-                                                                        {
-                                                                            tag
-                                                                                .dataStructures
-                                                                                .length
-                                                                        }
+                                                            {editingDataTypeTagId ===
+                                                            tag.id ? (
+                                                                <input
+                                                                    type="text"
+                                                                    value={
+                                                                        editingDataTypeTagName
+                                                                    }
+                                                                    onChange={(
+                                                                        e
+                                                                    ) =>
+                                                                        setEditingDataTypeTagName(
+                                                                            e
+                                                                                .target
+                                                                                .value
                                                                         )
-                                                                    </span>
-                                                                )}
-                                                            </button>
+                                                                    }
+                                                                    onBlur={() => {
+                                                                        updateTag(
+                                                                            tag.id,
+                                                                            editingDataTypeTagName,
+                                                                            true
+                                                                        );
+                                                                    }}
+                                                                    onKeyDown={(
+                                                                        e
+                                                                    ) => {
+                                                                        if (
+                                                                            e.key ===
+                                                                            "Enter"
+                                                                        ) {
+                                                                            updateTag(
+                                                                                tag.id,
+                                                                                editingDataTypeTagName,
+                                                                                true
+                                                                            );
+                                                                        } else if (
+                                                                            e.key ===
+                                                                            "Escape"
+                                                                        ) {
+                                                                            setEditingDataTypeTagId(
+                                                                                null
+                                                                            );
+                                                                        }
+                                                                    }}
+                                                                    autoFocus
+                                                                    className="px-3 py-1.5 rounded-l-full text-sm border border-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                                                                    onClick={(
+                                                                        e
+                                                                    ) =>
+                                                                        e.stopPropagation()
+                                                                    }
+                                                                />
+                                                            ) : (
+                                                                <>
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            setSelectedDataTypeTags(
+                                                                                (
+                                                                                    prev
+                                                                                ) => {
+                                                                                    const newSet =
+                                                                                        new Set(
+                                                                                            prev
+                                                                                        );
+                                                                                    if (
+                                                                                        newSet.has(
+                                                                                            tag.id
+                                                                                        )
+                                                                                    ) {
+                                                                                        newSet.delete(
+                                                                                            tag.id
+                                                                                        );
+                                                                                    } else {
+                                                                                        newSet.add(
+                                                                                            tag.id
+                                                                                        );
+                                                                                    }
+                                                                                    return newSet;
+                                                                                }
+                                                                            );
+                                                                        }}
+                                                                        className={`inline-flex items-center px-3 py-1.5 rounded-l-full text-sm transition-all relative ${
+                                                                            selectedDataTypeTags.has(
+                                                                                tag.id
+                                                                            )
+                                                                                ? "bg-gray-500 text-white"
+                                                                                : "bg-white text-gray-700 border border-gray-300 hover:border-gray-400 hover:bg-gray-50"
+                                                                        }`}
+                                                                    >
+                                                                        {
+                                                                            tag.name
+                                                                        }
+                                                                        {tag.dataStructures && (
+                                                                            <span className="ml-2 text-xs opacity-70">
+                                                                                (
+                                                                                {
+                                                                                    tag
+                                                                                        .dataStructures
+                                                                                        .length
+                                                                                }
+
+                                                                                )
+                                                                            </span>
+                                                                        )}
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={(
+                                                                            e
+                                                                        ) => {
+                                                                            e.stopPropagation();
+                                                                            setEditingDataTypeTagId(
+                                                                                tag.id
+                                                                            );
+                                                                            setEditingDataTypeTagName(
+                                                                                tag.name
+                                                                            );
+                                                                        }}
+                                                                        className="ml-1 px-2 py-1.5 opacity-0 group-hover:opacity-100 transition-opacity rounded-full hover:bg-gray-100"
+                                                                        title="Edit tag name"
+                                                                    >
+                                                                        <Pencil className="w-3 h-3" />
+                                                                    </button>
+                                                                </>
+                                                            )}
                                                             <button
                                                                 onClick={(
                                                                     e

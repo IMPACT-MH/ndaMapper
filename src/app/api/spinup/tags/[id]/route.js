@@ -101,6 +101,55 @@ export async function DELETE(request, { params }) {
     }
 }
 
+export async function PUT(request, { params }) {
+    try {
+        const { id } = await params;
+        const body = await request.json();
+        const response = await makeHttpsRequest(
+            `https://spinup-002b0f.spinup.yale.edu/api/tags/${id}`,
+            {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(body),
+                timeout: 30000, // 30 second timeout
+            }
+        );
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            return NextResponse.json(
+                {
+                    error: `API returned ${response.status}`,
+                    details: errorText,
+                },
+                { status: response.status }
+            );
+        }
+
+        const data = await response.json();
+
+        return NextResponse.json(data, {
+            headers: {
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods":
+                    "GET, POST, PUT, DELETE, OPTIONS",
+                "Access-Control-Allow-Headers": "Content-Type, Authorization",
+            },
+        });
+    } catch (error) {
+        console.error("Error updating tag in spinup API:", error);
+        return NextResponse.json(
+            {
+                error: "Failed to update tag in spinup API",
+                details: error.message || String(error),
+            },
+            { status: 500 }
+        );
+    }
+}
+
 export async function OPTIONS() {
     return new NextResponse(null, {
         status: 200,
