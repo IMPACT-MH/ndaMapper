@@ -303,6 +303,32 @@ const DataCategorySearch = ({
 
             setStructureTags(categoryTagsMap);
             setStructureDataTypeTags(dataTypeTagsMap);
+
+            // Extract custom tag names and add them to available filters
+            const customCategoryTags = new Set();
+            const customDataTypeTags = new Set();
+
+            tagsWithStructures.forEach((tag) => {
+                if (tag.tagType === "Data Type") {
+                    customDataTypeTags.add(tag.name);
+                } else {
+                    // Category tags
+                    customCategoryTags.add(tag.name);
+                }
+            });
+
+            // Add custom tags to available filters
+            setAvailableCategories((prev) => {
+                const updated = new Set(prev);
+                customCategoryTags.forEach((tag) => updated.add(tag));
+                return updated;
+            });
+
+            setAvailableDataTypes((prev) => {
+                const updated = new Set(prev);
+                customDataTypeTags.forEach((tag) => updated.add(tag));
+                return updated;
+            });
         } catch (err) {
             console.error("Error fetching structure tags:", err);
             // Don't throw - just log the error and continue
@@ -326,20 +352,42 @@ const DataCategorySearch = ({
             );
         }
 
-        // Apply category filters
+        // Apply category filters (including custom tags)
         if (selectedFilters.categories.size > 0) {
-            filtered = filtered.filter((structure) =>
-                structure.categories?.some((cat) =>
+            filtered = filtered.filter((structure) => {
+                // Check if structure has the selected category in its original categories
+                const hasOriginalCategory = structure.categories?.some((cat) =>
                     selectedFilters.categories.has(cat)
-                )
-            );
+                );
+
+                // Check if structure has custom category tags matching the filter
+                const structureCategoryTags =
+                    structureTags[structure.shortName] || [];
+                const hasCustomTag = structureCategoryTags.some((tag) =>
+                    selectedFilters.categories.has(tag.name)
+                );
+
+                return hasOriginalCategory || hasCustomTag;
+            });
         }
 
-        // Apply data type filters
+        // Apply data type filters (including custom tags)
         if (selectedFilters.dataTypes.size > 0) {
-            filtered = filtered.filter((structure) =>
-                selectedFilters.dataTypes.has(structure.dataType)
-            );
+            filtered = filtered.filter((structure) => {
+                // Check if structure has the selected data type
+                const hasOriginalDataType = selectedFilters.dataTypes.has(
+                    structure.dataType
+                );
+
+                // Check if structure has custom data type tags matching the filter
+                const structureCustomDataTypeTags =
+                    structureDataTypeTags[structure.shortName] || [];
+                const hasCustomTag = structureCustomDataTypeTags.some((tag) =>
+                    selectedFilters.dataTypes.has(tag.name)
+                );
+
+                return hasOriginalDataType || hasCustomTag;
+            });
         }
 
         // Apply database filter
@@ -451,6 +499,21 @@ const DataCategorySearch = ({
             categoriesInDatabase.has(categoryOrDataType) ||
             dataTypesInDatabase.has(categoryOrDataType)
         );
+    };
+
+    // Check if a filter item is a custom tag (not an original category/dataType)
+    const isCustomTag = (item, isCategory) => {
+        if (isCategory) {
+            // Check if it's in the original categories
+            return !allStructures.some((structure) =>
+                structure.categories?.includes(item)
+            );
+        } else {
+            // Check if it's in the original data types
+            return !allStructures.some(
+                (structure) => structure.dataType === item
+            );
+        }
     };
 
     const downloadApiAsCsv = async () => {
@@ -976,6 +1039,14 @@ const DataCategorySearch = ({
                                                 />
                                                 <span className="ml-2 text-sm text-gray-700 flex items-center">
                                                     {dataType}
+                                                    {isCustomTag(
+                                                        dataType,
+                                                        false
+                                                    ) && (
+                                                        <span className="ml-1 text-orange-500 text-xs">
+                                                            ★
+                                                        </span>
+                                                    )}
                                                     {hasStructuresInDatabase(
                                                         dataType
                                                     ) && (
@@ -1023,6 +1094,14 @@ const DataCategorySearch = ({
                                                 />
                                                 <span className="ml-2 text-sm text-gray-700 flex items-center">
                                                     {category}
+                                                    {isCustomTag(
+                                                        category,
+                                                        true
+                                                    ) && (
+                                                        <span className="ml-1 text-orange-500 text-xs">
+                                                            ★
+                                                        </span>
+                                                    )}
                                                     {hasStructuresInDatabase(
                                                         category
                                                     ) && (
