@@ -41,6 +41,9 @@ const DataStructureSearch = ({
 }) => {
     const [headers, setHeaders] = useState([]);
     const [isExpanded, setIsExpanded] = useState(false);
+    const [structureTags, setStructureTags] = useState({});
+    const [structureDataTypeTags, setStructureDataTypeTags] = useState({});
+    const apiBaseUrl = "/api/spinup";
 
     // Clear headers when CSV file is removed
     useEffect(() => {
@@ -55,6 +58,68 @@ const DataStructureSearch = ({
             setIsExpanded(false);
         }
     }, [searchTerm]);
+
+    // Fetch tags for selected structure
+    useEffect(() => {
+        if (!selectedStructure) return;
+
+        const fetchTagsForStructure = async () => {
+            try {
+                const response = await fetch(`${apiBaseUrl}/tags`);
+                if (!response.ok) return;
+                const allTags = await response.json();
+
+                if (!Array.isArray(allTags) || allTags.length === 0) return;
+
+                // Find tags assigned to this structure
+                const categoryTags = [];
+                const dataTypeTags = [];
+
+                for (const tag of allTags) {
+                    try {
+                        const dsResponse = await fetch(
+                            `${apiBaseUrl}/tags/${tag.id}/dataStructures`
+                        );
+                        if (dsResponse.ok) {
+                            const dsData = await dsResponse.json();
+                            const dataStructures = dsData.dataStructures || [];
+                            const hasStructure = dataStructures.some(
+                                (ds) =>
+                                    ds.shortName?.toLowerCase() ===
+                                    selectedStructure.shortName.toLowerCase()
+                            );
+
+                            if (hasStructure) {
+                                if (tag.tagType === "Data Type") {
+                                    dataTypeTags.push(tag);
+                                } else {
+                                    categoryTags.push(tag);
+                                }
+                            }
+                        }
+                    } catch (err) {
+                        console.warn(
+                            `Failed to fetch data structures for tag ${tag.name}:`,
+                            err
+                        );
+                    }
+                }
+
+                setStructureTags((prev) => ({
+                    ...prev,
+                    [selectedStructure.shortName]: categoryTags,
+                }));
+                setStructureDataTypeTags((prev) => ({
+                    ...prev,
+                    [selectedStructure.shortName]: dataTypeTags,
+                }));
+            } catch (err) {
+                console.error("Error fetching tags:", err);
+            }
+        };
+
+        fetchTagsForStructure();
+    }, [selectedStructure]);
 
     const resultsRef = useRef(null);
     const detailsRef = useRef(null);
@@ -426,48 +491,130 @@ const DataStructureSearch = ({
                                                                 <h3 className="font-medium text-gray-600 mb-2">
                                                                     Data Type
                                                                 </h3>
-                                                                <p className="text-gray-900">
-                                                                    {selectedStructure.dataType ||
-                                                                        "Not specified"}
-                                                                </p>
+                                                                {(() => {
+                                                                    const customDataTypeTags =
+                                                                        structureDataTypeTags[
+                                                                            selectedStructure
+                                                                                .shortName
+                                                                        ] || [];
+                                                                    if (
+                                                                        customDataTypeTags.length >
+                                                                        0
+                                                                    ) {
+                                                                        return (
+                                                                            <div className="flex flex-wrap gap-2">
+                                                                                {customDataTypeTags.map(
+                                                                                    (
+                                                                                        tag
+                                                                                    ) => (
+                                                                                        <span
+                                                                                            key={
+                                                                                                tag.id
+                                                                                            }
+                                                                                            className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm"
+                                                                                        >
+                                                                                            {
+                                                                                                tag.name
+                                                                                            }
+                                                                                            <span className="ml-1 text-xs opacity-70">
+                                                                                                ★
+                                                                                            </span>
+                                                                                        </span>
+                                                                                    )
+                                                                                )}
+                                                                            </div>
+                                                                        );
+                                                                    } else {
+                                                                        return (
+                                                                            <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm inline-block">
+                                                                                {selectedStructure.dataType ||
+                                                                                    "Not specified"}
+                                                                            </span>
+                                                                        );
+                                                                    }
+                                                                })()}
                                                             </div>
                                                             <div>
                                                                 <h3 className="font-medium text-gray-600 mb-2">
                                                                     Categories
                                                                 </h3>
                                                                 <div className="flex flex-wrap gap-2">
-                                                                    {selectedStructure.categories?.map(
-                                                                        (
-                                                                            category,
-                                                                            index
-                                                                        ) => (
-                                                                            <span
-                                                                                key={
-                                                                                    index
-                                                                                }
-                                                                                className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm cursor-pointer hover:bg-gray-200 transition-colors"
-                                                                                onClick={(
-                                                                                    e
-                                                                                ) => {
-                                                                                    e.preventDefault();
-                                                                                    e.stopPropagation();
-                                                                                    handleCategoryClick(
-                                                                                        category
-                                                                                    );
-                                                                                }}
-                                                                            >
-                                                                                {
-                                                                                    category
-                                                                                }
-                                                                            </span>
-                                                                        )
-                                                                    ) || (
-                                                                        <span className="text-gray-500">
-                                                                            No
-                                                                            categories
-                                                                            specified
-                                                                        </span>
-                                                                    )}
+                                                                    {(() => {
+                                                                        const customCategoryTags =
+                                                                            structureTags[
+                                                                                selectedStructure
+                                                                                    .shortName
+                                                                            ] ||
+                                                                            [];
+                                                                        if (
+                                                                            customCategoryTags.length >
+                                                                            0
+                                                                        ) {
+                                                                            return customCategoryTags.map(
+                                                                                (
+                                                                                    tag
+                                                                                ) => (
+                                                                                    <span
+                                                                                        key={
+                                                                                            tag.id
+                                                                                        }
+                                                                                        className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm cursor-pointer hover:bg-orange-200 transition-colors"
+                                                                                        onClick={(
+                                                                                            e
+                                                                                        ) => {
+                                                                                            e.preventDefault();
+                                                                                            e.stopPropagation();
+                                                                                            handleCategoryClick(
+                                                                                                tag.name
+                                                                                            );
+                                                                                        }}
+                                                                                    >
+                                                                                        {
+                                                                                            tag.name
+                                                                                        }
+                                                                                        <span className="ml-1 text-xs opacity-70">
+                                                                                            ★
+                                                                                        </span>
+                                                                                    </span>
+                                                                                )
+                                                                            );
+                                                                        } else {
+                                                                            return (
+                                                                                selectedStructure.categories?.map(
+                                                                                    (
+                                                                                        category,
+                                                                                        index
+                                                                                    ) => (
+                                                                                        <span
+                                                                                            key={
+                                                                                                index
+                                                                                            }
+                                                                                            className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm cursor-pointer hover:bg-blue-200 transition-colors"
+                                                                                            onClick={(
+                                                                                                e
+                                                                                            ) => {
+                                                                                                e.preventDefault();
+                                                                                                e.stopPropagation();
+                                                                                                handleCategoryClick(
+                                                                                                    category
+                                                                                                );
+                                                                                            }}
+                                                                                        >
+                                                                                            {
+                                                                                                category
+                                                                                            }
+                                                                                        </span>
+                                                                                    )
+                                                                                ) || (
+                                                                                    <span className="text-gray-500">
+                                                                                        No
+                                                                                        categories
+                                                                                        specified
+                                                                                    </span>
+                                                                                )
+                                                                            );
+                                                                        }
+                                                                    })()}
                                                                 </div>
                                                             </div>
                                                         </div>
