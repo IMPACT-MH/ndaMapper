@@ -1124,12 +1124,12 @@ const DataCategorySearch = ({
         <div className="space-y-6">
             <div className="mb-8">
                 <h1 className="text-3xl font-bold mb-4">Data Dictionary</h1>
-                <p className="text-gray-600 -mb-4">
+                <p className="text-gray-600 -mb-7">
                     Browse all NDA data structures by category and data type
                 </p>
 
                 {/* Database Filter Checkbox */}
-                <div className="-mb-5">
+                <div className="-mb-8">
                     <label className="flex items-center space-x-3 cursor-pointer">
                         <input
                             type="checkbox"
@@ -1164,7 +1164,7 @@ const DataCategorySearch = ({
                 </div>
 
                 {/* Search Input */}
-                <div className="relative mb-1">
+                <div className="relative mb-3">
                     <input
                         type="text"
                         className="w-full p-4 pl-12 border rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
