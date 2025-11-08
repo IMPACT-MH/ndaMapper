@@ -333,7 +333,7 @@ const DataStructureSearch = ({
                                                         }`}
                                                     >
                                                         {isCurrentFilterCustomTag && (
-                                                            <span className="mr-1">
+                                                            <span className="mr-1 text-orange-500">
                                                                 ★
                                                             </span>
                                                         )}
@@ -354,7 +354,7 @@ const DataStructureSearch = ({
                                                         }`}
                                                     >
                                                         {isCurrentFilterCustomTag && (
-                                                            <span className="mr-1">
+                                                            <span className="mr-1 text-orange-500">
                                                                 ★
                                                             </span>
                                                         )}
@@ -633,7 +633,7 @@ const DataStructureSearch = ({
                                                                                             {
                                                                                                 tag.name
                                                                                             }
-                                                                                            <span className="ml-1 text-xs opacity-70">
+                                                                                            <span className="ml-1 text-xs text-orange-500">
                                                                                                 ★
                                                                                             </span>
                                                                                         </span>
@@ -700,7 +700,7 @@ const DataStructureSearch = ({
                                                                                         {
                                                                                             tag.name
                                                                                         }
-                                                                                        <span className="ml-1 text-xs opacity-70">
+                                                                                        <span className="ml-1 text-xs text-orange-500">
                                                                                             ★
                                                                                         </span>
                                                                                     </span>

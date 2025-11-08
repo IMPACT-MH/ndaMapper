@@ -1408,7 +1408,7 @@ const DataCategorySearch = ({
                                                                                                     {
                                                                                                         tag.name
                                                                                                     }
-                                                                                                    <span className="ml-1 text-xs opacity-70">
+                                                                                                    <span className="ml-1 text-xs text-orange-500">
                                                                                                         ★
                                                                                                     </span>
                                                                                                 </span>
@@ -1483,7 +1483,7 @@ const DataCategorySearch = ({
                                                                                                     {
                                                                                                         tag.name
                                                                                                     }
-                                                                                                    <span className="ml-1 text-xs opacity-70">
+                                                                                                    <span className="ml-1 text-xs text-orange-500">
                                                                                                         ★
                                                                                                     </span>
                                                                                                 </span>
@@ -1553,7 +1553,7 @@ const DataCategorySearch = ({
                                                                                                     {
                                                                                                         tag.name
                                                                                                     }
-                                                                                                    <span className="ml-1 text-xs opacity-70">
+                                                                                                    <span className="ml-1 text-xs text-orange-500">
                                                                                                         ★
                                                                                                     </span>
                                                                                                 </span>
@@ -1621,7 +1621,7 @@ const DataCategorySearch = ({
                                                                                                     {
                                                                                                         tag.name
                                                                                                     }
-                                                                                                    <span className="ml-1 text-xs opacity-70">
+                                                                                                    <span className="ml-1 text-xs text-orange-500">
                                                                                                         ★
                                                                                                     </span>
                                                                                                 </span>
