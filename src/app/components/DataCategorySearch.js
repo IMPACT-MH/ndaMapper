@@ -733,6 +733,13 @@ const DataCategorySearch = ({
 
             setSelectedSocialTags((prev) => new Set([...prev, newTag.id]));
 
+            // Add to available categories filter
+            setAvailableCategories((prev) => {
+                const updated = new Set(prev);
+                updated.add(newTag.name);
+                return updated;
+            });
+
             setNewTagName("");
 
             // // Add to appropriate selected set
@@ -780,6 +787,13 @@ const DataCategorySearch = ({
             // Add to selected
             setSelectedDataTypeTags((prev) => new Set([...prev, newTag.id]));
 
+            // Add to available data types filter
+            setAvailableDataTypes((prev) => {
+                const updated = new Set(prev);
+                updated.add(newTag.name);
+                return updated;
+            });
+
             // Clear input
             setNewDataTypeTagName("");
 
@@ -814,14 +828,46 @@ const DataCategorySearch = ({
 
             // Update in available tags lists
             if (isDataType) {
+                // Find old tag name before updating
+                const oldTag = availableDataTypeTags.find(
+                    (t) => t.id === tagId
+                );
+                const oldName = oldTag?.name;
+
                 setAvailableDataTypeTags((prev) =>
                     prev.map((t) => (t.id === tagId ? updatedTag : t))
                 );
+
+                // Update available data types filter set
+                if (oldName) {
+                    setAvailableDataTypes((prev) => {
+                        const updated = new Set(prev);
+                        updated.delete(oldName);
+                        updated.add(updatedTag.name);
+                        return updated;
+                    });
+                }
+
                 setEditingDataTypeTagId(null);
             } else {
+                // Find old tag name before updating
+                const oldTag = availableTags.find((t) => t.id === tagId);
+                const oldName = oldTag?.name;
+
                 setAvailableTags((prev) =>
                     prev.map((t) => (t.id === tagId ? updatedTag : t))
                 );
+
+                // Update available categories filter set
+                if (oldName) {
+                    setAvailableCategories((prev) => {
+                        const updated = new Set(prev);
+                        updated.delete(oldName);
+                        updated.add(updatedTag.name);
+                        return updated;
+                    });
+                }
+
                 setEditingCategoryTagId(null);
             }
 
@@ -871,11 +917,36 @@ const DataCategorySearch = ({
                 throw new Error(errorData.error || "Failed to delete tag");
             }
 
+            // Find the tag to determine its type and name before removing
+            const categoryTag = availableTags.find((t) => t.id === tagId);
+            const dataTypeTag = availableDataTypeTags.find(
+                (t) => t.id === tagId
+            );
+            const tagToDelete = categoryTag || dataTypeTag;
+            const isDataType = !!dataTypeTag;
+
             // Remove from available tags lists
             setAvailableTags((prev) => prev.filter((t) => t.id !== tagId));
             setAvailableDataTypeTags((prev) =>
                 prev.filter((t) => t.id !== tagId)
             );
+
+            // Remove from filter sets
+            if (tagToDelete) {
+                if (isDataType) {
+                    setAvailableDataTypes((prev) => {
+                        const updated = new Set(prev);
+                        updated.delete(tagToDelete.name);
+                        return updated;
+                    });
+                } else {
+                    setAvailableCategories((prev) => {
+                        const updated = new Set(prev);
+                        updated.delete(tagToDelete.name);
+                        return updated;
+                    });
+                }
+            }
 
             // Remove from selected tags Sets
             setSelectedSocialTags((prev) => {
