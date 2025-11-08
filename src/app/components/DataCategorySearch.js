@@ -1818,9 +1818,6 @@ const DataCategorySearch = ({
                             )}
 
                             {/* Original NDA Categories Info */}
-                            <h3 className="text-sm font-semibold text-gray-700 mb-2">
-                                Categories
-                            </h3>
                             {modalStructure.categories &&
                                 modalStructure.categories.length > 0 && (
                                     <div className="mb-4 p-3 bg-blue-50 rounded-lg">
@@ -2089,7 +2086,7 @@ const DataCategorySearch = ({
                             {/* Create New Tag */}
                             <div className="border-t pt-4">
                                 <h3 className="text-sm font-semibold text-gray-700 mb-2">
-                                    Create New Custom Category Tag
+                                    Create New Category Tag
                                 </h3>
                                 <div className="space-y-2">
                                     <input
@@ -2308,9 +2305,6 @@ const DataCategorySearch = ({
                             )}
 
                             {/* Original NDA Data Type Info */}
-                            <h3 className="text-sm font-semibold text-gray-700 mb-2">
-                                Data Types
-                            </h3>
                             {modalStructure.dataType && (
                                 <div className="mb-4 p-3 bg-gray-50 rounded-lg">
                                     <h3 className="text-sm font-semibold text-gray-700 mb-2">
@@ -2585,7 +2579,7 @@ const DataCategorySearch = ({
                             {/* Create New Data Type Tag */}
                             <div className="border-t pt-4">
                                 <h3 className="text-sm font-semibold text-gray-700 mb-2">
-                                    Create New Custom Data Type Tag
+                                    Create New Data Type Tag
                                 </h3>
                                 <div className="space-y-2">
                                     <input
