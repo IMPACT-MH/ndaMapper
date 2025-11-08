@@ -1099,13 +1099,17 @@ const DataCategorySearch = ({
                                                     {hasStructuresInDatabase(
                                                         dataType
                                                     ) && (
-                                                        <div className="relative group ml-1">
-                                                            <Database className="w-3 h-3 text-blue-500 cursor-help" />
-                                                            <div className="absolute bottom-full left-0 mb-1 px-2 py-1 text-xs text-white bg-gray-800 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-10">
-                                                                This data type
-                                                                has structures
-                                                                in the IMPACT-MH
-                                                                database
+                                                        <div className="relative ml-1 inline-block">
+                                                            <div className="group">
+                                                                <Database className="w-3 h-3 text-blue-500 cursor-help" />
+                                                                <div className="absolute bottom-full left-0 mb-1 px-2 py-1 text-xs text-white bg-gray-800 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-10 pointer-events-none">
+                                                                    This data
+                                                                    type has
+                                                                    structures
+                                                                    in the
+                                                                    IMPACT-MH
+                                                                    database
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     )}
@@ -1157,13 +1161,17 @@ const DataCategorySearch = ({
                                                     {hasStructuresInDatabase(
                                                         category
                                                     ) && (
-                                                        <div className="relative group ml-1">
-                                                            <Database className="w-3 h-3 text-blue-500 cursor-help" />
-                                                            <div className="absolute bottom-full left-0 mb-1 px-2 py-1 text-xs text-white bg-gray-800 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-10">
-                                                                This category
-                                                                has structures
-                                                                in the IMPACT-MH
-                                                                database
+                                                        <div className="relative ml-1 inline-block">
+                                                            <div className="group">
+                                                                <Database className="w-3 h-3 text-blue-500 cursor-help" />
+                                                                <div className="absolute bottom-full left-0 mb-1 px-2 py-1 text-xs text-white bg-gray-800 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-10 pointer-events-none">
+                                                                    This
+                                                                    category has
+                                                                    structures
+                                                                    in the
+                                                                    IMPACT-MH
+                                                                    database
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     )}
