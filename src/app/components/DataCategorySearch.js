@@ -60,6 +60,10 @@ const DataCategorySearch = ({
 
     const [structureTags, setStructureTags] = useState({});
     const [structureDataTypeTags, setStructureDataTypeTags] = useState({});
+    // Track removed original categories (keyed by structure shortName, value is Set of category names)
+    const [removedOriginalCategories, setRemovedOriginalCategories] = useState(
+        {}
+    );
 
     // Modal states
     const [isCategoriesModalOpen, setIsCategoriesModalOpen] = useState(false);
@@ -357,23 +361,28 @@ const DataCategorySearch = ({
             );
         }
 
-        // Apply category filters (custom tags supersede original categories)
+        // Apply category filters (check both original categories and custom tags)
         if (selectedFilters.categories.size > 0) {
             filtered = filtered.filter((structure) => {
                 const structureCategoryTags =
                     structureTags[structure.shortName] || [];
+                const originalCategories = (structure.categories || []).filter(
+                    (category) =>
+                        !isCategoryRemoved(structure.shortName, category)
+                );
 
-                // If structure has custom category tags, only check those
-                if (structureCategoryTags.length > 0) {
-                    return structureCategoryTags.some((tag) =>
-                        selectedFilters.categories.has(tag.name)
-                    );
-                } else {
-                    // No custom tags, check original categories
-                    return structure.categories?.some((cat) =>
-                        selectedFilters.categories.has(cat)
-                    );
-                }
+                // Check custom tags
+                const matchesCustomTag = structureCategoryTags.some((tag) =>
+                    selectedFilters.categories.has(tag.name)
+                );
+
+                // Check original categories (excluding removed ones)
+                const matchesOriginalCategory = originalCategories.some((cat) =>
+                    selectedFilters.categories.has(cat)
+                );
+
+                // Match if either custom tag or original category matches
+                return matchesCustomTag || matchesOriginalCategory;
             });
         }
 
@@ -421,17 +430,27 @@ const DataCategorySearch = ({
             let groupKeys = [];
 
             if (groupBy === "category") {
-                // Check if structure has custom category tags - if so, only use those
+                // Include both original categories and custom tags
                 const customCategoryTags =
                     structureTags[structure.shortName] || [];
-                if (customCategoryTags.length > 0) {
-                    // Only use custom tags, supersede original categories
-                    customCategoryTags.forEach((tag) => {
-                        groupKeys.push(tag.name);
-                    });
-                } else {
-                    // No custom tags, use original categories
-                    groupKeys = structure.categories || ["Uncategorized"];
+                const originalCategories = (structure.categories || []).filter(
+                    (category) =>
+                        !isCategoryRemoved(structure.shortName, category)
+                );
+
+                // Add custom tags
+                customCategoryTags.forEach((tag) => {
+                    groupKeys.push(tag.name);
+                });
+
+                // Add original categories (excluding removed ones)
+                originalCategories.forEach((category) => {
+                    groupKeys.push(category);
+                });
+
+                // If no categories at all, use uncategorized
+                if (groupKeys.length === 0) {
+                    groupKeys = ["Uncategorized"];
                 }
             } else if (groupBy === "dataType") {
                 // Check if structure has custom data type tags - if so, only use those
@@ -557,6 +576,24 @@ const DataCategorySearch = ({
                 (structure) => structure.dataType === item
             );
         }
+    };
+
+    const removeOriginalCategory = (structureShortName, categoryName) => {
+        setRemovedOriginalCategories((prev) => {
+            const updated = { ...prev };
+            if (!updated[structureShortName]) {
+                updated[structureShortName] = new Set();
+            }
+            updated[structureShortName].add(categoryName);
+            return updated;
+        });
+    };
+
+    const isCategoryRemoved = (structureShortName, categoryName) => {
+        return (
+            removedOriginalCategories[structureShortName]?.has(categoryName) ||
+            false
+        );
     };
 
     const downloadApiAsCsv = async () => {
@@ -1442,77 +1479,89 @@ const DataCategorySearch = ({
                                                                             <>
                                                                                 {/* Category Tags - clickable to open categories modal */}
                                                                                 {(() => {
-                                                                                    const hasCustomCategoryTags =
+                                                                                    const customCategoryTags =
                                                                                         structureTags[
                                                                                             structure
                                                                                                 .shortName
-                                                                                        ]
-                                                                                            ?.length >
-                                                                                        0;
+                                                                                        ] ||
+                                                                                        [];
+                                                                                    const originalCategories =
+                                                                                        structure.categories ||
+                                                                                        [];
 
-                                                                                    if (
-                                                                                        hasCustomCategoryTags
-                                                                                    ) {
-                                                                                        // Show custom category tags with orange styling
-                                                                                        return structureTags[
-                                                                                            structure
-                                                                                                .shortName
-                                                                                        ].map(
-                                                                                            (
-                                                                                                tag
-                                                                                            ) => (
-                                                                                                <span
-                                                                                                    key={
-                                                                                                        tag.id
-                                                                                                    }
-                                                                                                    onClick={(
-                                                                                                        e
-                                                                                                    ) => {
-                                                                                                        e.stopPropagation();
-                                                                                                        handleOpenCategoriesModal(
-                                                                                                            structure
-                                                                                                        );
-                                                                                                    }}
-                                                                                                    className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-blue-100 text-blue-700 hover:bg-blue-200"
-                                                                                                    title="Custom category tags (click to modify)"
-                                                                                                >
-                                                                                                    {
-                                                                                                        tag.name
-                                                                                                    }
-                                                                                                    <span className="ml-1 text-xs text-orange-500">
-                                                                                                        ★
+                                                                                    return (
+                                                                                        <>
+                                                                                            {/* Show original NDA categories (excluding removed ones) */}
+                                                                                            {originalCategories
+                                                                                                .filter(
+                                                                                                    (
+                                                                                                        category
+                                                                                                    ) =>
+                                                                                                        !isCategoryRemoved(
+                                                                                                            structure.shortName,
+                                                                                                            category
+                                                                                                        )
+                                                                                                )
+                                                                                                .map(
+                                                                                                    (
+                                                                                                        category
+                                                                                                    ) => (
+                                                                                                        <span
+                                                                                                            key={
+                                                                                                                category
+                                                                                                            }
+                                                                                                            className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-blue-100 text-blue-800 hover:bg-blue-200"
+                                                                                                            title="Original NDA category (click to add custom tags)"
+                                                                                                        >
+                                                                                                            <span
+                                                                                                                onClick={(
+                                                                                                                    e
+                                                                                                                ) => {
+                                                                                                                    e.stopPropagation();
+                                                                                                                    handleOpenCategoriesModal(
+                                                                                                                        structure
+                                                                                                                    );
+                                                                                                                }}
+                                                                                                            >
+                                                                                                                {
+                                                                                                                    category
+                                                                                                                }
+                                                                                                            </span>
+                                                                                                        </span>
+                                                                                                    )
+                                                                                                )}
+
+                                                                                            {/* Show custom category tags */}
+                                                                                            {customCategoryTags.map(
+                                                                                                (
+                                                                                                    tag
+                                                                                                ) => (
+                                                                                                    <span
+                                                                                                        key={
+                                                                                                            tag.id
+                                                                                                        }
+                                                                                                        onClick={(
+                                                                                                            e
+                                                                                                        ) => {
+                                                                                                            e.stopPropagation();
+                                                                                                            handleOpenCategoriesModal(
+                                                                                                                structure
+                                                                                                            );
+                                                                                                        }}
+                                                                                                        className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-blue-100 text-blue-700 hover:bg-blue-200"
+                                                                                                        title="Custom category tag (click to modify)"
+                                                                                                    >
+                                                                                                        {
+                                                                                                            tag.name
+                                                                                                        }
+                                                                                                        <span className="ml-1 text-xs text-orange-500">
+                                                                                                            ★
+                                                                                                        </span>
                                                                                                     </span>
-                                                                                                </span>
-                                                                                            )
-                                                                                        );
-                                                                                    } else {
-                                                                                        // Show original NDA categories
-                                                                                        return structure.categories?.map(
-                                                                                            (
-                                                                                                category
-                                                                                            ) => (
-                                                                                                <span
-                                                                                                    key={
-                                                                                                        category
-                                                                                                    }
-                                                                                                    onClick={(
-                                                                                                        e
-                                                                                                    ) => {
-                                                                                                        e.stopPropagation();
-                                                                                                        handleOpenCategoriesModal(
-                                                                                                            structure
-                                                                                                        );
-                                                                                                    }}
-                                                                                                    className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-blue-100 text-blue-800 hover:bg-blue-200"
-                                                                                                    title="Click to add custom category tags"
-                                                                                                >
-                                                                                                    {
-                                                                                                        category
-                                                                                                    }
-                                                                                                </span>
-                                                                                            )
-                                                                                        );
-                                                                                    }
+                                                                                                )
+                                                                                            )}
+                                                                                        </>
+                                                                                    );
                                                                                 })()}
 
                                                                                 {/* Data Type Tags - clickable to open data types modal */}
@@ -1655,77 +1704,89 @@ const DataCategorySearch = ({
 
                                                                                 {/* Category Tags - clickable to open categories modal */}
                                                                                 {(() => {
-                                                                                    const hasCustomCategoryTags =
+                                                                                    const customCategoryTags =
                                                                                         structureTags[
                                                                                             structure
                                                                                                 .shortName
-                                                                                        ]
-                                                                                            ?.length >
-                                                                                        0;
+                                                                                        ] ||
+                                                                                        [];
+                                                                                    const originalCategories =
+                                                                                        structure.categories ||
+                                                                                        [];
 
-                                                                                    if (
-                                                                                        hasCustomCategoryTags
-                                                                                    ) {
-                                                                                        // Show custom category tags with orange styling
-                                                                                        return structureTags[
-                                                                                            structure
-                                                                                                .shortName
-                                                                                        ].map(
-                                                                                            (
-                                                                                                tag
-                                                                                            ) => (
-                                                                                                <span
-                                                                                                    key={
-                                                                                                        tag.id
-                                                                                                    }
-                                                                                                    onClick={(
-                                                                                                        e
-                                                                                                    ) => {
-                                                                                                        e.stopPropagation();
-                                                                                                        handleOpenCategoriesModal(
-                                                                                                            structure
-                                                                                                        );
-                                                                                                    }}
-                                                                                                    className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-blue-100 text-blue-700 hover:bg-blue-200"
-                                                                                                    title="Custom category tags (click to modify)"
-                                                                                                >
-                                                                                                    {
-                                                                                                        tag.name
-                                                                                                    }
-                                                                                                    <span className="ml-1 text-xs text-orange-500">
-                                                                                                        ★
+                                                                                    return (
+                                                                                        <>
+                                                                                            {/* Show original NDA categories (excluding removed ones) */}
+                                                                                            {originalCategories
+                                                                                                .filter(
+                                                                                                    (
+                                                                                                        category
+                                                                                                    ) =>
+                                                                                                        !isCategoryRemoved(
+                                                                                                            structure.shortName,
+                                                                                                            category
+                                                                                                        )
+                                                                                                )
+                                                                                                .map(
+                                                                                                    (
+                                                                                                        category
+                                                                                                    ) => (
+                                                                                                        <span
+                                                                                                            key={
+                                                                                                                category
+                                                                                                            }
+                                                                                                            className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-blue-100 text-blue-800 hover:bg-blue-200"
+                                                                                                            title="Original NDA category (click to add custom tags)"
+                                                                                                        >
+                                                                                                            <span
+                                                                                                                onClick={(
+                                                                                                                    e
+                                                                                                                ) => {
+                                                                                                                    e.stopPropagation();
+                                                                                                                    handleOpenCategoriesModal(
+                                                                                                                        structure
+                                                                                                                    );
+                                                                                                                }}
+                                                                                                            >
+                                                                                                                {
+                                                                                                                    category
+                                                                                                                }
+                                                                                                            </span>
+                                                                                                        </span>
+                                                                                                    )
+                                                                                                )}
+
+                                                                                            {/* Show custom category tags */}
+                                                                                            {customCategoryTags.map(
+                                                                                                (
+                                                                                                    tag
+                                                                                                ) => (
+                                                                                                    <span
+                                                                                                        key={
+                                                                                                            tag.id
+                                                                                                        }
+                                                                                                        onClick={(
+                                                                                                            e
+                                                                                                        ) => {
+                                                                                                            e.stopPropagation();
+                                                                                                            handleOpenCategoriesModal(
+                                                                                                                structure
+                                                                                                            );
+                                                                                                        }}
+                                                                                                        className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-blue-100 text-blue-700 hover:bg-blue-200"
+                                                                                                        title="Custom category tag (click to modify)"
+                                                                                                    >
+                                                                                                        {
+                                                                                                            tag.name
+                                                                                                        }
+                                                                                                        <span className="ml-1 text-xs text-orange-500">
+                                                                                                            ★
+                                                                                                        </span>
                                                                                                     </span>
-                                                                                                </span>
-                                                                                            )
-                                                                                        );
-                                                                                    } else {
-                                                                                        // Show original NDA categories
-                                                                                        return structure.categories?.map(
-                                                                                            (
-                                                                                                category
-                                                                                            ) => (
-                                                                                                <span
-                                                                                                    key={
-                                                                                                        category
-                                                                                                    }
-                                                                                                    onClick={(
-                                                                                                        e
-                                                                                                    ) => {
-                                                                                                        e.stopPropagation();
-                                                                                                        handleOpenCategoriesModal(
-                                                                                                            structure
-                                                                                                        );
-                                                                                                    }}
-                                                                                                    className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-blue-100 text-blue-800 hover:bg-blue-200"
-                                                                                                    title="Click to add custom category tags"
-                                                                                                >
-                                                                                                    {
-                                                                                                        category
-                                                                                                    }
-                                                                                                </span>
-                                                                                            )
-                                                                                        );
-                                                                                    }
+                                                                                                )
+                                                                                            )}
+                                                                                        </>
+                                                                                    );
                                                                                 })()}
                                                                             </>
                                                                         )}
@@ -1824,16 +1885,89 @@ const DataCategorySearch = ({
                                         <h3 className="text-sm font-semibold text-blue-700 mb-2">
                                             Original NDA Categories
                                         </h3>
-                                        <div className="flex flex-wrap gap-2">
+                                        <p className="text-xs text-blue-600 mb-3">
+                                            Toggle visibility of original
+                                            categories
+                                        </p>
+                                        <div className="space-y-2">
                                             {modalStructure.categories.map(
-                                                (cat) => (
-                                                    <span
-                                                        key={cat}
-                                                        className="text-xs px-2 py-1 bg-blue-200 text-blue-700 rounded"
-                                                    >
-                                                        {cat}
-                                                    </span>
-                                                )
+                                                (cat) => {
+                                                    const isRemoved =
+                                                        isCategoryRemoved(
+                                                            modalStructure.shortName,
+                                                            cat
+                                                        );
+                                                    return (
+                                                        <label
+                                                            key={cat}
+                                                            className="flex items-center gap-2 cursor-pointer hover:bg-blue-100 p-2 rounded transition-colors"
+                                                        >
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={
+                                                                    !isRemoved
+                                                                }
+                                                                onChange={(
+                                                                    e
+                                                                ) => {
+                                                                    if (
+                                                                        e.target
+                                                                            .checked
+                                                                    ) {
+                                                                        // Restore category
+                                                                        setRemovedOriginalCategories(
+                                                                            (
+                                                                                prev
+                                                                            ) => {
+                                                                                const updated =
+                                                                                    {
+                                                                                        ...prev,
+                                                                                    };
+                                                                                if (
+                                                                                    updated[
+                                                                                        modalStructure
+                                                                                            .shortName
+                                                                                    ]
+                                                                                ) {
+                                                                                    updated[
+                                                                                        modalStructure
+                                                                                            .shortName
+                                                                                    ].delete(
+                                                                                        cat
+                                                                                    );
+                                                                                    if (
+                                                                                        updated[
+                                                                                            modalStructure
+                                                                                                .shortName
+                                                                                        ]
+                                                                                            .size ===
+                                                                                        0
+                                                                                    ) {
+                                                                                        delete updated[
+                                                                                            modalStructure
+                                                                                                .shortName
+                                                                                        ];
+                                                                                    }
+                                                                                }
+                                                                                return updated;
+                                                                            }
+                                                                        );
+                                                                    } else {
+                                                                        // Remove category
+                                                                        removeOriginalCategory(
+                                                                            modalStructure.shortName,
+                                                                            cat
+                                                                        );
+                                                                    }
+                                                                }}
+                                                                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                                            />
+                                                            <span className="text-sm text-blue-700">
+                                                                {cat}
+                                                            </span>
+                                                        </label>
+                                                    );
+                                                }
                                             )}
                                         </div>
                                     </div>
