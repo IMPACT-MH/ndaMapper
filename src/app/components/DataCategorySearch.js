@@ -1366,148 +1366,298 @@ const DataCategorySearch = ({
                                                                             e.stopPropagation()
                                                                         }
                                                                     >
-                                                                        {/* Category Tags - clickable to open categories modal */}
-                                                                        {(() => {
-                                                                            const hasCustomCategoryTags =
-                                                                                structureTags[
-                                                                                    structure
-                                                                                        .shortName
-                                                                                ]
-                                                                                    ?.length >
-                                                                                0;
+                                                                        {groupBy ===
+                                                                        "category" ? (
+                                                                            <>
+                                                                                {/* Category Tags - clickable to open categories modal */}
+                                                                                {(() => {
+                                                                                    const hasCustomCategoryTags =
+                                                                                        structureTags[
+                                                                                            structure
+                                                                                                .shortName
+                                                                                        ]
+                                                                                            ?.length >
+                                                                                        0;
 
-                                                                            if (
-                                                                                hasCustomCategoryTags
-                                                                            ) {
-                                                                                // Show custom category tags with purple styling
-                                                                                return structureTags[
-                                                                                    structure
-                                                                                        .shortName
-                                                                                ].map(
-                                                                                    (
-                                                                                        tag
-                                                                                    ) => (
-                                                                                        <span
-                                                                                            key={
-                                                                                                tag.id
-                                                                                            }
-                                                                                            onClick={(
-                                                                                                e
-                                                                                            ) => {
-                                                                                                e.stopPropagation();
-                                                                                                handleOpenCategoriesModal(
-                                                                                                    structure
-                                                                                                );
-                                                                                            }}
-                                                                                            className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-orange-100 text-orange-700 hover:bg-orange-200"
-                                                                                            title="Custom category tags (click to modify)"
-                                                                                        >
-                                                                                            {
-                                                                                                tag.name
-                                                                                            }
-                                                                                            <span className="ml-1 text-xs opacity-70">
-                                                                                                ★
-                                                                                            </span>
-                                                                                        </span>
-                                                                                    )
-                                                                                );
-                                                                            } else {
-                                                                                // Show original NDA categories
-                                                                                return structure.categories?.map(
-                                                                                    (
-                                                                                        category
-                                                                                    ) => (
-                                                                                        <span
-                                                                                            key={
+                                                                                    if (
+                                                                                        hasCustomCategoryTags
+                                                                                    ) {
+                                                                                        // Show custom category tags with orange styling
+                                                                                        return structureTags[
+                                                                                            structure
+                                                                                                .shortName
+                                                                                        ].map(
+                                                                                            (
+                                                                                                tag
+                                                                                            ) => (
+                                                                                                <span
+                                                                                                    key={
+                                                                                                        tag.id
+                                                                                                    }
+                                                                                                    onClick={(
+                                                                                                        e
+                                                                                                    ) => {
+                                                                                                        e.stopPropagation();
+                                                                                                        handleOpenCategoriesModal(
+                                                                                                            structure
+                                                                                                        );
+                                                                                                    }}
+                                                                                                    className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-blue-100 text-blue-700 hover:bg-blue-200"
+                                                                                                    title="Custom category tags (click to modify)"
+                                                                                                >
+                                                                                                    {
+                                                                                                        tag.name
+                                                                                                    }
+                                                                                                    <span className="ml-1 text-xs opacity-70">
+                                                                                                        ★
+                                                                                                    </span>
+                                                                                                </span>
+                                                                                            )
+                                                                                        );
+                                                                                    } else {
+                                                                                        // Show original NDA categories
+                                                                                        return structure.categories?.map(
+                                                                                            (
                                                                                                 category
-                                                                                            }
-                                                                                            onClick={(
-                                                                                                e
-                                                                                            ) => {
-                                                                                                e.stopPropagation();
-                                                                                                handleOpenCategoriesModal(
-                                                                                                    structure
-                                                                                                );
-                                                                                            }}
-                                                                                            className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-blue-100 text-blue-800 hover:bg-blue-200"
-                                                                                            title="Click to add custom category tags"
-                                                                                        >
-                                                                                            {
-                                                                                                category
-                                                                                            }
-                                                                                        </span>
-                                                                                    )
-                                                                                );
-                                                                            }
-                                                                        })()}
+                                                                                            ) => (
+                                                                                                <span
+                                                                                                    key={
+                                                                                                        category
+                                                                                                    }
+                                                                                                    onClick={(
+                                                                                                        e
+                                                                                                    ) => {
+                                                                                                        e.stopPropagation();
+                                                                                                        handleOpenCategoriesModal(
+                                                                                                            structure
+                                                                                                        );
+                                                                                                    }}
+                                                                                                    className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-blue-100 text-blue-800 hover:bg-blue-200"
+                                                                                                    title="Click to add custom category tags"
+                                                                                                >
+                                                                                                    {
+                                                                                                        category
+                                                                                                    }
+                                                                                                </span>
+                                                                                            )
+                                                                                        );
+                                                                                    }
+                                                                                })()}
 
-                                                                        {/* Data Type Tags - clickable to open data types modal */}
-                                                                        {(() => {
-                                                                            const hasCustomDataTypeTags =
-                                                                                structureDataTypeTags[
-                                                                                    structure
-                                                                                        .shortName
-                                                                                ]
-                                                                                    ?.length >
-                                                                                0;
+                                                                                {/* Data Type Tags - clickable to open data types modal */}
+                                                                                {(() => {
+                                                                                    const hasCustomDataTypeTags =
+                                                                                        structureDataTypeTags[
+                                                                                            structure
+                                                                                                .shortName
+                                                                                        ]
+                                                                                            ?.length >
+                                                                                        0;
 
-                                                                            if (
-                                                                                hasCustomDataTypeTags
-                                                                            ) {
-                                                                                // Show custom data type tags with purple styling
-                                                                                return structureDataTypeTags[
-                                                                                    structure
-                                                                                        .shortName
-                                                                                ].map(
-                                                                                    (
-                                                                                        tag
-                                                                                    ) => (
-                                                                                        <span
-                                                                                            key={
-                                                                                                tag.id
-                                                                                            }
-                                                                                            onClick={(
-                                                                                                e
-                                                                                            ) => {
-                                                                                                e.stopPropagation();
-                                                                                                handleOpenDataTypesModal(
-                                                                                                    structure
-                                                                                                );
-                                                                                            }}
-                                                                                            className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-purple-100 text-purple-700 hover:bg-purple-200"
-                                                                                            title="Custom data type tags (click to modify)"
-                                                                                        >
-                                                                                            {
-                                                                                                tag.name
-                                                                                            }
-                                                                                            <span className="ml-1 text-xs opacity-70">
-                                                                                                ★
+                                                                                    if (
+                                                                                        hasCustomDataTypeTags
+                                                                                    ) {
+                                                                                        // Show custom data type tags with purple styling
+                                                                                        return structureDataTypeTags[
+                                                                                            structure
+                                                                                                .shortName
+                                                                                        ].map(
+                                                                                            (
+                                                                                                tag
+                                                                                            ) => (
+                                                                                                <span
+                                                                                                    key={
+                                                                                                        tag.id
+                                                                                                    }
+                                                                                                    onClick={(
+                                                                                                        e
+                                                                                                    ) => {
+                                                                                                        e.stopPropagation();
+                                                                                                        handleOpenDataTypesModal(
+                                                                                                            structure
+                                                                                                        );
+                                                                                                    }}
+                                                                                                    className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-gray-100 text-gray-700 hover:bg-gray-200"
+                                                                                                    title="Custom data type tags (click to modify)"
+                                                                                                >
+                                                                                                    {
+                                                                                                        tag.name
+                                                                                                    }
+                                                                                                    <span className="ml-1 text-xs opacity-70">
+                                                                                                        ★
+                                                                                                    </span>
+                                                                                                </span>
+                                                                                            )
+                                                                                        );
+                                                                                    } else {
+                                                                                        // Show original NDA data type
+                                                                                        return (
+                                                                                            <span
+                                                                                                className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-gray-100 text-gray-800 hover:bg-gray-200"
+                                                                                                onClick={(
+                                                                                                    e
+                                                                                                ) => {
+                                                                                                    e.stopPropagation();
+                                                                                                    handleOpenDataTypesModal(
+                                                                                                        structure
+                                                                                                    );
+                                                                                                }}
+                                                                                                title="Click to add custom data type tags"
+                                                                                            >
+                                                                                                {
+                                                                                                    structure.dataType
+                                                                                                }
                                                                                             </span>
-                                                                                        </span>
-                                                                                    )
-                                                                                );
-                                                                            } else {
-                                                                                // Show original NDA data type
-                                                                                return (
-                                                                                    <span
-                                                                                        className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-gray-100 text-gray-800 hover:bg-gray-200"
-                                                                                        onClick={(
-                                                                                            e
-                                                                                        ) => {
-                                                                                            e.stopPropagation();
-                                                                                            handleOpenDataTypesModal(
-                                                                                                structure
-                                                                                            );
-                                                                                        }}
-                                                                                        title="Click to add custom data type tags"
-                                                                                    >
-                                                                                        {
-                                                                                            structure.dataType
-                                                                                        }
-                                                                                    </span>
-                                                                                );
-                                                                            }
-                                                                        })()}
+                                                                                        );
+                                                                                    }
+                                                                                })()}
+                                                                            </>
+                                                                        ) : (
+                                                                            <>
+                                                                                {/* Data Type Tags - clickable to open data types modal */}
+                                                                                {(() => {
+                                                                                    const hasCustomDataTypeTags =
+                                                                                        structureDataTypeTags[
+                                                                                            structure
+                                                                                                .shortName
+                                                                                        ]
+                                                                                            ?.length >
+                                                                                        0;
+
+                                                                                    if (
+                                                                                        hasCustomDataTypeTags
+                                                                                    ) {
+                                                                                        // Show custom data type tags with purple styling
+                                                                                        return structureDataTypeTags[
+                                                                                            structure
+                                                                                                .shortName
+                                                                                        ].map(
+                                                                                            (
+                                                                                                tag
+                                                                                            ) => (
+                                                                                                <span
+                                                                                                    key={
+                                                                                                        tag.id
+                                                                                                    }
+                                                                                                    onClick={(
+                                                                                                        e
+                                                                                                    ) => {
+                                                                                                        e.stopPropagation();
+                                                                                                        handleOpenDataTypesModal(
+                                                                                                            structure
+                                                                                                        );
+                                                                                                    }}
+                                                                                                    className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-gray-100 text-gray-700 hover:bg-gray-200"
+                                                                                                    title="Custom data type tags (click to modify)"
+                                                                                                >
+                                                                                                    {
+                                                                                                        tag.name
+                                                                                                    }
+                                                                                                    <span className="ml-1 text-xs opacity-70">
+                                                                                                        ★
+                                                                                                    </span>
+                                                                                                </span>
+                                                                                            )
+                                                                                        );
+                                                                                    } else {
+                                                                                        // Show original NDA data type
+                                                                                        return (
+                                                                                            <span
+                                                                                                className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-gray-100 text-gray-800 hover:bg-gray-200"
+                                                                                                onClick={(
+                                                                                                    e
+                                                                                                ) => {
+                                                                                                    e.stopPropagation();
+                                                                                                    handleOpenDataTypesModal(
+                                                                                                        structure
+                                                                                                    );
+                                                                                                }}
+                                                                                                title="Click to add custom data type tags"
+                                                                                            >
+                                                                                                {
+                                                                                                    structure.dataType
+                                                                                                }
+                                                                                            </span>
+                                                                                        );
+                                                                                    }
+                                                                                })()}
+
+                                                                                {/* Category Tags - clickable to open categories modal */}
+                                                                                {(() => {
+                                                                                    const hasCustomCategoryTags =
+                                                                                        structureTags[
+                                                                                            structure
+                                                                                                .shortName
+                                                                                        ]
+                                                                                            ?.length >
+                                                                                        0;
+
+                                                                                    if (
+                                                                                        hasCustomCategoryTags
+                                                                                    ) {
+                                                                                        // Show custom category tags with orange styling
+                                                                                        return structureTags[
+                                                                                            structure
+                                                                                                .shortName
+                                                                                        ].map(
+                                                                                            (
+                                                                                                tag
+                                                                                            ) => (
+                                                                                                <span
+                                                                                                    key={
+                                                                                                        tag.id
+                                                                                                    }
+                                                                                                    onClick={(
+                                                                                                        e
+                                                                                                    ) => {
+                                                                                                        e.stopPropagation();
+                                                                                                        handleOpenCategoriesModal(
+                                                                                                            structure
+                                                                                                        );
+                                                                                                    }}
+                                                                                                    className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-blue-100 text-blue-700 hover:bg-blue-200"
+                                                                                                    title="Custom category tags (click to modify)"
+                                                                                                >
+                                                                                                    {
+                                                                                                        tag.name
+                                                                                                    }
+                                                                                                    <span className="ml-1 text-xs opacity-70">
+                                                                                                        ★
+                                                                                                    </span>
+                                                                                                </span>
+                                                                                            )
+                                                                                        );
+                                                                                    } else {
+                                                                                        // Show original NDA categories
+                                                                                        return structure.categories?.map(
+                                                                                            (
+                                                                                                category
+                                                                                            ) => (
+                                                                                                <span
+                                                                                                    key={
+                                                                                                        category
+                                                                                                    }
+                                                                                                    onClick={(
+                                                                                                        e
+                                                                                                    ) => {
+                                                                                                        e.stopPropagation();
+                                                                                                        handleOpenCategoriesModal(
+                                                                                                            structure
+                                                                                                        );
+                                                                                                    }}
+                                                                                                    className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-blue-100 text-blue-800 hover:bg-blue-200"
+                                                                                                    title="Click to add custom category tags"
+                                                                                                >
+                                                                                                    {
+                                                                                                        category
+                                                                                                    }
+                                                                                                </span>
+                                                                                            )
+                                                                                        );
+                                                                                    }
+                                                                                })()}
+                                                                            </>
+                                                                        )}
 
                                                                         {/* Status Badge */}
                                                                         <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">

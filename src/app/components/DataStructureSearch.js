@@ -328,7 +328,7 @@ const DataStructureSearch = ({
                                                     <span
                                                         className={`px-2 py-1 rounded-full text-xs inline-block ${
                                                             isCurrentFilterCustomTag
-                                                                ? "bg-orange-100 text-orange-700"
+                                                                ? "bg-blue-100 text-blue-700"
                                                                 : "bg-blue-100 text-blue-700"
                                                         }`}
                                                     >
@@ -349,7 +349,7 @@ const DataStructureSearch = ({
                                                     <span
                                                         className={`px-2 py-1 rounded-full text-xs inline-block ${
                                                             isCurrentFilterCustomTag
-                                                                ? "bg-orange-100 text-orange-700"
+                                                                ? "bg-gray-100 text-gray-700"
                                                                 : "bg-gray-100 text-gray-700"
                                                         }`}
                                                     >
@@ -619,7 +619,7 @@ const DataStructureSearch = ({
                                                                                             key={
                                                                                                 tag.id
                                                                                             }
-                                                                                            className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm cursor-pointer hover:bg-orange-200 transition-colors"
+                                                                                            className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm cursor-pointer hover:bg-gray-200 transition-colors"
                                                                                             onClick={(
                                                                                                 e
                                                                                             ) => {
@@ -686,7 +686,7 @@ const DataStructureSearch = ({
                                                                                         key={
                                                                                             tag.id
                                                                                         }
-                                                                                        className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm cursor-pointer hover:bg-orange-200 transition-colors"
+                                                                                        className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm cursor-pointer hover:bg-blue-200 transition-colors"
                                                                                         onClick={(
                                                                                             e
                                                                                         ) => {
