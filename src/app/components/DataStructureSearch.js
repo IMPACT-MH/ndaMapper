@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 import {
     Search,
     X,
@@ -221,12 +222,12 @@ const DataStructureSearch = ({
                         <h1 className="text-3xl font-bold mb-4">
                             Data Structures
                         </h1>
-                        <p className="text-gray-600 mb-6">
+                        <p className="text-gray-600 -mb-7">
                             Search the NDA Data Dictionary
                         </p>
 
                         {/* Database Filter Checkbox */}
-                        <div className="mb-4">
+                        <div className="-mb-8">
                             <label className="flex items-center space-x-3 cursor-pointer">
                                 <input
                                     type="checkbox"
@@ -236,28 +237,35 @@ const DataStructureSearch = ({
                                             e.target.checked
                                         )
                                     }
-                                    className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                                    className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 flex-shrink-0 self-center"
                                 />
                                 <div className="flex items-center space-x-2">
-                                    <Database className="w-4 h-4 text-blue-600" />
-                                    <span className="text-sm font-medium text-gray-700">
-                                        Show only {databaseName} structures
-                                    </span>
+                                    <div className="w-32 h-32 relative flex items-center justify-center self-center">
+                                        <Image
+                                            src="/impact.png"
+                                            alt="IMPACT Logo"
+                                            width={128}
+                                            height={128}
+                                            className="object-contain"
+                                        />
+                                    </div>
                                     {loadingDatabaseStructures && (
                                         <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-500"></div>
                                     )}
                                 </div>
+                                {databaseFilterEnabled &&
+                                    databaseStructures.length > 0 && (
+                                        <p className="text-xs text-gray-500 ml-2">
+                                            Filtering by{" "}
+                                            {databaseStructures.length}{" "}
+                                            available structures
+                                        </p>
+                                    )}
                             </label>
-                            {databaseFilterEnabled &&
-                                databaseStructures.length > 0 && (
-                                    <p className="text-xs text-gray-500 mt-1 ml-7">
-                                        Filtering by {databaseStructures.length}{" "}
-                                        available structures
-                                    </p>
-                                )}
                         </div>
 
-                        <div className="relative">
+                        {/* Search Input */}
+                        <div className="relative mb-3">
                             <input
                                 type="text"
                                 className="w-full p-4 pl-12 border rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"

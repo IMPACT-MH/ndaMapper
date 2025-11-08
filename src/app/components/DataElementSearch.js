@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { Search, X, AlertCircle, Info, Database } from "lucide-react";
 
 const DataElementSearch = ({
@@ -649,12 +650,12 @@ const DataElementSearch = ({
         <div className="space-y-6">
             <div className="mb-8">
                 <h1 className="text-3xl font-bold mb-4">Data Elements</h1>
-                <p className="text-gray-600 mb-6">
+                <p className="text-gray-600 -mb-7">
                     Search the NDA Data Dictionary
                 </p>
 
                 {/* Database Filter Checkbox */}
-                <div className="mb-4">
+                <div className="-mb-8">
                     <label className="flex items-center space-x-3 cursor-pointer">
                         <input
                             type="checkbox"
@@ -674,33 +675,33 @@ const DataElementSearch = ({
                                     handleSearchWithFilter(newFilterState);
                                 }
                             }}
-                            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 flex-shrink-0 self-center"
                         />
                         <div className="flex items-center space-x-2">
-                            <div className="relative group">
-                                <Database className="w-4 h-4 text-blue-600 cursor-help" />
-                                <div className="absolute bottom-full left-0 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-10">
-                                    Filter to show only elements that exist in
-                                    the IMPACT-MH database
-                                </div>
+                            <div className="w-32 h-32 relative flex items-center justify-center self-center">
+                                <Image
+                                    src="/impact.png"
+                                    alt="IMPACT Logo"
+                                    width={128}
+                                    height={128}
+                                    className="object-contain"
+                                />
                             </div>
-                            <span className="text-sm font-medium text-gray-700">
-                                Show only IMPACT-MH elements
-                            </span>
                             {loadingDatabaseElements && (
                                 <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-500"></div>
                             )}
                         </div>
+                        {databaseFilterEnabled && databaseElements.size > 0 && (
+                            <p className="text-xs text-gray-500 ml-2">
+                                Filtering by {databaseElements.size} available
+                                elements
+                            </p>
+                        )}
                     </label>
-                    {databaseFilterEnabled && databaseElements.size > 0 && (
-                        <p className="text-xs text-gray-500 mt-1 ml-7">
-                            Filtering by {databaseElements.size} available
-                            elements
-                        </p>
-                    )}
                 </div>
 
-                <div className="relative">
+                {/* Search Input */}
+                <div className="relative mb-3">
                     <input
                         type="text"
                         className="w-full p-4 pl-12 border rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
