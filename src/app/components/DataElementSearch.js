@@ -273,14 +273,25 @@ const DataElementSearch = ({
             const elementDetails = await Promise.all(
                 searchResults.datadict.results.map(async (result) => {
                     try {
+                        // Validate result.name exists and is a string
+                        if (
+                            !result ||
+                            !result.name ||
+                            typeof result.name !== "string"
+                        ) {
+                            console.warn("Invalid result object:", result);
+                            return null;
+                        }
+
                         const response = await fetch(
                             `https://nda.nih.gov/api/datadictionary/dataelement/${result.name}`
                         );
 
                         if (!response.ok) {
-                            throw new Error(
-                                `Failed to fetch details for ${result.name}`
+                            console.warn(
+                                `Failed to fetch details for ${result.name}, status: ${response.status}`
                             );
+                            return null;
                         }
 
                         const fullData = await response.json();
@@ -468,14 +479,25 @@ const DataElementSearch = ({
             const elementDetails = await Promise.all(
                 searchResults.datadict.results.map(async (result) => {
                     try {
+                        // Validate result.name exists and is a string
+                        if (
+                            !result ||
+                            !result.name ||
+                            typeof result.name !== "string"
+                        ) {
+                            console.warn("Invalid result object:", result);
+                            return null;
+                        }
+
                         const response = await fetch(
                             `https://nda.nih.gov/api/datadictionary/dataelement/${result.name}`
                         );
 
                         if (!response.ok) {
-                            throw new Error(
-                                `Failed to fetch details for ${result.name}`
+                            console.warn(
+                                `Failed to fetch details for ${result.name}, status: ${response.status}`
                             );
+                            return null;
                         }
 
                         const fullData = await response.json();
@@ -507,7 +529,7 @@ const DataElementSearch = ({
                         };
                     } catch (err) {
                         console.error(
-                            `Error fetching details for ${result.name}:`,
+                            `Error fetching details for element:`,
                             err
                         );
                         return null;

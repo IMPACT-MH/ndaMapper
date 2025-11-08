@@ -43,6 +43,8 @@ const DataStructureSearch = ({
     const [isExpanded, setIsExpanded] = useState(false);
     const [structureTags, setStructureTags] = useState({});
     const [structureDataTypeTags, setStructureDataTypeTags] = useState({});
+    const [isCurrentFilterCustomTag, setIsCurrentFilterCustomTag] =
+        useState(false);
     const apiBaseUrl = "/api/spinup";
 
     // Clear headers when CSV file is removed
@@ -58,6 +60,54 @@ const DataStructureSearch = ({
             setIsExpanded(false);
         }
     }, [searchTerm]);
+
+    // Check if current filter is a custom tag
+    useEffect(() => {
+        const checkIfCustomTag = async () => {
+            if (
+                !searchTerm.startsWith("category:") &&
+                !searchTerm.startsWith("datatype:")
+            ) {
+                setIsCurrentFilterCustomTag(false);
+                return;
+            }
+
+            const isCategory = searchTerm.startsWith("category:");
+            const filterValue = isCategory
+                ? searchTerm.replace("category:", "")
+                : searchTerm.replace("datatype:", "");
+
+            try {
+                const response = await fetch(`${apiBaseUrl}/tags`);
+                if (response.ok) {
+                    const allTags = await response.json();
+                    const customTag = allTags.find((tag) => {
+                        if (isCategory) {
+                            return (
+                                (tag.tagType === "Category" ||
+                                    !tag.tagType ||
+                                    tag.tagType === "") &&
+                                tag.name === filterValue
+                            );
+                        } else {
+                            return (
+                                tag.tagType === "Data Type" &&
+                                tag.name === filterValue
+                            );
+                        }
+                    });
+                    setIsCurrentFilterCustomTag(!!customTag);
+                } else {
+                    setIsCurrentFilterCustomTag(false);
+                }
+            } catch (err) {
+                console.warn("Error checking if filter is custom tag:", err);
+                setIsCurrentFilterCustomTag(false);
+            }
+        };
+
+        checkIfCustomTag();
+    }, [searchTerm, apiBaseUrl]);
 
     // Fetch tags for selected structure
     useEffect(() => {
@@ -133,6 +183,19 @@ const DataStructureSearch = ({
         }
 
         setSearchTerm(`category:${category}`);
+
+        window.scrollTo({
+            top: 0,
+            behavior: "smooth",
+        });
+    };
+
+    const handleDataTypeClick = async (dataType) => {
+        if (isExpanded) {
+            setIsExpanded(false);
+        }
+
+        setSearchTerm(`datatype:${dataType}`);
 
         window.scrollTo({
             top: 0,
@@ -258,14 +321,59 @@ const DataStructureSearch = ({
                                                     ` of ${totalStructureCount} total`}
                                                 )
                                             </h2>
-                                            {databaseFilterEnabled &&
-                                                databaseStructures.length >
-                                                    0 && (
-                                                    <p className="text-sm text-blue-600 mt-1">
-                                                        <Database className="w-3 h-3 inline mr-1" />
-                                                        {databaseName} filtered
-                                                    </p>
+                                            <div className="mt-2 flex items-center gap-2 flex-wrap">
+                                                {searchTerm.startsWith(
+                                                    "category:"
+                                                ) && (
+                                                    <span
+                                                        className={`px-2 py-1 rounded-full text-xs inline-block ${
+                                                            isCurrentFilterCustomTag
+                                                                ? "bg-orange-100 text-orange-700"
+                                                                : "bg-blue-100 text-blue-700"
+                                                        }`}
+                                                    >
+                                                        {isCurrentFilterCustomTag && (
+                                                            <span className="mr-1">
+                                                                ★
+                                                            </span>
+                                                        )}
+                                                        {searchTerm.replace(
+                                                            "category:",
+                                                            ""
+                                                        )}
+                                                    </span>
                                                 )}
+                                                {searchTerm.startsWith(
+                                                    "datatype:"
+                                                ) && (
+                                                    <span
+                                                        className={`px-2 py-1 rounded-full text-xs inline-block ${
+                                                            isCurrentFilterCustomTag
+                                                                ? "bg-orange-100 text-orange-700"
+                                                                : "bg-gray-100 text-gray-700"
+                                                        }`}
+                                                    >
+                                                        {isCurrentFilterCustomTag && (
+                                                            <span className="mr-1">
+                                                                ★
+                                                            </span>
+                                                        )}
+                                                        {searchTerm.replace(
+                                                            "datatype:",
+                                                            ""
+                                                        )}
+                                                    </span>
+                                                )}
+                                                {databaseFilterEnabled &&
+                                                    databaseStructures.length >
+                                                        0 && (
+                                                        <span className="text-sm text-blue-600">
+                                                            <Database className="w-3 h-3 inline mr-1" />
+                                                            {databaseName}{" "}
+                                                            filtered
+                                                        </span>
+                                                    )}
+                                            </div>
                                         </div>
                                     </div>
                                     <div className="p-4 space-y-2">
@@ -336,7 +444,7 @@ const DataStructureSearch = ({
                                             </h3>
                                             <p className="text-gray-600 mb-4">
                                                 No structures in your database
-                                                match "{searchTerm}".
+                                                match &quot;{searchTerm}&quot;.
                                             </p>
                                             <button
                                                 onClick={() =>
@@ -356,8 +464,8 @@ const DataStructureSearch = ({
                                                 No Results Found
                                             </h3>
                                             <p className="text-gray-600">
-                                                No structures match "
-                                                {searchTerm}".
+                                                No structures match &quot;
+                                                {searchTerm}&quot;.
                                             </p>
                                         </>
                                     )}
@@ -511,7 +619,16 @@ const DataStructureSearch = ({
                                                                                             key={
                                                                                                 tag.id
                                                                                             }
-                                                                                            className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm"
+                                                                                            className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm cursor-pointer hover:bg-orange-200 transition-colors"
+                                                                                            onClick={(
+                                                                                                e
+                                                                                            ) => {
+                                                                                                e.preventDefault();
+                                                                                                e.stopPropagation();
+                                                                                                handleDataTypeClick(
+                                                                                                    tag.name
+                                                                                                );
+                                                                                            }}
                                                                                         >
                                                                                             {
                                                                                                 tag.name
@@ -526,7 +643,18 @@ const DataStructureSearch = ({
                                                                         );
                                                                     } else {
                                                                         return (
-                                                                            <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm inline-block">
+                                                                            <span
+                                                                                className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm inline-block cursor-pointer hover:bg-gray-200 transition-colors"
+                                                                                onClick={(
+                                                                                    e
+                                                                                ) => {
+                                                                                    e.preventDefault();
+                                                                                    e.stopPropagation();
+                                                                                    handleDataTypeClick(
+                                                                                        selectedStructure.dataType
+                                                                                    );
+                                                                                }}
+                                                                            >
                                                                                 {selectedStructure.dataType ||
                                                                                     "Not specified"}
                                                                             </span>
