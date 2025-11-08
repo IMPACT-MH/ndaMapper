@@ -416,9 +416,29 @@ const DataCategorySearch = ({
             let groupKeys = [];
 
             if (groupBy === "category") {
+                // Include original categories
                 groupKeys = structure.categories || ["Uncategorized"];
+
+                // Also include custom category tags
+                const customCategoryTags =
+                    structureTags[structure.shortName] || [];
+                customCategoryTags.forEach((tag) => {
+                    if (!groupKeys.includes(tag.name)) {
+                        groupKeys.push(tag.name);
+                    }
+                });
             } else if (groupBy === "dataType") {
+                // Include original data type
                 groupKeys = [structure.dataType || "Unknown"];
+
+                // Also include custom data type tags
+                const customDataTypeTags =
+                    structureDataTypeTags[structure.shortName] || [];
+                customDataTypeTags.forEach((tag) => {
+                    if (!groupKeys.includes(tag.name)) {
+                        groupKeys.push(tag.name);
+                    }
+                });
             }
 
             groupKeys.forEach((key) => {
@@ -484,12 +504,28 @@ const DataCategorySearch = ({
                 .includes(structure.shortName.toLowerCase());
 
             if (isInDatabase) {
+                // Add original categories
                 structure.categories?.forEach((cat) =>
                     categoriesInDatabase.add(cat)
                 );
+                // Add original data types
                 if (structure.dataType) {
                     dataTypesInDatabase.add(structure.dataType);
                 }
+
+                // Add custom category tags if structure is in database
+                const customCategoryTags =
+                    structureTags[structure.shortName] || [];
+                customCategoryTags.forEach((tag) => {
+                    categoriesInDatabase.add(tag.name);
+                });
+
+                // Add custom data type tags if structure is in database
+                const customDataTypeTags =
+                    structureDataTypeTags[structure.shortName] || [];
+                customDataTypeTags.forEach((tag) => {
+                    dataTypesInDatabase.add(tag.name);
+                });
             }
         });
     }
@@ -1011,6 +1047,16 @@ const DataCategorySearch = ({
                                 Filters
                             </h3>
 
+                            {/* Legend */}
+                            <div className="mb-4 pb-4 border-b border-gray-200">
+                                <div className="flex items-center text-xs text-gray-600">
+                                    <span className="text-orange-500 mr-1">
+                                        ★
+                                    </span>
+                                    <span>Custom tag</span>
+                                </div>
+                            </div>
+
                             {/* Data Type Filters */}
                             <div>
                                 <h4 className="font-medium text-gray-700 mb-2">
@@ -1065,7 +1111,10 @@ const DataCategorySearch = ({
                                         ))}
                                 </div>
                             </div>
-                            <br />
+
+                            {/* Horizontal divider */}
+                            <div className="my-4 border-t border-gray-200"></div>
+
                             {/* Category Filters */}
                             <div className="mb-6">
                                 <h4 className="font-medium text-gray-700 mb-2">
@@ -1147,8 +1196,33 @@ const DataCategorySearch = ({
                                                 ) : (
                                                     <ChevronRight className="w-5 h-5 text-gray-500" />
                                                 )}
-                                                <h3 className="font-medium text-gray-900">
+                                                <h3 className="font-medium text-gray-900 flex items-center">
                                                     {groupName}
+                                                    {isCustomTag(
+                                                        groupName,
+                                                        groupBy === "category"
+                                                    ) && (
+                                                        <span className="ml-1 text-orange-500 text-xs">
+                                                            ★
+                                                        </span>
+                                                    )}
+                                                    {hasStructuresInDatabase(
+                                                        groupName
+                                                    ) && (
+                                                        <div className="relative group ml-1">
+                                                            <Database className="w-3 h-3 text-blue-500 cursor-help" />
+                                                            <div className="absolute bottom-full left-0 mb-1 px-2 py-1 text-xs text-white bg-gray-800 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-10">
+                                                                This{" "}
+                                                                {groupBy ===
+                                                                "category"
+                                                                    ? "category"
+                                                                    : "data type"}{" "}
+                                                                has structures
+                                                                in the IMPACT-MH
+                                                                database
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </h3>
                                                 <span className="text-sm text-gray-500">
                                                     (
