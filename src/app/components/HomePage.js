@@ -230,7 +230,7 @@ const HomePage = () => {
         setSearchTerm(shortName);
         setCsvFile(file);
         setCsvHeaders(headers);
-        setActiveTab(Tabs.STRUCTURE_SEARCH);
+        setActiveTab(Tabs.CATEGORY_SEARCH);
     };
 
     const handleClearSearch = () => {
