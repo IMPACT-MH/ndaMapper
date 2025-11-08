@@ -1564,7 +1564,7 @@ const DataCategorySearch = ({
                                                                                         // Show original NDA data type
                                                                                         return (
                                                                                             <span
-                                                                                                className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-gray-100 text-gray-800 hover:bg-gray-200"
+                                                                                                className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-gray-100 text-gray-700 hover:bg-gray-200"
                                                                                                 onClick={(
                                                                                                     e
                                                                                                 ) => {
@@ -1634,7 +1634,7 @@ const DataCategorySearch = ({
                                                                                         // Show original NDA data type
                                                                                         return (
                                                                                             <span
-                                                                                                className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-gray-100 text-gray-800 hover:bg-gray-200"
+                                                                                                className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-gray-100 text-gray-700 hover:bg-gray-200"
                                                                                                 onClick={(
                                                                                                     e
                                                                                                 ) => {
@@ -1804,21 +1804,6 @@ const DataCategorySearch = ({
                         </div>
 
                         <div className="flex-1 overflow-y-auto p-5">
-                            <div className="mb-4">
-                                <div className="relative">
-                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                                    <input
-                                        type="text"
-                                        value={modalSearchTerm}
-                                        onChange={(e) =>
-                                            setModalSearchTerm(e.target.value)
-                                        }
-                                        placeholder="Search custom categories..."
-                                        className="w-full pl-10 pr-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
-                                    />
-                                </div>
-                            </div>
-
                             {modalLoading && (
                                 <div className="text-center py-8">
                                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
@@ -1834,8 +1819,8 @@ const DataCategorySearch = ({
                             {/* Original NDA Categories Info */}
                             {modalStructure.categories &&
                                 modalStructure.categories.length > 0 && (
-                                    <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                                        <h3 className="text-sm font-semibold text-gray-700 mb-2">
+                                    <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+                                        <h3 className="text-sm font-semibold text-blue-700 mb-2">
                                             Original NDA Categories
                                         </h3>
                                         <div className="flex flex-wrap gap-2">
@@ -1843,7 +1828,7 @@ const DataCategorySearch = ({
                                                 (cat) => (
                                                     <span
                                                         key={cat}
-                                                        className="text-xs px-2 py-1 bg-gray-200 text-gray-700 rounded"
+                                                        className="text-xs px-2 py-1 bg-blue-200 text-blue-700 rounded"
                                                     >
                                                         {cat}
                                                     </span>
@@ -1907,6 +1892,22 @@ const DataCategorySearch = ({
                                     <h3 className="text-sm font-semibold text-gray-700 mb-2">
                                         Available Custom Category Tags
                                     </h3>
+                                    <div className="mb-4">
+                                        <div className="relative">
+                                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                                            <input
+                                                type="text"
+                                                value={modalSearchTerm}
+                                                onChange={(e) =>
+                                                    setModalSearchTerm(
+                                                        e.target.value
+                                                    )
+                                                }
+                                                placeholder="Search custom categories..."
+                                                className="w-full pl-10 pr-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
+                                            />
+                                        </div>
+                                    </div>
                                     <div className="bg-gray-50 rounded-lg p-3 max-h-64 overflow-y-auto">
                                         <div className="flex flex-wrap gap-2">
                                             {filteredAvailableTags.length >
@@ -2289,21 +2290,6 @@ const DataCategorySearch = ({
                         </div>
 
                         <div className="flex-1 overflow-y-auto p-5">
-                            <div className="mb-4">
-                                <div className="relative">
-                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                                    <input
-                                        type="text"
-                                        value={modalSearchTerm}
-                                        onChange={(e) =>
-                                            setModalSearchTerm(e.target.value)
-                                        }
-                                        placeholder="Search custom data types..."
-                                        className="w-full pl-10 pr-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
-                                    />
-                                </div>
-                            </div>
-
                             {modalLoading && (
                                 <div className="text-center py-8">
                                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
@@ -2345,7 +2331,7 @@ const DataCategorySearch = ({
                                                 return tag ? (
                                                     <div
                                                         key={tag.id}
-                                                        className="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-sm"
+                                                        className="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm"
                                                     >
                                                         <span>{tag.name}</span>
                                                         <button
@@ -2364,7 +2350,7 @@ const DataCategorySearch = ({
                                                                     }
                                                                 );
                                                             }}
-                                                            className="ml-1 hover:bg-gray-200 rounded-full w-4 h-4 flex items-center justify-center text-gray-600 hover:text-gray-800 font-bold"
+                                                            className="ml-1 hover:bg-gray-200 rounded-full w-4 h-4 flex items-center justify-center text-gray-600 hover:text-gray-700 font-bold"
                                                             title="Remove from selection"
                                                         >
                                                             ×
@@ -2383,6 +2369,22 @@ const DataCategorySearch = ({
                                     <h3 className="text-sm font-semibold text-gray-700 mb-2">
                                         Available Custom Data Types
                                     </h3>
+                                    <div className="mb-4">
+                                        <div className="relative">
+                                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                                            <input
+                                                type="text"
+                                                value={modalSearchTerm}
+                                                onChange={(e) =>
+                                                    setModalSearchTerm(
+                                                        e.target.value
+                                                    )
+                                                }
+                                                placeholder="Search custom data types..."
+                                                className="w-full pl-10 pr-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
+                                            />
+                                        </div>
+                                    </div>
                                     <div className="bg-gray-50 rounded-lg p-3 max-h-64 overflow-y-auto">
                                         <div className="flex flex-wrap gap-2">
                                             {availableDataTypeTags.filter(
@@ -2494,8 +2496,8 @@ const DataCategorySearch = ({
                                                                             selectedDataTypeTags.has(
                                                                                 tag.id
                                                                             )
-                                                                                ? "bg-gray-500 text-white"
-                                                                                : "bg-white text-gray-700 border border-gray-300 hover:border-gray-400 hover:bg-gray-50"
+                                                                                ? "bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200"
+                                                                                : "bg-gray-100 text-gray-700 border border-gray-300 hover:border-gray-400 hover:bg-gray-200"
                                                                         }`}
                                                                     >
                                                                         {
@@ -2532,8 +2534,8 @@ const DataCategorySearch = ({
                                                                     selectedDataTypeTags.has(
                                                                         tag.id
                                                                     )
-                                                                        ? "bg-gray-500 text-white hover:bg-blue-600"
-                                                                        : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 hover:text-gray-800 hover:border-gray-400"
+                                                                        ? "bg-gray-100 text-gray-700 border border-gray-300 hover:bg-blue-50 hover:text-blue-600"
+                                                                        : "bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200 hover:text-gray-800 hover:border-gray-400"
                                                                 }`}
                                                                 title="Edit tag name"
                                                             >
@@ -2552,8 +2554,8 @@ const DataCategorySearch = ({
                                                                     selectedDataTypeTags.has(
                                                                         tag.id
                                                                     )
-                                                                        ? "bg-gray-500 text-white hover:bg-red-600"
-                                                                        : "bg-white text-gray-700 border border-gray-300 hover:bg-red-50 hover:text-red-600 hover:border-red-400"
+                                                                        ? "bg-gray-100 text-gray-700 border border-gray-300 hover:bg-red-50 hover:text-red-600"
+                                                                        : "bg-gray-100 text-gray-700 border border-gray-300 hover:bg-red-50 hover:text-red-600 hover:border-red-400"
                                                                 }`}
                                                                 title="Delete tag permanently"
                                                             >
