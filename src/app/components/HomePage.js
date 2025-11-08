@@ -58,34 +58,48 @@ const HomePage = () => {
     }, [activeTab]);
 
     // Fetch database elements when filter is enabled
+    // Fetch database data once when filter is enabled (optimized - single fetch for both)
     useEffect(() => {
-        if (databaseFilterEnabled && databaseElements.size === 0) {
-            fetchDatabaseElements();
+        if (
+            databaseFilterEnabled &&
+            databaseElements.size === 0 &&
+            databaseStructures.length === 0
+        ) {
+            fetchDatabaseData();
         }
-    }, [databaseFilterEnabled, databaseElements.size]);
+    }, [
+        databaseFilterEnabled,
+        databaseElements.size,
+        databaseStructures.length,
+    ]);
 
-    // Fetch database structures when filter is enabled
-    useEffect(() => {
-        if (databaseFilterEnabled && databaseStructures.length === 0) {
-            fetchDatabaseStructures();
-        }
-    }, [databaseFilterEnabled, databaseStructures.length]);
-
-    const fetchDatabaseElements = async () => {
+    // Optimized: Fetch database data once and use for both elements and structures
+    const fetchDatabaseData = async () => {
         setLoadingDatabaseElements(true);
+        setLoadingDatabaseStructures(true);
         try {
-            const response = await fetch(DATA_PORTAL);
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
+            const response = await fetch(DATA_PORTAL, {
+                signal: controller.signal,
+            });
+            clearTimeout(timeoutId);
+
             if (response.ok) {
                 const data = await response.json();
-
-                const allElements = new Map(); // Store full element objects
 
                 if (
                     data &&
                     data.dataStructures &&
                     typeof data.dataStructures === "object"
                 ) {
+                    // Extract structure names
+                    const structureNames = Object.keys(data.dataStructures);
+                    setDatabaseStructures(structureNames);
+
                     // Extract all unique elements from all structures
+                    const allElements = new Map();
                     Object.values(data.dataStructures).forEach((structure) => {
                         if (
                             structure.dataElements &&
@@ -93,7 +107,6 @@ const HomePage = () => {
                         ) {
                             structure.dataElements.forEach((element) => {
                                 if (element.name) {
-                                    // Store full element object with lowercase name as key
                                     allElements.set(
                                         element.name.toLowerCase(),
                                         element
@@ -102,65 +115,34 @@ const HomePage = () => {
                             });
                         }
                     });
-                }
 
-                console.log(
-                    `Found ${allElements.size} unique database elements`
-                );
-                setDatabaseElements(allElements);
-            } else {
-                console.error(
-                    "Failed to fetch database elements, status:",
-                    response.status
-                );
-                setDatabaseElements(new Map());
-            }
-        } catch (error) {
-            console.error("Error fetching database elements:", error);
-            setDatabaseElements(new Map());
-        } finally {
-            setLoadingDatabaseElements(false);
-        }
-    };
-
-    const fetchDatabaseStructures = async () => {
-        setLoadingDatabaseStructures(true);
-        try {
-            const response = await fetch(DATA_PORTAL);
-            if (response.ok) {
-                const data = await response.json();
-
-                let structureNames = [];
-
-                // Handle the specific format: { dataStructures: { "aces01": {...}, "structure2": {...} } }
-                if (
-                    data &&
-                    data.dataStructures &&
-                    typeof data.dataStructures === "object"
-                ) {
-                    structureNames = Object.keys(data.dataStructures);
+                    console.log(
+                        `Found ${allElements.size} unique database elements and ${structureNames.length} structures`
+                    );
+                    setDatabaseElements(allElements);
                 } else {
                     console.warn("Unexpected API response format:", data);
                     setDatabaseStructures([]);
-                    return;
+                    setDatabaseElements(new Map());
                 }
-
-                console.log(
-                    `Found ${structureNames.length} database structures:`,
-                    structureNames
-                );
-                setDatabaseStructures(structureNames);
             } else {
                 console.error(
-                    "Failed to fetch database structures, status:",
+                    "Failed to fetch database data, status:",
                     response.status
                 );
                 setDatabaseStructures([]);
+                setDatabaseElements(new Map());
             }
         } catch (error) {
-            console.error("Error fetching database structures:", error);
+            if (error.name === "AbortError") {
+                console.error("Database data fetch timed out after 30 seconds");
+            } else {
+                console.error("Error fetching database data:", error);
+            }
             setDatabaseStructures([]);
+            setDatabaseElements(new Map());
         } finally {
+            setLoadingDatabaseElements(false);
             setLoadingDatabaseStructures(false);
         }
     };
