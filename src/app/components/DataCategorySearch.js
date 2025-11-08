@@ -1014,12 +1014,12 @@ const DataCategorySearch = ({
                         </button>
                     )}
 
-                    <button
+                    {/* <button
                         onClick={downloadApiAsCsv}
                         className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors text-sm font-medium"
                     >
                         Download API Data as CSV
-                    </button>
+                    </button> */}
                 </div>
             </div>
 
