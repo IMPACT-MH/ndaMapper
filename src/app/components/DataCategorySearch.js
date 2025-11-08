@@ -1791,7 +1791,8 @@ const DataCategorySearch = ({
                                     Manage Categories
                                 </h2>
                                 <p className="text-sm text-gray-500 mt-1">
-                                    {modalStructure.title ||
+                                    {modalStructure.title +
+                                        " - " +
                                         modalStructure.shortName}
                                 </p>
                             </div>
@@ -1817,6 +1818,9 @@ const DataCategorySearch = ({
                             )}
 
                             {/* Original NDA Categories Info */}
+                            <h3 className="text-sm font-semibold text-gray-700 mb-2">
+                                Categories
+                            </h3>
                             {modalStructure.categories &&
                                 modalStructure.categories.length > 0 && (
                                     <div className="mb-4 p-3 bg-blue-50 rounded-lg">
@@ -2277,7 +2281,8 @@ const DataCategorySearch = ({
                                     Manage Data Types
                                 </h2>
                                 <p className="text-sm text-gray-500 mt-1">
-                                    {modalStructure.title ||
+                                    {modalStructure.title +
+                                        " - " +
                                         modalStructure.shortName}
                                 </p>
                             </div>
@@ -2303,6 +2308,9 @@ const DataCategorySearch = ({
                             )}
 
                             {/* Original NDA Data Type Info */}
+                            <h3 className="text-sm font-semibold text-gray-700 mb-2">
+                                Data Types
+                            </h3>
                             {modalStructure.dataType && (
                                 <div className="mb-4 p-3 bg-gray-50 rounded-lg">
                                     <h3 className="text-sm font-semibold text-gray-700 mb-2">
@@ -2496,7 +2504,7 @@ const DataCategorySearch = ({
                                                                             selectedDataTypeTags.has(
                                                                                 tag.id
                                                                             )
-                                                                                ? "bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200"
+                                                                                ? "bg-gray-100 text-gray-700 border-2 border-gray-400"
                                                                                 : "bg-gray-100 text-gray-700 border border-gray-300 hover:border-gray-400 hover:bg-gray-200"
                                                                         }`}
                                                                     >
@@ -2534,7 +2542,7 @@ const DataCategorySearch = ({
                                                                     selectedDataTypeTags.has(
                                                                         tag.id
                                                                     )
-                                                                        ? "bg-gray-100 text-gray-700 border border-gray-300 hover:bg-blue-50 hover:text-blue-600"
+                                                                        ? "bg-gray-100 text-gray-700 border-2 border-gray-400 hover:bg-blue-50 hover:text-blue-600"
                                                                         : "bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200 hover:text-gray-800 hover:border-gray-400"
                                                                 }`}
                                                                 title="Edit tag name"
@@ -2554,7 +2562,7 @@ const DataCategorySearch = ({
                                                                     selectedDataTypeTags.has(
                                                                         tag.id
                                                                     )
-                                                                        ? "bg-gray-100 text-gray-700 border border-gray-300 hover:bg-red-50 hover:text-red-600"
+                                                                        ? "bg-gray-100 text-gray-700 border-2 border-gray-400 hover:bg-red-50 hover:text-red-600"
                                                                         : "bg-gray-100 text-gray-700 border border-gray-300 hover:bg-red-50 hover:text-red-600 hover:border-red-400"
                                                                 }`}
                                                                 title="Delete tag permanently"
