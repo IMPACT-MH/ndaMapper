@@ -1567,7 +1567,7 @@ const DataCategorySearch = ({
                         <div className="flex justify-between items-center p-5 border-b">
                             <div>
                                 <h2 className="text-xl font-semibold">
-                                    Manage Custom Categories
+                                    Manage Categories
                                 </h2>
                                 <p className="text-sm text-gray-500 mt-1">
                                     {modalStructure.title ||
@@ -1694,7 +1694,7 @@ const DataCategorySearch = ({
                                                     (tag) => (
                                                         <div
                                                             key={tag.id}
-                                                            className="inline-flex items-center group"
+                                                            className="inline-flex items-center group relative"
                                                         >
                                                             {editingCategoryTagId ===
                                                             tag.id ? (
@@ -1801,25 +1801,31 @@ const DataCategorySearch = ({
                                                                             </span>
                                                                         )}
                                                                     </button>
-                                                                    <button
-                                                                        onClick={(
-                                                                            e
-                                                                        ) => {
-                                                                            e.stopPropagation();
-                                                                            setEditingCategoryTagId(
-                                                                                tag.id
-                                                                            );
-                                                                            setEditingCategoryTagName(
-                                                                                tag.name
-                                                                            );
-                                                                        }}
-                                                                        className="ml-1 px-2 py-1.5 opacity-0 group-hover:opacity-100 transition-opacity rounded-full hover:bg-gray-100"
-                                                                        title="Edit tag name"
-                                                                    >
-                                                                        <Pencil className="w-3 h-3" />
-                                                                    </button>
                                                                 </>
                                                             )}
+                                                            <button
+                                                                onClick={(
+                                                                    e
+                                                                ) => {
+                                                                    e.stopPropagation();
+                                                                    setEditingCategoryTagId(
+                                                                        tag.id
+                                                                    );
+                                                                    setEditingCategoryTagName(
+                                                                        tag.name
+                                                                    );
+                                                                }}
+                                                                className={`px-2 py-1.5 text-sm transition-all border-l-0 inline-flex items-center justify-center ${
+                                                                    selectedSocialTags.has(
+                                                                        tag.id
+                                                                    )
+                                                                        ? "bg-blue-500 text-white hover:bg-blue-600"
+                                                                        : "bg-white text-gray-700 border border-gray-300 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-400"
+                                                                }`}
+                                                                title="Edit tag name"
+                                                            >
+                                                                <Pencil className="w-4 h-5" />
+                                                            </button>
                                                             <button
                                                                 onClick={(
                                                                     e
@@ -1829,7 +1835,7 @@ const DataCategorySearch = ({
                                                                         tag.id
                                                                     );
                                                                 }}
-                                                                className={`px-2 py-1.5 rounded-r-full text-sm transition-all border-l-0 ${
+                                                                className={`px-2 py-1.5 rounded-r-full text-sm transition-all border-l-0 inline-flex items-center justify-center ${
                                                                     selectedSocialTags.has(
                                                                         tag.id
                                                                     )
@@ -2180,7 +2186,7 @@ const DataCategorySearch = ({
                                                     .map((tag) => (
                                                         <div
                                                             key={tag.id}
-                                                            className="inline-flex items-center group"
+                                                            className="inline-flex items-center group relative"
                                                         >
                                                             {editingDataTypeTagId ===
                                                             tag.id ? (
@@ -2287,25 +2293,31 @@ const DataCategorySearch = ({
                                                                             </span>
                                                                         )}
                                                                     </button>
-                                                                    <button
-                                                                        onClick={(
-                                                                            e
-                                                                        ) => {
-                                                                            e.stopPropagation();
-                                                                            setEditingDataTypeTagId(
-                                                                                tag.id
-                                                                            );
-                                                                            setEditingDataTypeTagName(
-                                                                                tag.name
-                                                                            );
-                                                                        }}
-                                                                        className="ml-1 px-2 py-1.5 opacity-0 group-hover:opacity-100 transition-opacity rounded-full hover:bg-gray-100"
-                                                                        title="Edit tag name"
-                                                                    >
-                                                                        <Pencil className="w-3 h-3" />
-                                                                    </button>
                                                                 </>
                                                             )}
+                                                            <button
+                                                                onClick={(
+                                                                    e
+                                                                ) => {
+                                                                    e.stopPropagation();
+                                                                    setEditingDataTypeTagId(
+                                                                        tag.id
+                                                                    );
+                                                                    setEditingDataTypeTagName(
+                                                                        tag.name
+                                                                    );
+                                                                }}
+                                                                className={`px-2 py-1.5 text-sm transition-all border-l-0 inline-flex items-center justify-center ${
+                                                                    selectedDataTypeTags.has(
+                                                                        tag.id
+                                                                    )
+                                                                        ? "bg-gray-500 text-white hover:bg-blue-600"
+                                                                        : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 hover:text-gray-800 hover:border-gray-400"
+                                                                }`}
+                                                                title="Edit tag name"
+                                                            >
+                                                                <Pencil className="w-4 h-5" />
+                                                            </button>
                                                             <button
                                                                 onClick={(
                                                                     e
@@ -2315,7 +2327,7 @@ const DataCategorySearch = ({
                                                                         tag.id
                                                                     );
                                                                 }}
-                                                                className={`px-2 py-1.5 rounded-r-full text-sm transition-all border-l-0 ${
+                                                                className={`px-2 py-1.5 rounded-r-full text-sm transition-all border-l-0 inline-flex items-center justify-center ${
                                                                     selectedDataTypeTags.has(
                                                                         tag.id
                                                                     )
