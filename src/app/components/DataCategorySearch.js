@@ -352,41 +352,41 @@ const DataCategorySearch = ({
             );
         }
 
-        // Apply category filters (including custom tags)
+        // Apply category filters (custom tags supersede original categories)
         if (selectedFilters.categories.size > 0) {
             filtered = filtered.filter((structure) => {
-                // Check if structure has the selected category in its original categories
-                const hasOriginalCategory = structure.categories?.some((cat) =>
-                    selectedFilters.categories.has(cat)
-                );
-
-                // Check if structure has custom category tags matching the filter
                 const structureCategoryTags =
                     structureTags[structure.shortName] || [];
-                const hasCustomTag = structureCategoryTags.some((tag) =>
-                    selectedFilters.categories.has(tag.name)
-                );
 
-                return hasOriginalCategory || hasCustomTag;
+                // If structure has custom category tags, only check those
+                if (structureCategoryTags.length > 0) {
+                    return structureCategoryTags.some((tag) =>
+                        selectedFilters.categories.has(tag.name)
+                    );
+                } else {
+                    // No custom tags, check original categories
+                    return structure.categories?.some((cat) =>
+                        selectedFilters.categories.has(cat)
+                    );
+                }
             });
         }
 
-        // Apply data type filters (including custom tags)
+        // Apply data type filters (custom tags supersede original data type)
         if (selectedFilters.dataTypes.size > 0) {
             filtered = filtered.filter((structure) => {
-                // Check if structure has the selected data type
-                const hasOriginalDataType = selectedFilters.dataTypes.has(
-                    structure.dataType
-                );
-
-                // Check if structure has custom data type tags matching the filter
                 const structureCustomDataTypeTags =
                     structureDataTypeTags[structure.shortName] || [];
-                const hasCustomTag = structureCustomDataTypeTags.some((tag) =>
-                    selectedFilters.dataTypes.has(tag.name)
-                );
 
-                return hasOriginalDataType || hasCustomTag;
+                // If structure has custom data type tags, only check those
+                if (structureCustomDataTypeTags.length > 0) {
+                    return structureCustomDataTypeTags.some((tag) =>
+                        selectedFilters.dataTypes.has(tag.name)
+                    );
+                } else {
+                    // No custom tags, check original data type
+                    return selectedFilters.dataTypes.has(structure.dataType);
+                }
             });
         }
 
@@ -416,29 +416,31 @@ const DataCategorySearch = ({
             let groupKeys = [];
 
             if (groupBy === "category") {
-                // Include original categories
-                groupKeys = structure.categories || ["Uncategorized"];
-
-                // Also include custom category tags
+                // Check if structure has custom category tags - if so, only use those
                 const customCategoryTags =
                     structureTags[structure.shortName] || [];
-                customCategoryTags.forEach((tag) => {
-                    if (!groupKeys.includes(tag.name)) {
+                if (customCategoryTags.length > 0) {
+                    // Only use custom tags, supersede original categories
+                    customCategoryTags.forEach((tag) => {
                         groupKeys.push(tag.name);
-                    }
-                });
+                    });
+                } else {
+                    // No custom tags, use original categories
+                    groupKeys = structure.categories || ["Uncategorized"];
+                }
             } else if (groupBy === "dataType") {
-                // Include original data type
-                groupKeys = [structure.dataType || "Unknown"];
-
-                // Also include custom data type tags
+                // Check if structure has custom data type tags - if so, only use those
                 const customDataTypeTags =
                     structureDataTypeTags[structure.shortName] || [];
-                customDataTypeTags.forEach((tag) => {
-                    if (!groupKeys.includes(tag.name)) {
+                if (customDataTypeTags.length > 0) {
+                    // Only use custom tags, supersede original data type
+                    customDataTypeTags.forEach((tag) => {
                         groupKeys.push(tag.name);
-                    }
-                });
+                    });
+                } else {
+                    // No custom tags, use original data type
+                    groupKeys = [structure.dataType || "Unknown"];
+                }
             }
 
             groupKeys.forEach((key) => {
