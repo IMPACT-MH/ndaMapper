@@ -22,6 +22,7 @@ const DataCategorySearch = ({
     databaseStructures,
     databaseName,
     loadingDatabaseStructures,
+    databaseConnectionError,
 }) => {
     const [allStructures, setAllStructures] = useState([]);
     const [filteredStructures, setFilteredStructures] = useState([]);
@@ -1296,6 +1297,11 @@ const DataCategorySearch = ({
                                     className="object-contain"
                                 />
                             </div>
+                            {databaseConnectionError && (
+                                <p className="text-sm text-red-600 ml-2">
+                                    {databaseConnectionError}
+                                </p>
+                            )}
                             {loadingDatabaseStructures && (
                                 <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-500"></div>
                             )}

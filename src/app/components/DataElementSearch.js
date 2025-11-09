@@ -15,6 +15,7 @@ const DataElementSearch = ({
     loadingDatabaseElements,
     setLoadingDatabaseElements,
     databaseName,
+    databaseConnectionError,
     initialSearchTerm,
 }) => {
     const [searchTerm, setSearchTerm] = useState("");
@@ -687,6 +688,11 @@ const DataElementSearch = ({
                                     className="object-contain"
                                 />
                             </div>
+                            {databaseConnectionError && (
+                                <p className="text-sm text-red-600 ml-2">
+                                    {databaseConnectionError}
+                                </p>
+                            )}
                             {loadingDatabaseElements && (
                                 <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-500"></div>
                             )}

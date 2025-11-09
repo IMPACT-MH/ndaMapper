@@ -43,6 +43,10 @@ const HomePage = () => {
     const [loadingDatabaseStructures, setLoadingDatabaseStructures] =
         useState(false);
 
+    // Database connection error state
+    const [databaseConnectionError, setDatabaseConnectionError] =
+        useState(null);
+
     // Tags state for custom tag searches
     const [structureDataTypeTags, setStructureDataTypeTags] = useState({});
     const apiBaseUrl = "/api/spinup";
@@ -81,6 +85,7 @@ const HomePage = () => {
     const fetchDatabaseData = async () => {
         setLoadingDatabaseElements(true);
         setLoadingDatabaseStructures(true);
+        setDatabaseConnectionError(null); // Clear any previous errors
         try {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
@@ -124,10 +129,15 @@ const HomePage = () => {
                         `Found ${allElements.size} unique database elements and ${structureNames.length} structures`
                     );
                     setDatabaseElements(allElements);
+                    setDatabaseConnectionError(null); // Clear error on success
                 } else {
                     console.warn("Unexpected API response format:", data);
                     setDatabaseStructures([]);
                     setDatabaseElements(new Map());
+                    setDatabaseFilterEnabled(false);
+                    setDatabaseConnectionError(
+                        "Unable to connect to database."
+                    );
                 }
             } else {
                 console.error(
@@ -136,15 +146,20 @@ const HomePage = () => {
                 );
                 setDatabaseStructures([]);
                 setDatabaseElements(new Map());
+                setDatabaseFilterEnabled(false);
+                setDatabaseConnectionError("Unable to connect to API.");
             }
         } catch (error) {
             if (error.name === "AbortError") {
                 console.error("Database data fetch timed out after 30 seconds");
+                setDatabaseConnectionError("Unable to connect to API.");
             } else {
                 console.error("Error fetching database data:", error);
+                setDatabaseConnectionError("Unable to connect to API.");
             }
             setDatabaseStructures([]);
             setDatabaseElements(new Map());
+            setDatabaseFilterEnabled(false);
         } finally {
             setLoadingDatabaseElements(false);
             setLoadingDatabaseStructures(false);
@@ -790,6 +805,7 @@ const HomePage = () => {
                     databaseName={databaseName}
                     loadingDatabaseStructures={loadingDatabaseStructures}
                     databaseElements={databaseElements}
+                    databaseConnectionError={databaseConnectionError}
                     onSwitchToElementSearch={(elementName) => {
                         setSearchTerm(elementName);
                         setActiveTab(Tabs.ELEMENT_SEARCH);
@@ -810,6 +826,7 @@ const HomePage = () => {
                     databaseStructures={databaseStructures}
                     databaseName={databaseName}
                     loadingDatabaseStructures={loadingDatabaseStructures}
+                    databaseConnectionError={databaseConnectionError}
                 />
             </div>
 
@@ -875,6 +892,7 @@ const HomePage = () => {
                     loadingDatabaseElements={loadingDatabaseElements}
                     setLoadingDatabaseElements={setLoadingDatabaseElements}
                     databaseName={databaseName}
+                    databaseConnectionError={databaseConnectionError}
                     initialSearchTerm={searchTerm}
                 />
             </div>
