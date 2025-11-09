@@ -153,7 +153,64 @@ const DataCategorySearch = ({
         if (saved) {
             setModifiedDataTypes(JSON.parse(saved));
         }
-    }, []);
+
+        // Load removed categories and data types from backend (tags API)
+        const fetchRemovedItems = async () => {
+            try {
+                const response = await fetch(`${apiBaseUrl}/tags`);
+                if (!response.ok) return;
+
+                const allTags = await response.json();
+                const removedCategoriesMap = {};
+                const removedDataTypesMap = {};
+
+                // Process removed category tags (format: "REMOVED_CATEGORY:structureShortName:categoryName")
+                const removedCategoryTags = allTags.filter(
+                    (tag) => tag.tagType === "Removed Category"
+                );
+
+                for (const tag of removedCategoryTags) {
+                    // Tag name format: "REMOVED_CATEGORY:structureShortName:categoryName"
+                    const parts = tag.name.split(":");
+                    if (parts.length === 3 && parts[0] === "REMOVED_CATEGORY") {
+                        const structureShortName = parts[1];
+                        const categoryName = parts[2];
+                        if (!removedCategoriesMap[structureShortName]) {
+                            removedCategoriesMap[structureShortName] =
+                                new Set();
+                        }
+                        removedCategoriesMap[structureShortName].add(
+                            categoryName
+                        );
+                    }
+                }
+
+                // Process removed data type tags (format: "REMOVED_DATATYPE:structureShortName")
+                const removedDataTypeTags = allTags.filter(
+                    (tag) => tag.tagType === "Removed Data Type"
+                );
+
+                for (const tag of removedDataTypeTags) {
+                    // Tag name format: "REMOVED_DATATYPE:structureShortName"
+                    const parts = tag.name.split(":");
+                    if (parts.length === 2 && parts[0] === "REMOVED_DATATYPE") {
+                        const structureShortName = parts[1];
+                        removedDataTypesMap[structureShortName] = true;
+                    }
+                }
+
+                setRemovedOriginalCategories(removedCategoriesMap);
+                setRemovedOriginalDataTypes(removedDataTypesMap);
+            } catch (err) {
+                console.error(
+                    "Error loading removed categories/data types:",
+                    err
+                );
+            }
+        };
+
+        fetchRemovedItems();
+    }, [apiBaseUrl]);
 
     // Fetch all data structures on component mount
     useEffect(() => {
@@ -593,7 +650,8 @@ const DataCategorySearch = ({
         }
     };
 
-    const removeOriginalCategory = (structureShortName, categoryName) => {
+    const removeOriginalCategory = async (structureShortName, categoryName) => {
+        // Update local state immediately
         setRemovedOriginalCategories((prev) => {
             const updated = { ...prev };
             if (!updated[structureShortName]) {
@@ -602,6 +660,50 @@ const DataCategorySearch = ({
             updated[structureShortName].add(categoryName);
             return updated;
         });
+
+        // Save to backend using tags API
+        try {
+            const tagName = `REMOVED_CATEGORY:${structureShortName}:${categoryName}`;
+
+            // Check if tag already exists
+            const tagsResponse = await fetch(`${apiBaseUrl}/tags`);
+            if (tagsResponse.ok) {
+                const allTags = await tagsResponse.json();
+                const existingTag = allTags.find(
+                    (tag) =>
+                        tag.name === tagName &&
+                        tag.tagType === "Removed Category"
+                );
+
+                if (!existingTag) {
+                    // Create the tag
+                    const createResponse = await fetch(`${apiBaseUrl}/tags`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            name: tagName,
+                            tagType: "Removed Category",
+                            description: `Removed category ${categoryName} from structure ${structureShortName}`,
+                        }),
+                    });
+
+                    if (createResponse.ok) {
+                        const newTag = await createResponse.json();
+                        // Assign tag to the structure
+                        await fetch(`${apiBaseUrl}/tags/assign`, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                tagId: newTag.id,
+                                dataStructureShortName: structureShortName,
+                            }),
+                        });
+                    }
+                }
+            }
+        } catch (err) {
+            console.error("Error saving removed category to backend:", err);
+        }
     };
 
     const isCategoryRemoved = (structureShortName, categoryName) => {
@@ -611,12 +713,57 @@ const DataCategorySearch = ({
         );
     };
 
-    const removeOriginalDataType = (structureShortName) => {
+    const removeOriginalDataType = async (structureShortName) => {
+        // Update local state immediately
         setRemovedOriginalDataTypes((prev) => {
             const updated = { ...prev };
             updated[structureShortName] = true;
             return updated;
         });
+
+        // Save to backend using tags API
+        try {
+            const tagName = `REMOVED_DATATYPE:${structureShortName}`;
+
+            // Check if tag already exists
+            const tagsResponse = await fetch(`${apiBaseUrl}/tags`);
+            if (tagsResponse.ok) {
+                const allTags = await tagsResponse.json();
+                const existingTag = allTags.find(
+                    (tag) =>
+                        tag.name === tagName &&
+                        tag.tagType === "Removed Data Type"
+                );
+
+                if (!existingTag) {
+                    // Create the tag
+                    const createResponse = await fetch(`${apiBaseUrl}/tags`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            name: tagName,
+                            tagType: "Removed Data Type",
+                            description: `Removed data type from structure ${structureShortName}`,
+                        }),
+                    });
+
+                    if (createResponse.ok) {
+                        const newTag = await createResponse.json();
+                        // Assign tag to the structure
+                        await fetch(`${apiBaseUrl}/tags/assign`, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                tagId: newTag.id,
+                                dataStructureShortName: structureShortName,
+                            }),
+                        });
+                    }
+                }
+            }
+        } catch (err) {
+            console.error("Error saving removed data type to backend:", err);
+        }
     };
 
     const isDataTypeRemoved = (structureShortName) => {
@@ -1962,43 +2109,108 @@ const DataCategorySearch = ({
                                                                             .checked
                                                                     ) {
                                                                         // Restore category
-                                                                        setRemovedOriginalCategories(
-                                                                            (
-                                                                                prev
-                                                                            ) => {
-                                                                                const updated =
-                                                                                    {
-                                                                                        ...prev,
-                                                                                    };
-                                                                                if (
-                                                                                    updated[
-                                                                                        modalStructure
-                                                                                            .shortName
-                                                                                    ]
-                                                                                ) {
-                                                                                    updated[
-                                                                                        modalStructure
-                                                                                            .shortName
-                                                                                    ].delete(
-                                                                                        cat
-                                                                                    );
-                                                                                    if (
-                                                                                        updated[
-                                                                                            modalStructure
-                                                                                                .shortName
-                                                                                        ]
-                                                                                            .size ===
-                                                                                        0
-                                                                                    ) {
-                                                                                        delete updated[
-                                                                                            modalStructure
-                                                                                                .shortName
-                                                                                        ];
+                                                                        const restoreCategory =
+                                                                            async () => {
+                                                                                // Update local state
+                                                                                setRemovedOriginalCategories(
+                                                                                    (
+                                                                                        prev
+                                                                                    ) => {
+                                                                                        const updated =
+                                                                                            {
+                                                                                                ...prev,
+                                                                                            };
+                                                                                        if (
+                                                                                            updated[
+                                                                                                modalStructure
+                                                                                                    .shortName
+                                                                                            ]
+                                                                                        ) {
+                                                                                            updated[
+                                                                                                modalStructure
+                                                                                                    .shortName
+                                                                                            ].delete(
+                                                                                                cat
+                                                                                            );
+                                                                                            if (
+                                                                                                updated[
+                                                                                                    modalStructure
+                                                                                                        .shortName
+                                                                                                ]
+                                                                                                    .size ===
+                                                                                                0
+                                                                                            ) {
+                                                                                                delete updated[
+                                                                                                    modalStructure
+                                                                                                        .shortName
+                                                                                                ];
+                                                                                            }
+                                                                                        }
+                                                                                        return updated;
                                                                                     }
+                                                                                );
+
+                                                                                // Delete tag from backend
+                                                                                try {
+                                                                                    const tagName = `REMOVED_CATEGORY:${modalStructure.shortName}:${cat}`;
+                                                                                    const tagsResponse =
+                                                                                        await fetch(
+                                                                                            `${apiBaseUrl}/tags`
+                                                                                        );
+                                                                                    if (
+                                                                                        tagsResponse.ok
+                                                                                    ) {
+                                                                                        const allTags =
+                                                                                            await tagsResponse.json();
+                                                                                        const tagToDelete =
+                                                                                            allTags.find(
+                                                                                                (
+                                                                                                    tag
+                                                                                                ) =>
+                                                                                                    tag.name ===
+                                                                                                        tagName &&
+                                                                                                    tag.tagType ===
+                                                                                                        "Removed Category"
+                                                                                            );
+                                                                                        if (
+                                                                                            tagToDelete
+                                                                                        ) {
+                                                                                            // Remove tag from structure first
+                                                                                            await fetch(
+                                                                                                `${apiBaseUrl}/tags/remove`,
+                                                                                                {
+                                                                                                    method: "POST",
+                                                                                                    headers:
+                                                                                                        {
+                                                                                                            "Content-Type":
+                                                                                                                "application/json",
+                                                                                                        },
+                                                                                                    body: JSON.stringify(
+                                                                                                        {
+                                                                                                            tagId: tagToDelete.id,
+                                                                                                            dataStructureShortName:
+                                                                                                                modalStructure.shortName,
+                                                                                                        }
+                                                                                                    ),
+                                                                                                }
+                                                                                            );
+                                                                                            // Delete the tag
+                                                                                            await fetch(
+                                                                                                `${apiBaseUrl}/tags/${tagToDelete.id}`,
+                                                                                                {
+                                                                                                    method: "DELETE",
+                                                                                                }
+                                                                                            );
+                                                                                        }
+                                                                                    }
+                                                                                } catch (err) {
+                                                                                    console.error(
+                                                                                        "Error restoring category:",
+                                                                                        err
+                                                                                    );
                                                                                 }
-                                                                                return updated;
-                                                                            }
-                                                                        );
+                                                                            };
+                                                                        restoreCategory();
                                                                     } else {
                                                                         // Remove category
                                                                         removeOriginalCategory(
@@ -2505,18 +2717,84 @@ const DataCategorySearch = ({
                                             onChange={(e) => {
                                                 if (e.target.checked) {
                                                     // Restore data type
-                                                    setRemovedOriginalDataTypes(
-                                                        (prev) => {
-                                                            const updated = {
-                                                                ...prev,
-                                                            };
-                                                            delete updated[
-                                                                modalStructure
-                                                                    .shortName
-                                                            ];
-                                                            return updated;
-                                                        }
-                                                    );
+                                                    const restoreDataType =
+                                                        async () => {
+                                                            // Update local state
+                                                            setRemovedOriginalDataTypes(
+                                                                (prev) => {
+                                                                    const updated =
+                                                                        {
+                                                                            ...prev,
+                                                                        };
+                                                                    delete updated[
+                                                                        modalStructure
+                                                                            .shortName
+                                                                    ];
+                                                                    return updated;
+                                                                }
+                                                            );
+
+                                                            // Delete tag from backend
+                                                            try {
+                                                                const tagName = `REMOVED_DATATYPE:${modalStructure.shortName}`;
+                                                                const tagsResponse =
+                                                                    await fetch(
+                                                                        `${apiBaseUrl}/tags`
+                                                                    );
+                                                                if (
+                                                                    tagsResponse.ok
+                                                                ) {
+                                                                    const allTags =
+                                                                        await tagsResponse.json();
+                                                                    const tagToDelete =
+                                                                        allTags.find(
+                                                                            (
+                                                                                tag
+                                                                            ) =>
+                                                                                tag.name ===
+                                                                                    tagName &&
+                                                                                tag.tagType ===
+                                                                                    "Removed Data Type"
+                                                                        );
+                                                                    if (
+                                                                        tagToDelete
+                                                                    ) {
+                                                                        // Remove tag from structure first
+                                                                        await fetch(
+                                                                            `${apiBaseUrl}/tags/remove`,
+                                                                            {
+                                                                                method: "POST",
+                                                                                headers:
+                                                                                    {
+                                                                                        "Content-Type":
+                                                                                            "application/json",
+                                                                                    },
+                                                                                body: JSON.stringify(
+                                                                                    {
+                                                                                        tagId: tagToDelete.id,
+                                                                                        dataStructureShortName:
+                                                                                            modalStructure.shortName,
+                                                                                    }
+                                                                                ),
+                                                                            }
+                                                                        );
+                                                                        // Delete the tag
+                                                                        await fetch(
+                                                                            `${apiBaseUrl}/tags/${tagToDelete.id}`,
+                                                                            {
+                                                                                method: "DELETE",
+                                                                            }
+                                                                        );
+                                                                    }
+                                                                }
+                                                            } catch (err) {
+                                                                console.error(
+                                                                    "Error restoring data type:",
+                                                                    err
+                                                                );
+                                                            }
+                                                        };
+                                                    restoreDataType();
                                                 } else {
                                                     // Remove data type
                                                     removeOriginalDataType(
