@@ -892,7 +892,11 @@ const DataCategorySearch = ({
             if (!response.ok) throw new Error("Failed to fetch tags");
             const data = await response.json();
             const categoryTags = data.filter(
-                (tag) => !tag.tagType || tag.tagType !== "Data Type"
+                (tag) =>
+                    // Exclude data type tags and removed tags
+                    (!tag.tagType || tag.tagType !== "Data Type") &&
+                    tag.tagType !== "Removed Category" &&
+                    tag.tagType !== "Removed Data Type"
             );
             setAvailableTags(categoryTags);
         } catch (err) {
@@ -910,7 +914,11 @@ const DataCategorySearch = ({
             if (!response.ok) throw new Error("Failed to fetch data type tags");
             const data = await response.json();
             const dataTypeTags = data.filter(
-                (tag) => tag.tagType === "Data Type"
+                (tag) =>
+                    // Only include data type tags, exclude removed tags
+                    tag.tagType === "Data Type" &&
+                    tag.tagType !== "Removed Category" &&
+                    tag.tagType !== "Removed Data Type"
             );
             setAvailableDataTypeTags(dataTypeTags);
         } catch (err) {
