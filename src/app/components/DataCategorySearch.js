@@ -119,24 +119,38 @@ const DataCategorySearch = ({
 
     // Combine custom tags and existing NDA categories into one unified list
     // Create a unified list where NDA categories are represented as pseudo-tag objects
-    const combinedAvailableCategories = [
-        ...filteredAvailableTags.map((tag) => ({
+    // Use a Map to ensure uniqueness by name to prevent duplicates
+    const combinedMap = new Map();
+
+    // Add custom tags first
+    filteredAvailableTags.forEach((tag) => {
+        combinedMap.set(tag.id, {
             ...tag,
             isNdaCategory: false,
-        })),
-        ...filteredNdaCategories
-            .filter(
-                (category) =>
-                    // Only include NDA categories that aren't already in availableTags
-                    !availableTags.some((tag) => tag.name === category)
-            )
-            .map((category) => ({
-                id: `nda-category-${category}`, // Temporary ID for NDA categories
-                name: category,
-                isNdaCategory: true,
-                tagType: "Category",
-            })),
-    ];
+        });
+    });
+
+    // Add NDA categories that aren't already in availableTags (by name)
+    filteredNdaCategories
+        .filter(
+            (category) =>
+                // Only include NDA categories that aren't already in availableTags
+                !availableTags.some((tag) => tag.name === category)
+        )
+        .forEach((category) => {
+            const ndaId = `nda-category-${category}`;
+            // Only add if not already in map (by ID)
+            if (!combinedMap.has(ndaId)) {
+                combinedMap.set(ndaId, {
+                    id: ndaId,
+                    name: category,
+                    isNdaCategory: true,
+                    tagType: "Category",
+                });
+            }
+        });
+
+    const combinedAvailableCategories = Array.from(combinedMap.values());
 
     // Add this useEffect to fetch once
     useEffect(() => {
@@ -2517,21 +2531,24 @@ const DataCategorySearch = ({
                                             {combinedAvailableCategories.length >
                                             0 ? (
                                                 combinedAvailableCategories.map(
-                                                    (item) => {
+                                                    (item, index) => {
                                                         // Check if this is a custom tag (from availableTags) vs NDA category (pseudo-tag)
                                                         // Custom tags have a real ID from the API (UUID format), NDA categories have a temporary ID starting with "nda-category-"
-                                                        // Also check if it's in availableTags to be sure it's a custom tag
-                                                        const isFromAvailableTags =
-                                                            availableTags.some(
-                                                                (tag) =>
-                                                                    tag.id ===
-                                                                    item.id
+                                                        // A tag is custom ONLY if it's in availableTags AND NOT in availableCategories (NDA categories list)
+                                                        const isNdaCategoryName =
+                                                            availableCategories.has(
+                                                                item.name
                                                             );
-                                                        const isCustomTag =
-                                                            isFromAvailableTags ||
+                                                        // Check if item has a real UUID (not starting with "nda-category-")
+                                                        const hasRealId =
+                                                            item.id &&
                                                             !item.id.startsWith(
                                                                 "nda-category-"
                                                             );
+                                                        // Custom tag = has real ID AND NOT an NDA category name
+                                                        const isCustomTag =
+                                                            hasRealId &&
+                                                            !isNdaCategoryName;
                                                         const isNdaCategory =
                                                             !isCustomTag;
                                                         const isSelected =
@@ -2545,7 +2562,7 @@ const DataCategorySearch = ({
 
                                                         return (
                                                             <div
-                                                                key={item.id}
+                                                                key={`${item.id}-${index}`}
                                                                 className="inline-flex items-center group relative"
                                                             >
                                                                 {isCustomTag &&
