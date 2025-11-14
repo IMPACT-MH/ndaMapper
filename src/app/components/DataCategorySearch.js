@@ -195,17 +195,14 @@ const DataCategorySearch = ({
         fetchDataStructures();
     }, []);
 
-    // Save to localStorage when modified
-    localStorage.setItem(
-        "modifiedDataTypes",
-        JSON.stringify(modifiedDataTypes)
-    );
-
     // Load on mount
     useEffect(() => {
-        const saved = localStorage.getItem("modifiedDataTypes");
-        if (saved) {
-            setModifiedDataTypes(JSON.parse(saved));
+        // Only access localStorage on client side
+        if (typeof window !== "undefined") {
+            const saved = localStorage.getItem("modifiedDataTypes");
+            if (saved) {
+                setModifiedDataTypes(JSON.parse(saved));
+            }
         }
 
         // Load removed categories and data types from backend (tags API)
@@ -269,6 +266,42 @@ const DataCategorySearch = ({
     // Fetch all data structures on component mount
     useEffect(() => {
         fetchAllStructures();
+    }, []);
+
+    // Fetch all tags on component mount for sidebar filters
+    useEffect(() => {
+        const fetchAllTags = async () => {
+            try {
+                const response = await fetch(`${apiBaseUrl}/tags`);
+                if (!response.ok) return;
+                const data = await response.json();
+
+                // Set category tags
+                const categoryTags = data.filter(
+                    (tag) =>
+                        (!tag.tagType || tag.tagType !== "Data Type") &&
+                        tag.tagType !== "Removed Category" &&
+                        tag.tagType !== "Removed Data Type" &&
+                        !tag.name.startsWith("REMOVED_CATEGORY:") &&
+                        !tag.name.startsWith("REMOVED_DATATYPE:")
+                );
+                setAvailableTags(categoryTags);
+
+                // Set data type tags
+                const dataTypeTags = data.filter(
+                    (tag) =>
+                        tag.tagType === "Data Type" &&
+                        tag.tagType !== "Removed Category" &&
+                        tag.tagType !== "Removed Data Type" &&
+                        !tag.name.startsWith("REMOVED_CATEGORY:") &&
+                        !tag.name.startsWith("REMOVED_DATATYPE:")
+                );
+                setAvailableDataTypeTags(dataTypeTags);
+            } catch (err) {
+                console.error("Error fetching tags for sidebar:", err);
+            }
+        };
+        fetchAllTags();
     }, []);
 
     // Fetch structure tags in the background (non-blocking)
@@ -1052,12 +1085,9 @@ const DataCategorySearch = ({
             // Add to selected
             setSelectedDataTypeTags((prev) => new Set([...prev, newTag.id]));
 
-            // Add to available data types filter
-            setAvailableDataTypes((prev) => {
-                const updated = new Set(prev);
-                updated.add(newTag.name);
-                return updated;
-            });
+            // Note: Do NOT add custom tags to availableDataTypes
+            // availableDataTypes should only contain NDA data types from the API
+            // Custom tags are tracked separately in availableDataTypeTags
 
             // Clear input
             setNewDataTypeTagName("");
@@ -1103,15 +1133,9 @@ const DataCategorySearch = ({
                     prev.map((t) => (t.id === tagId ? updatedTag : t))
                 );
 
-                // Update available data types filter set
-                if (oldName) {
-                    setAvailableDataTypes((prev) => {
-                        const updated = new Set(prev);
-                        updated.delete(oldName);
-                        updated.add(updatedTag.name);
-                        return updated;
-                    });
-                }
+                // Note: Do NOT update availableDataTypes for custom tags
+                // availableDataTypes should only contain NDA data types from the API
+                // Custom tags are tracked separately in availableDataTypeTags
 
                 setEditingDataTypeTagId(null);
             } else {
@@ -1322,7 +1346,7 @@ const DataCategorySearch = ({
             <div className="mb-8">
                 <h1 className="text-3xl font-bold mb-4">Data Dictionary</h1>
                 <p className="text-gray-600 -mb-7">
-                    Browse all NDA data structures by category and data type
+                    Browse all NDA data structures by data type and category
                 </p>
 
                 {/* Database Filter Checkbox */}
@@ -1474,56 +1498,66 @@ const DataCategorySearch = ({
                                     Data Types
                                 </h4>
                                 <div className="space-y-2">
-                                    {Array.from(availableDataTypes)
-                                        .sort()
-                                        .map((dataType) => (
-                                            <label
-                                                key={dataType}
-                                                className="flex items-center"
-                                            >
-                                                <input
-                                                    type="checkbox"
-                                                    checked={selectedFilters.dataTypes.has(
-                                                        dataType
-                                                    )}
-                                                    onChange={() =>
-                                                        toggleFilter(
-                                                            "dataTypes",
+                                    {(() => {
+                                        // Combine NDA data types with custom data type tags
+                                        const combinedDataTypes = new Set(
+                                            availableDataTypes
+                                        );
+                                        availableDataTypeTags.forEach((tag) => {
+                                            combinedDataTypes.add(tag.name);
+                                        });
+                                        return Array.from(combinedDataTypes)
+                                            .sort()
+                                            .map((dataType) => (
+                                                <label
+                                                    key={dataType}
+                                                    className="flex items-center"
+                                                >
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={selectedFilters.dataTypes.has(
                                                             dataType
-                                                        )
-                                                    }
-                                                    className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-                                                />
-                                                <span className="ml-2 text-sm text-gray-700 flex items-center">
-                                                    {dataType}
-                                                    {isCustomTag(
-                                                        dataType,
-                                                        false
-                                                    ) && (
-                                                        <span className="ml-1 text-orange-500 text-xs">
-                                                            ★
-                                                        </span>
-                                                    )}
-                                                    {hasStructuresInDatabase(
-                                                        dataType
-                                                    ) && (
-                                                        <div className="relative ml-1 inline-block">
-                                                            <div className="group">
-                                                                <Database className="w-3 h-3 text-blue-500 cursor-help" />
-                                                                <div className="absolute bottom-full left-0 mb-1 px-2 py-1 text-xs text-white bg-gray-800 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-10 pointer-events-none">
-                                                                    This data
-                                                                    type has
-                                                                    structures
-                                                                    in the
-                                                                    IMPACT-MH
-                                                                    database
+                                                        )}
+                                                        onChange={() =>
+                                                            toggleFilter(
+                                                                "dataTypes",
+                                                                dataType
+                                                            )
+                                                        }
+                                                        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                                                    />
+                                                    <span className="ml-2 text-sm text-gray-700 flex items-center">
+                                                        {dataType}
+                                                        {isCustomTag(
+                                                            dataType,
+                                                            false
+                                                        ) && (
+                                                            <span className="ml-1 text-orange-500 text-xs">
+                                                                ★
+                                                            </span>
+                                                        )}
+                                                        {hasStructuresInDatabase(
+                                                            dataType
+                                                        ) && (
+                                                            <div className="relative ml-1 inline-block">
+                                                                <div className="group">
+                                                                    <Database className="w-3 h-3 text-blue-500 cursor-help" />
+                                                                    <div className="absolute bottom-full left-0 mb-1 px-2 py-1 text-xs text-white bg-gray-800 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-10 pointer-events-none">
+                                                                        This
+                                                                        data
+                                                                        type has
+                                                                        structures
+                                                                        in the
+                                                                        IMPACT-MH
+                                                                        database
+                                                                    </div>
                                                                 </div>
                                                             </div>
-                                                        </div>
-                                                    )}
-                                                </span>
-                                            </label>
-                                        ))}
+                                                        )}
+                                                    </span>
+                                                </label>
+                                            ));
+                                    })()}
                                 </div>
                             </div>
 
@@ -1536,56 +1570,66 @@ const DataCategorySearch = ({
                                     Categories
                                 </h4>
                                 <div className="space-y-2 max-h-48 overflow-y-auto">
-                                    {Array.from(availableCategories)
-                                        .sort()
-                                        .map((category) => (
-                                            <label
-                                                key={category}
-                                                className="flex items-center"
-                                            >
-                                                <input
-                                                    type="checkbox"
-                                                    checked={selectedFilters.categories.has(
-                                                        category
-                                                    )}
-                                                    onChange={() =>
-                                                        toggleFilter(
-                                                            "categories",
+                                    {(() => {
+                                        // Combine NDA categories with custom category tags
+                                        const combinedCategories = new Set(
+                                            availableCategories
+                                        );
+                                        availableTags.forEach((tag) => {
+                                            combinedCategories.add(tag.name);
+                                        });
+                                        return Array.from(combinedCategories)
+                                            .sort()
+                                            .map((category) => (
+                                                <label
+                                                    key={category}
+                                                    className="flex items-center"
+                                                >
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={selectedFilters.categories.has(
                                                             category
-                                                        )
-                                                    }
-                                                    className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-                                                />
-                                                <span className="ml-2 text-sm text-gray-700 flex items-center">
-                                                    {category}
-                                                    {isCustomTag(
-                                                        category,
-                                                        true
-                                                    ) && (
-                                                        <span className="ml-1 text-orange-500 text-xs">
-                                                            ★
-                                                        </span>
-                                                    )}
-                                                    {hasStructuresInDatabase(
-                                                        category
-                                                    ) && (
-                                                        <div className="relative ml-1 inline-block">
-                                                            <div className="group">
-                                                                <Database className="w-3 h-3 text-blue-500 cursor-help" />
-                                                                <div className="absolute bottom-full left-0 mb-1 px-2 py-1 text-xs text-white bg-gray-800 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-10 pointer-events-none">
-                                                                    This
-                                                                    category has
-                                                                    structures
-                                                                    in the
-                                                                    IMPACT-MH
-                                                                    database
+                                                        )}
+                                                        onChange={() =>
+                                                            toggleFilter(
+                                                                "categories",
+                                                                category
+                                                            )
+                                                        }
+                                                        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                                                    />
+                                                    <span className="ml-2 text-sm text-gray-700 flex items-center">
+                                                        {category}
+                                                        {isCustomTag(
+                                                            category,
+                                                            true
+                                                        ) && (
+                                                            <span className="ml-1 text-orange-500 text-xs">
+                                                                ★
+                                                            </span>
+                                                        )}
+                                                        {hasStructuresInDatabase(
+                                                            category
+                                                        ) && (
+                                                            <div className="relative ml-1 inline-block">
+                                                                <div className="group">
+                                                                    <Database className="w-3 h-3 text-blue-500 cursor-help" />
+                                                                    <div className="absolute bottom-full left-0 mb-1 px-2 py-1 text-xs text-white bg-gray-800 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-10 pointer-events-none">
+                                                                        This
+                                                                        category
+                                                                        has
+                                                                        structures
+                                                                        in the
+                                                                        IMPACT-MH
+                                                                        database
+                                                                    </div>
                                                                 </div>
                                                             </div>
-                                                        </div>
-                                                    )}
-                                                </span>
-                                            </label>
-                                        ))}
+                                                        )}
+                                                    </span>
+                                                </label>
+                                            ));
+                                    })()}
                                 </div>
                             </div>
                         </div>
@@ -2185,6 +2229,18 @@ const DataCategorySearch = ({
                                                                         otherVisibleOriginalCategories.length +
                                                                         selectedCustomTagCount +
                                                                         selectedNdaCategoryCount;
+
+                                                                    // Auto-select and disable if no alternatives are selected
+                                                                    if (
+                                                                        !isRemoved &&
+                                                                        selectedCustomTagCount ===
+                                                                            0 &&
+                                                                        selectedNdaCategoryCount ===
+                                                                            0
+                                                                    ) {
+                                                                        return true; // Disable and auto-select
+                                                                    }
+
                                                                     return (
                                                                         !isRemoved &&
                                                                         totalCategoriesAfterRemoval <
@@ -3267,6 +3323,20 @@ const DataCategorySearch = ({
                                                     structureDataTypeTags[
                                                         modalStructure.shortName
                                                     ] || [];
+
+                                                // Check if any custom data type tags are selected
+                                                const hasCustomDataTypeTags =
+                                                    selectedDataTypeTags.size >
+                                                    0;
+
+                                                // Auto-select and disable if no alternatives are selected
+                                                if (
+                                                    !hasCustomDataTypeTags &&
+                                                    !isDataTypeCurrentlyRemoved
+                                                ) {
+                                                    return true; // Disable and auto-select
+                                                }
+
                                                 const hasOriginalDataType =
                                                     modalStructure.dataType &&
                                                     !isDataTypeCurrentlyRemoved;
@@ -3558,28 +3628,27 @@ const DataCategorySearch = ({
                                         onChange={(e) =>
                                             setModalSearchTerm(e.target.value)
                                         }
-                                        placeholder="Search custom data types..."
+                                        placeholder="Search all data types..."
                                         className="w-full pl-10 pr-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
                                     />
                                 </div>
                             </div>
 
-                            {/* Available Data Type Tags */}
+                            {/* Combined Word Bank */}
                             {!tagLoading && (
                                 <div className="mb-4">
+                                    <p className="text-xs text-gray-500 mb-3">
+                                        <span className="text-orange-500">
+                                            ★
+                                        </span>{" "}
+                                        Custom tag
+                                    </p>
                                     <div className="bg-gray-50 rounded-lg p-3 max-h-64 overflow-y-auto">
                                         <div className="flex flex-wrap gap-2">
-                                            {availableDataTypeTags.filter(
-                                                (tag) =>
-                                                    !modalSearchTerm ||
-                                                    tag.name
-                                                        .toLowerCase()
-                                                        .includes(
-                                                            modalSearchTerm.toLowerCase()
-                                                        )
-                                            ).length > 0 ? (
-                                                availableDataTypeTags
-                                                    .filter(
+                                            {(() => {
+                                                // Filter available data type tags
+                                                const filteredAvailableDataTypeTags =
+                                                    availableDataTypeTags.filter(
                                                         (tag) =>
                                                             !modalSearchTerm ||
                                                             tag.name
@@ -3587,170 +3656,286 @@ const DataCategorySearch = ({
                                                                 .includes(
                                                                     modalSearchTerm.toLowerCase()
                                                                 )
+                                                    );
+
+                                                // Filter available NDA data types
+                                                const filteredNdaDataTypes =
+                                                    Array.from(
+                                                        availableDataTypes
+                                                    ).filter(
+                                                        (dataType) =>
+                                                            !modalSearchTerm ||
+                                                            dataType
+                                                                .toLowerCase()
+                                                                .includes(
+                                                                    modalSearchTerm.toLowerCase()
+                                                                )
+                                                    );
+
+                                                // Combine custom tags and existing NDA data types into one unified list
+                                                const combinedMap = new Map();
+
+                                                // Add custom tags first
+                                                filteredAvailableDataTypeTags.forEach(
+                                                    (tag) => {
+                                                        combinedMap.set(
+                                                            tag.id,
+                                                            {
+                                                                ...tag,
+                                                                isNdaDataType: false,
+                                                            }
+                                                        );
+                                                    }
+                                                );
+
+                                                // Add NDA data types that aren't already in availableDataTypeTags (by name)
+                                                filteredNdaDataTypes
+                                                    .filter(
+                                                        (dataType) =>
+                                                            !availableDataTypeTags.some(
+                                                                (tag) =>
+                                                                    tag.name ===
+                                                                    dataType
+                                                            )
                                                     )
-                                                    .map((tag) => (
-                                                        <div
-                                                            key={tag.id}
-                                                            className="inline-flex items-center group relative"
-                                                        >
-                                                            {editingDataTypeTagId ===
-                                                            tag.id ? (
-                                                                <input
-                                                                    type="text"
-                                                                    value={
-                                                                        editingDataTypeTagName
-                                                                    }
-                                                                    onChange={(
-                                                                        e
-                                                                    ) =>
-                                                                        setEditingDataTypeTagName(
-                                                                            e
-                                                                                .target
-                                                                                .value
-                                                                        )
-                                                                    }
-                                                                    onBlur={() => {
-                                                                        updateTag(
-                                                                            tag.id,
-                                                                            editingDataTypeTagName,
-                                                                            true
-                                                                        );
-                                                                    }}
-                                                                    onKeyDown={(
-                                                                        e
-                                                                    ) => {
-                                                                        if (
-                                                                            e.key ===
-                                                                            "Enter"
-                                                                        ) {
-                                                                            updateTag(
-                                                                                tag.id,
-                                                                                editingDataTypeTagName,
-                                                                                true
-                                                                            );
-                                                                        } else if (
-                                                                            e.key ===
-                                                                            "Escape"
-                                                                        ) {
-                                                                            setEditingDataTypeTagId(
-                                                                                null
-                                                                            );
-                                                                        }
-                                                                    }}
-                                                                    autoFocus
-                                                                    className="px-3 py-1.5 rounded-l-full text-sm border border-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-500"
-                                                                    onClick={(
-                                                                        e
-                                                                    ) =>
-                                                                        e.stopPropagation()
-                                                                    }
-                                                                />
-                                                            ) : (
-                                                                <>
-                                                                    <button
-                                                                        onClick={() => {
-                                                                            setSelectedDataTypeTags(
-                                                                                (
-                                                                                    prev
-                                                                                ) => {
-                                                                                    const newSet =
-                                                                                        new Set(
-                                                                                            prev
-                                                                                        );
+                                                    .forEach((dataType) => {
+                                                        const ndaId = `nda-datatype-${dataType}`;
+                                                        if (
+                                                            !combinedMap.has(
+                                                                ndaId
+                                                            )
+                                                        ) {
+                                                            combinedMap.set(
+                                                                ndaId,
+                                                                {
+                                                                    id: ndaId,
+                                                                    name: dataType,
+                                                                    isNdaDataType: true,
+                                                                    tagType:
+                                                                        "Data Type",
+                                                                }
+                                                            );
+                                                        }
+                                                    });
+
+                                                const combinedAvailableDataTypes =
+                                                    Array.from(
+                                                        combinedMap.values()
+                                                    );
+
+                                                return combinedAvailableDataTypes.length >
+                                                    0 ? (
+                                                    combinedAvailableDataTypes.map(
+                                                        (item, index) => {
+                                                            // Check if this is a custom tag
+                                                            const hasRealId =
+                                                                item.id &&
+                                                                !item.id.startsWith(
+                                                                    "nda-datatype-"
+                                                                );
+
+                                                            // Check if the name exists in NDA data types
+                                                            const isNdaDataTypeName =
+                                                                availableDataTypes.has(
+                                                                    item.name
+                                                                );
+
+                                                            // Custom tag = has real ID AND NOT an NDA data type name
+                                                            const isCustomTag =
+                                                                hasRealId &&
+                                                                !isNdaDataTypeName;
+                                                            const isNdaDataType =
+                                                                !isCustomTag;
+
+                                                            const isSelected =
+                                                                isNdaDataType
+                                                                    ? false // NDA data types can't be selected (they're just for display)
+                                                                    : selectedDataTypeTags.has(
+                                                                          item.id
+                                                                      );
+
+                                                            return (
+                                                                <div
+                                                                    key={`${item.id}-${index}`}
+                                                                    className="inline-flex items-center group relative"
+                                                                >
+                                                                    {isCustomTag &&
+                                                                    editingDataTypeTagId ===
+                                                                        item.id ? (
+                                                                        <input
+                                                                            type="text"
+                                                                            value={
+                                                                                editingDataTypeTagName
+                                                                            }
+                                                                            onChange={(
+                                                                                e
+                                                                            ) =>
+                                                                                setEditingDataTypeTagName(
+                                                                                    e
+                                                                                        .target
+                                                                                        .value
+                                                                                )
+                                                                            }
+                                                                            onBlur={() => {
+                                                                                updateTag(
+                                                                                    item.id,
+                                                                                    editingDataTypeTagName,
+                                                                                    true
+                                                                                );
+                                                                            }}
+                                                                            onKeyDown={(
+                                                                                e
+                                                                            ) => {
+                                                                                if (
+                                                                                    e.key ===
+                                                                                    "Enter"
+                                                                                ) {
+                                                                                    updateTag(
+                                                                                        item.id,
+                                                                                        editingDataTypeTagName,
+                                                                                        true
+                                                                                    );
+                                                                                } else if (
+                                                                                    e.key ===
+                                                                                    "Escape"
+                                                                                ) {
+                                                                                    setEditingDataTypeTagId(
+                                                                                        null
+                                                                                    );
+                                                                                }
+                                                                            }}
+                                                                            autoFocus
+                                                                            className="px-3 py-1.5 rounded-l-full text-sm border border-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                                                                            onClick={(
+                                                                                e
+                                                                            ) =>
+                                                                                e.stopPropagation()
+                                                                            }
+                                                                        />
+                                                                    ) : (
+                                                                        <>
+                                                                            <button
+                                                                                onClick={() => {
                                                                                     if (
-                                                                                        newSet.has(
-                                                                                            tag.id
-                                                                                        )
+                                                                                        !isNdaDataType
                                                                                     ) {
-                                                                                        newSet.delete(
-                                                                                            tag.id
-                                                                                        );
-                                                                                    } else {
-                                                                                        newSet.add(
-                                                                                            tag.id
+                                                                                        setSelectedDataTypeTags(
+                                                                                            (
+                                                                                                prev
+                                                                                            ) => {
+                                                                                                const newSet =
+                                                                                                    new Set(
+                                                                                                        prev
+                                                                                                    );
+                                                                                                if (
+                                                                                                    newSet.has(
+                                                                                                        item.id
+                                                                                                    )
+                                                                                                ) {
+                                                                                                    newSet.delete(
+                                                                                                        item.id
+                                                                                                    );
+                                                                                                } else {
+                                                                                                    newSet.add(
+                                                                                                        item.id
+                                                                                                    );
+                                                                                                }
+                                                                                                return newSet;
+                                                                                            }
                                                                                         );
                                                                                     }
-                                                                                    return newSet;
+                                                                                }}
+                                                                                disabled={
+                                                                                    isNdaDataType
                                                                                 }
-                                                                            );
-                                                                        }}
-                                                                        className={`inline-flex items-center px-3 py-1.5 rounded-l-full text-sm transition-all relative ${
-                                                                            selectedDataTypeTags.has(
-                                                                                tag.id
-                                                                            )
-                                                                                ? "bg-gray-100 text-gray-700 border-2 border-gray-400"
-                                                                                : "bg-gray-100 text-gray-700 border border-gray-300 hover:border-gray-400 hover:bg-gray-200"
-                                                                        }`}
-                                                                    >
-                                                                        {
-                                                                            tag.name
-                                                                        }
-                                                                        {tag.dataStructures && (
-                                                                            <span className="ml-2 text-xs opacity-70">
-                                                                                (
+                                                                                className={`inline-flex items-center px-3 py-1.5 ${
+                                                                                    isCustomTag
+                                                                                        ? "rounded-l-full"
+                                                                                        : "rounded-full"
+                                                                                } text-sm transition-all relative ${
+                                                                                    isSelected
+                                                                                        ? "bg-gray-100 text-gray-700 border-2 border-gray-400"
+                                                                                        : isNdaDataType
+                                                                                        ? "bg-gray-50 text-gray-500 border border-gray-200 cursor-not-allowed"
+                                                                                        : "bg-gray-100 text-gray-700 border border-gray-300 hover:border-gray-400 hover:bg-gray-200"
+                                                                                }`}
+                                                                            >
+                                                                                {isCustomTag && (
+                                                                                    <span className="mr-1 text-xs text-orange-500">
+                                                                                        ★
+                                                                                    </span>
+                                                                                )}
                                                                                 {
-                                                                                    tag
-                                                                                        .dataStructures
-                                                                                        .length
+                                                                                    item.name
                                                                                 }
+                                                                                {item.dataStructures && (
+                                                                                    <span className="ml-2 text-xs opacity-70">
+                                                                                        (
+                                                                                        {
+                                                                                            item
+                                                                                                .dataStructures
+                                                                                                .length
+                                                                                        }
 
-                                                                                )
-                                                                            </span>
-                                                                        )}
-                                                                    </button>
-                                                                </>
-                                                            )}
-                                                            <button
-                                                                onClick={(
-                                                                    e
-                                                                ) => {
-                                                                    e.stopPropagation();
-                                                                    setEditingDataTypeTagId(
-                                                                        tag.id
-                                                                    );
-                                                                    setEditingDataTypeTagName(
-                                                                        tag.name
-                                                                    );
-                                                                }}
-                                                                className={`px-2 py-1.5 text-sm transition-all border-l-0 inline-flex items-center justify-center ${
-                                                                    selectedDataTypeTags.has(
-                                                                        tag.id
-                                                                    )
-                                                                        ? "bg-gray-100 text-gray-700 border-2 border-gray-400 hover:bg-blue-50 hover:text-blue-600"
-                                                                        : "bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200 hover:text-gray-800 hover:border-gray-400"
-                                                                }`}
-                                                                title="Edit tag name"
-                                                            >
-                                                                <Pencil className="w-4 h-5" />
-                                                            </button>
-                                                            <button
-                                                                onClick={(
-                                                                    e
-                                                                ) => {
-                                                                    e.stopPropagation();
-                                                                    deleteTag(
-                                                                        tag.id
-                                                                    );
-                                                                }}
-                                                                className={`px-2 py-1.5 rounded-r-full text-sm transition-all border-l-0 inline-flex items-center justify-center ${
-                                                                    selectedDataTypeTags.has(
-                                                                        tag.id
-                                                                    )
-                                                                        ? "bg-gray-100 text-gray-700 border-2 border-gray-400 hover:bg-red-50 hover:text-red-600"
-                                                                        : "bg-gray-100 text-gray-700 border border-gray-300 hover:bg-red-50 hover:text-red-600 hover:border-red-400"
-                                                                }`}
-                                                                title="Delete tag permanently"
-                                                            >
-                                                                ×
-                                                            </button>
-                                                        </div>
-                                                    ))
-                                            ) : (
-                                                <p className="text-gray-500 text-sm">
-                                                    No custom data type tags
-                                                    found
-                                                </p>
-                                            )}
+                                                                                        )
+                                                                                    </span>
+                                                                                )}
+                                                                            </button>
+                                                                            {isCustomTag && (
+                                                                                <>
+                                                                                    <button
+                                                                                        onClick={(
+                                                                                            e
+                                                                                        ) => {
+                                                                                            e.stopPropagation();
+                                                                                            setEditingDataTypeTagId(
+                                                                                                item.id
+                                                                                            );
+                                                                                            setEditingDataTypeTagName(
+                                                                                                item.name
+                                                                                            );
+                                                                                        }}
+                                                                                        className={`px-2 py-1.5 text-sm transition-all border-l-0 inline-flex items-center justify-center ${
+                                                                                            isSelected
+                                                                                                ? "bg-gray-100 text-gray-700 border-2 border-gray-400 hover:bg-blue-50 hover:text-blue-600"
+                                                                                                : "bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200 hover:text-gray-800 hover:border-gray-400"
+                                                                                        }`}
+                                                                                        title="Edit tag name"
+                                                                                    >
+                                                                                        <Pencil className="w-4 h-5" />
+                                                                                    </button>
+                                                                                    <button
+                                                                                        onClick={(
+                                                                                            e
+                                                                                        ) => {
+                                                                                            e.stopPropagation();
+                                                                                            deleteTag(
+                                                                                                item.id
+                                                                                            );
+                                                                                        }}
+                                                                                        className={`px-2 py-1.5 rounded-r-full text-sm transition-all border-l-0 inline-flex items-center justify-center ${
+                                                                                            isSelected
+                                                                                                ? "bg-gray-100 text-gray-700 border-2 border-gray-400 hover:bg-red-50 hover:text-red-600"
+                                                                                                : "bg-gray-100 text-gray-700 border border-gray-300 hover:bg-red-50 hover:text-red-600 hover:border-red-400"
+                                                                                        }`}
+                                                                                        title="Delete tag permanently"
+                                                                                    >
+                                                                                        ×
+                                                                                    </button>
+                                                                                </>
+                                                                            )}
+                                                                        </>
+                                                                    )}
+                                                                </div>
+                                                            );
+                                                        }
+                                                    )
+                                                ) : (
+                                                    <p className="text-gray-500 text-sm">
+                                                        No data types found
+                                                    </p>
+                                                );
+                                            })()}
                                         </div>
                                     </div>
                                 </div>
@@ -3777,6 +3962,28 @@ const DataCategorySearch = ({
                                         const selectedTagIds =
                                             Array.from(selectedDataTypeTags);
 
+                                        // Validate that at least one data type will remain after save
+                                        const isDataTypeCurrentlyRemoved =
+                                            isDataTypeRemoved(
+                                                modalStructure.shortName
+                                            );
+                                        const visibleOriginalDataTypeAfterSave =
+                                            modalStructure.dataType &&
+                                            !isDataTypeCurrentlyRemoved
+                                                ? 1
+                                                : 0;
+                                        const totalDataTypesAfterSave =
+                                            visibleOriginalDataTypeAfterSave +
+                                            selectedTagIds.length;
+
+                                        if (totalDataTypesAfterSave < 1) {
+                                            setModalError(
+                                                "Cannot save: At least one data type must remain. Please add a data type before removing the last one."
+                                            );
+                                            setModalLoading(false);
+                                            return;
+                                        }
+
                                         const existingStructure =
                                             dataStructuresMap[
                                                 modalStructure.shortName
@@ -3788,59 +3995,8 @@ const DataCategorySearch = ({
                                             );
                                         }
 
-                                        // Get current data type tag IDs for this structure
-                                        // const currentDataTypeTags = (structureTags[modalStructure.shortName] || [])
-                                        //     .filter(t => t.tagType === 'Data Type');
-                                        // const currentTagIds = new Set(currentDataTypeTags.map(t => t.id));
-
-                                        const currentTagIds = new Set(
-                                            (
-                                                structureDataTypeTags[
-                                                    modalStructure.shortName
-                                                ] || []
-                                            ).map((t) => t.id)
-                                        );
-
-                                        // Find tags to add and remove
-                                        const toAdd = selectedTagIds.filter(
-                                            (id) => !currentTagIds.has(id)
-                                        );
-                                        const toRemove = Array.from(
-                                            currentTagIds
-                                        ).filter(
-                                            (id) => !selectedTagIds.includes(id)
-                                        );
-
-                                        // Process removals
-                                        for (const tagId of toRemove) {
-                                            const response = await fetch(
-                                                `${apiBaseUrl}/tags/remove`,
-                                                {
-                                                    method: "POST",
-                                                    headers: {
-                                                        "Content-Type":
-                                                            "application/json",
-                                                    },
-                                                    body: JSON.stringify({
-                                                        tagId: tagId,
-                                                        dataStructureShortName:
-                                                            modalStructure.shortName,
-                                                    }),
-                                                }
-                                            );
-
-                                            if (!response.ok) {
-                                                const errorData =
-                                                    await response.json();
-                                                throw new Error(
-                                                    errorData.error ||
-                                                        "Failed to remove tag"
-                                                );
-                                            }
-                                        }
-
-                                        // Process additions
-                                        for (const tagId of toAdd) {
+                                        // Assign tags to structure
+                                        for (const tagId of selectedTagIds) {
                                             const response = await fetch(
                                                 `${apiBaseUrl}/tags/assign`,
                                                 {
@@ -3850,44 +4006,56 @@ const DataCategorySearch = ({
                                                             "application/json",
                                                     },
                                                     body: JSON.stringify({
-                                                        tagId: tagId,
-                                                        dataStructureShortName:
-                                                            modalStructure.shortName,
+                                                        DataStructureID:
+                                                            existingStructure.dataStructureId ||
+                                                            existingStructure.id ||
+                                                            existingStructure.DataStructureID,
+                                                        TagID: tagId,
                                                     }),
                                                 }
                                             );
 
                                             if (!response.ok) {
-                                                const errorData =
-                                                    await response.json();
+                                                const errorData = await response
+                                                    .json()
+                                                    .catch(() => ({}));
                                                 throw new Error(
                                                     errorData.error ||
-                                                        "Failed to assign tag"
+                                                        `Failed to assign tag ${tagId}`
                                                 );
                                             }
                                         }
 
-                                        // Update local state - merge category and data type tags
-                                        // const categoryTags = (structureTags[modalStructure.shortName] || [])
-                                        //     .filter(t => t.tagType !== 'Data Type');
-                                        // const newDataTypeTags = availableDataTypeTags.filter(tag => selectedTagIds.includes(tag.id));
-                                        // const allTags = [...categoryTags, ...newDataTypeTags];
-
-                                        // handleTagsUpdate(modalStructure.shortName, allTags);
-                                        const newDataTypeTags =
-                                            availableDataTypeTags.filter(
-                                                (tag) =>
-                                                    selectedTagIds.includes(
-                                                        tag.id
-                                                    )
+                                        // Get all currently assigned tags for this structure
+                                        const allTagsResponse = await fetch(
+                                            `${apiBaseUrl}/tags`
+                                        );
+                                        if (!allTagsResponse.ok) {
+                                            throw new Error(
+                                                "Failed to fetch all tags"
                                             );
+                                        }
+                                        const allTags =
+                                            await allTagsResponse.json();
+
+                                        // Find tags assigned to this structure
+                                        const structureTagIds = new Set();
+                                        for (const tagId of selectedTagIds) {
+                                            structureTagIds.add(tagId);
+                                        }
+
+                                        // Get tag details for selected tags
+                                        const assignedTags = allTags.filter(
+                                            (tag) => structureTagIds.has(tag.id)
+                                        );
+
+                                        // Update structure tags state
                                         setStructureDataTypeTags((prev) => ({
                                             ...prev,
                                             [modalStructure.shortName]:
-                                                newDataTypeTags,
+                                                assignedTags,
                                         }));
 
-                                        // Mark as modified
                                         setModifiedDataTypes((prev) => ({
                                             ...prev,
                                             [modalStructure.shortName]: true,
