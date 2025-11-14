@@ -71,6 +71,11 @@ export async function POST(request) {
 
         if (!response.ok) {
             const errorText = await response.text();
+            console.error("Spinup API error:", {
+                status: response.status,
+                body: body,
+                errorText: errorText,
+            });
             return NextResponse.json(
                 {
                     error: `API returned ${response.status}`,

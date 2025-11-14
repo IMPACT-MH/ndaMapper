@@ -97,11 +97,53 @@ const DataCategorySearch = ({
     const [isLoadingStructures, setIsLoadingStructures] = useState(false);
     const [clinicalAssessments, setClinicalAssessments] = useState([]);
     const [selectedClinical, setSelectedClinical] = useState(new Set());
+
+    // NDA category search state
+    const [ndaCategorySearchTerm, setNdaCategorySearchTerm] = useState("");
+    const [selectedNdaCategories, setSelectedNdaCategories] = useState(
+        new Set()
+    );
+
     const filteredAvailableTags = availableTags.filter(
         (tag) =>
             !modalSearchTerm ||
             tag.name.toLowerCase().includes(modalSearchTerm.toLowerCase())
     );
+
+    // Filter available NDA categories based on search
+    const filteredNdaCategories = Array.from(availableCategories).filter(
+        (category) =>
+            !ndaCategorySearchTerm ||
+            category.toLowerCase().includes(ndaCategorySearchTerm.toLowerCase())
+    );
+
+    // Combine custom tags and existing NDA categories for the "Available Custom Category Tags" section
+    // Create a unified list where NDA categories are represented as pseudo-tag objects
+    const combinedAvailableCategories = [
+        ...filteredAvailableTags.map((tag) => ({
+            ...tag,
+            isNdaCategory: false,
+        })),
+        ...Array.from(availableCategories)
+            .filter(
+                (category) =>
+                    !modalSearchTerm ||
+                    category
+                        .toLowerCase()
+                        .includes(modalSearchTerm.toLowerCase())
+            )
+            .filter(
+                (category) =>
+                    // Only include NDA categories that aren't already in availableTags
+                    !availableTags.some((tag) => tag.name === category)
+            )
+            .map((category) => ({
+                id: `nda-category-${category}`, // Temporary ID for NDA categories
+                name: category,
+                isNdaCategory: true,
+                tagType: "Category",
+            })),
+    ];
 
     // Add this useEffect to fetch once
     useEffect(() => {
@@ -896,7 +938,9 @@ const DataCategorySearch = ({
                     // Exclude data type tags and removed tags
                     (!tag.tagType || tag.tagType !== "Data Type") &&
                     tag.tagType !== "Removed Category" &&
-                    tag.tagType !== "Removed Data Type"
+                    tag.tagType !== "Removed Data Type" &&
+                    !tag.name.startsWith("REMOVED_CATEGORY:") &&
+                    !tag.name.startsWith("REMOVED_DATATYPE:")
             );
             setAvailableTags(categoryTags);
         } catch (err) {
@@ -918,7 +962,9 @@ const DataCategorySearch = ({
                     // Only include data type tags, exclude removed tags
                     tag.tagType === "Data Type" &&
                     tag.tagType !== "Removed Category" &&
-                    tag.tagType !== "Removed Data Type"
+                    tag.tagType !== "Removed Data Type" &&
+                    !tag.name.startsWith("REMOVED_CATEGORY:") &&
+                    !tag.name.startsWith("REMOVED_DATATYPE:")
             );
             setAvailableDataTypeTags(dataTypeTags);
         } catch (err) {
@@ -1248,14 +1294,26 @@ const DataCategorySearch = ({
         setModalStructure(structure);
         setIsCategoriesModalOpen(true);
         setModalError(null);
+        setNdaCategorySearchTerm("");
         fetchTags();
         // Initialize with structure's existing tags if any
         if (structureTags[structure.shortName]) {
-            setSelectedSocialTags(
-                new Set(structureTags[structure.shortName].map((t) => t.id))
+            const existingTagIds = structureTags[structure.shortName].map(
+                (t) => t.id
             );
+            setSelectedSocialTags(new Set(existingTagIds));
+
+            // Initialize selected NDA categories based on existing tags that match NDA category names
+            const existingTagNames = structureTags[structure.shortName].map(
+                (t) => t.name
+            );
+            const matchingNdaCategories = Array.from(
+                availableCategories
+            ).filter((cat) => existingTagNames.includes(cat));
+            setSelectedNdaCategories(new Set(matchingNdaCategories));
         } else {
             setSelectedSocialTags(new Set());
+            setSelectedNdaCategories(new Set());
         }
     };
 
@@ -1729,30 +1787,33 @@ const DataCategorySearch = ({
                                                                                             {customCategoryTags.map(
                                                                                                 (
                                                                                                     tag
-                                                                                                ) => (
-                                                                                                    <span
-                                                                                                        key={
-                                                                                                            tag.id
-                                                                                                        }
-                                                                                                        onClick={(
-                                                                                                            e
-                                                                                                        ) => {
-                                                                                                            e.stopPropagation();
-                                                                                                            handleOpenCategoriesModal(
-                                                                                                                structure
-                                                                                                            );
-                                                                                                        }}
-                                                                                                        className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-blue-100 text-blue-700 hover:bg-blue-200"
-                                                                                                        title="Custom category tag (click to modify)"
-                                                                                                    >
-                                                                                                        {
+                                                                                                ) => {
+                                                                                                    const isNdaCategory =
+                                                                                                        availableCategories.has(
                                                                                                             tag.name
-                                                                                                        }
-                                                                                                        <span className="ml-1 text-xs text-orange-500">
-                                                                                                            ★
+                                                                                                        );
+                                                                                                    return (
+                                                                                                        <span
+                                                                                                            key={
+                                                                                                                tag.id
+                                                                                                            }
+                                                                                                            onClick={(
+                                                                                                                e
+                                                                                                            ) => {
+                                                                                                                e.stopPropagation();
+                                                                                                                handleOpenCategoriesModal(
+                                                                                                                    structure
+                                                                                                                );
+                                                                                                            }}
+                                                                                                            className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-blue-100 text-blue-700 hover:bg-blue-200"
+                                                                                                            title="Custom category tag (click to modify)"
+                                                                                                        >
+                                                                                                            {
+                                                                                                                tag.name
+                                                                                                            }
                                                                                                         </span>
-                                                                                                    </span>
-                                                                                                )
+                                                                                                    );
+                                                                                                }
                                                                                             )}
                                                                                         </>
                                                                                     );
@@ -1968,30 +2029,33 @@ const DataCategorySearch = ({
                                                                                             {customCategoryTags.map(
                                                                                                 (
                                                                                                     tag
-                                                                                                ) => (
-                                                                                                    <span
-                                                                                                        key={
-                                                                                                            tag.id
-                                                                                                        }
-                                                                                                        onClick={(
-                                                                                                            e
-                                                                                                        ) => {
-                                                                                                            e.stopPropagation();
-                                                                                                            handleOpenCategoriesModal(
-                                                                                                                structure
-                                                                                                            );
-                                                                                                        }}
-                                                                                                        className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-blue-100 text-blue-700 hover:bg-blue-200"
-                                                                                                        title="Custom category tag (click to modify)"
-                                                                                                    >
-                                                                                                        {
+                                                                                                ) => {
+                                                                                                    const isNdaCategory =
+                                                                                                        availableCategories.has(
                                                                                                             tag.name
-                                                                                                        }
-                                                                                                        <span className="ml-1 text-xs text-orange-500">
-                                                                                                            ★
+                                                                                                        );
+                                                                                                    return (
+                                                                                                        <span
+                                                                                                            key={
+                                                                                                                tag.id
+                                                                                                            }
+                                                                                                            onClick={(
+                                                                                                                e
+                                                                                                            ) => {
+                                                                                                                e.stopPropagation();
+                                                                                                                handleOpenCategoriesModal(
+                                                                                                                    structure
+                                                                                                                );
+                                                                                                            }}
+                                                                                                            className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-blue-100 text-blue-700 hover:bg-blue-200"
+                                                                                                            title="Custom category tag (click to modify)"
+                                                                                                        >
+                                                                                                            {
+                                                                                                                tag.name
+                                                                                                            }
                                                                                                         </span>
-                                                                                                    </span>
-                                                                                                )
+                                                                                                    );
+                                                                                                }
                                                                                             )}
                                                                                         </>
                                                                                     );
@@ -2115,9 +2179,42 @@ const DataCategorySearch = ({
                                                                 checked={
                                                                     !isRemoved
                                                                 }
+                                                                disabled={(() => {
+                                                                    // Check if removing this would leave at least one category
+                                                                    // Count: other visible original categories + selected custom tags + selected NDA categories
+                                                                    const otherVisibleOriginalCategories =
+                                                                        modalStructure.categories.filter(
+                                                                            (
+                                                                                c
+                                                                            ) =>
+                                                                                c !==
+                                                                                    cat &&
+                                                                                !isCategoryRemoved(
+                                                                                    modalStructure.shortName,
+                                                                                    c
+                                                                                )
+                                                                        );
+                                                                    const selectedCustomTagCount =
+                                                                        selectedSocialTags.size;
+                                                                    const selectedNdaCategoryCount =
+                                                                        selectedNdaCategories.size;
+                                                                    const totalCategoriesAfterRemoval =
+                                                                        otherVisibleOriginalCategories.length +
+                                                                        selectedCustomTagCount +
+                                                                        selectedNdaCategoryCount;
+                                                                    return (
+                                                                        !isRemoved &&
+                                                                        totalCategoriesAfterRemoval <
+                                                                            1
+                                                                    );
+                                                                })()}
                                                                 onChange={(
                                                                     e
                                                                 ) => {
+                                                                    // Clear any previous errors
+                                                                    setModalError(
+                                                                        null
+                                                                    );
                                                                     if (
                                                                         e.target
                                                                             .checked
@@ -2226,6 +2323,41 @@ const DataCategorySearch = ({
                                                                             };
                                                                         restoreCategory();
                                                                     } else {
+                                                                        // Check if removing this would leave at least one category
+                                                                        // Count: other visible original categories + selected custom tags + selected NDA categories
+                                                                        const otherVisibleOriginalCategories =
+                                                                            modalStructure.categories.filter(
+                                                                                (
+                                                                                    c
+                                                                                ) =>
+                                                                                    c !==
+                                                                                        cat &&
+                                                                                    !isCategoryRemoved(
+                                                                                        modalStructure.shortName,
+                                                                                        c
+                                                                                    )
+                                                                            );
+                                                                        const selectedCustomTagCount =
+                                                                            selectedSocialTags.size;
+                                                                        const selectedNdaCategoryCount =
+                                                                            selectedNdaCategories.size;
+                                                                        const totalCategoriesAfterRemoval =
+                                                                            otherVisibleOriginalCategories.length +
+                                                                            selectedCustomTagCount +
+                                                                            selectedNdaCategoryCount;
+
+                                                                        if (
+                                                                            totalCategoriesAfterRemoval <
+                                                                            1
+                                                                        ) {
+                                                                            setModalError(
+                                                                                "Cannot remove the last category. At least one category must remain. Please add a new category first."
+                                                                            );
+                                                                            // Reset checkbox
+                                                                            e.target.checked = true;
+                                                                            return;
+                                                                        }
+
                                                                         // Remove category
                                                                         removeOriginalCategory(
                                                                             modalStructure.shortName,
@@ -2247,23 +2379,38 @@ const DataCategorySearch = ({
                                 )}
 
                             {/* Selected Tags Preview */}
-                            {selectedSocialTags.size > 0 && (
+                            {(selectedSocialTags.size > 0 ||
+                                selectedNdaCategories.size > 0) && (
                                 <div className="mb-4 p-3 bg-blue-50 rounded-lg">
                                     <h3 className="text-sm font-semibold text-blue-700 mb-2">
-                                        Selected Custom Categories (
-                                        {selectedSocialTags.size})
+                                        Selected Categories (
+                                        {selectedSocialTags.size +
+                                            selectedNdaCategories.size}
+                                        )
                                     </h3>
                                     <div className="flex flex-wrap gap-2">
+                                        {/* Show selected custom tags */}
                                         {Array.from(selectedSocialTags).map(
                                             (tagId) => {
                                                 const tag = availableTags.find(
                                                     (t) => t.id === tagId
                                                 );
+                                                // Show star if this is a custom tag (NOT an existing NDA category)
+                                                const isCustomTag =
+                                                    tag &&
+                                                    !availableCategories.has(
+                                                        tag.name
+                                                    );
                                                 return tag ? (
                                                     <div
                                                         key={tag.id}
                                                         className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
                                                     >
+                                                        {isCustomTag && (
+                                                            <span className="text-orange-500">
+                                                                ★
+                                                            </span>
+                                                        )}
                                                         <span>{tag.name}</span>
                                                         <button
                                                             onClick={(e) => {
@@ -2290,9 +2437,117 @@ const DataCategorySearch = ({
                                                 ) : null;
                                             }
                                         )}
+                                        {/* Show selected NDA categories */}
+                                        {Array.from(selectedNdaCategories).map(
+                                            (categoryName) => (
+                                                <div
+                                                    key={`nda-${categoryName}`}
+                                                    className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
+                                                >
+                                                    <span>{categoryName}</span>
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setSelectedNdaCategories(
+                                                                (prev) => {
+                                                                    const newSet =
+                                                                        new Set(
+                                                                            prev
+                                                                        );
+                                                                    newSet.delete(
+                                                                        categoryName
+                                                                    );
+                                                                    return newSet;
+                                                                }
+                                                            );
+                                                        }}
+                                                        className="ml-1 hover:bg-blue-200 rounded-full w-4 h-4 flex items-center justify-center text-blue-600 hover:text-blue-800 font-bold"
+                                                        title="Remove from selection"
+                                                    >
+                                                        ×
+                                                    </button>
+                                                </div>
+                                            )
+                                        )}
                                     </div>
                                 </div>
                             )}
+
+                            {/* NDA Categories Section */}
+                            <div className="mb-4">
+                                <h3 className="text-sm font-semibold text-gray-700 mb-2">
+                                    NDA Categories
+                                </h3>
+                                <p className="text-xs text-gray-500 mb-3">
+                                    Search and add existing NDA categories
+                                </p>
+                                <div className="mb-4">
+                                    <div className="relative">
+                                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                                        <input
+                                            type="text"
+                                            value={ndaCategorySearchTerm}
+                                            onChange={(e) =>
+                                                setNdaCategorySearchTerm(
+                                                    e.target.value
+                                                )
+                                            }
+                                            placeholder="Search NDA categories..."
+                                            className="w-full pl-10 pr-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="bg-gray-50 rounded-lg p-3 max-h-64 overflow-y-auto">
+                                    <div className="flex flex-wrap gap-2">
+                                        {filteredNdaCategories.length > 0 ? (
+                                            filteredNdaCategories.map(
+                                                (category) => (
+                                                    <button
+                                                        key={category}
+                                                        onClick={() => {
+                                                            setSelectedNdaCategories(
+                                                                (prev) => {
+                                                                    const newSet =
+                                                                        new Set(
+                                                                            prev
+                                                                        );
+                                                                    if (
+                                                                        newSet.has(
+                                                                            category
+                                                                        )
+                                                                    ) {
+                                                                        newSet.delete(
+                                                                            category
+                                                                        );
+                                                                    } else {
+                                                                        newSet.add(
+                                                                            category
+                                                                        );
+                                                                    }
+                                                                    return newSet;
+                                                                }
+                                                            );
+                                                        }}
+                                                        className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
+                                                            selectedNdaCategories.has(
+                                                                category
+                                                            )
+                                                                ? "bg-blue-100 text-blue-700 border-blue-300 hover:bg-blue-200"
+                                                                : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
+                                                        }`}
+                                                    >
+                                                        {category}
+                                                    </button>
+                                                )
+                                            )
+                                        ) : (
+                                            <p className="text-sm text-gray-500">
+                                                No NDA categories found
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
 
                             {/* Available Tags */}
                             {!tagLoading && (
@@ -2311,178 +2566,235 @@ const DataCategorySearch = ({
                                                         e.target.value
                                                     )
                                                 }
-                                                placeholder="Search custom categories..."
+                                                placeholder="Search categories..."
                                                 className="w-full pl-10 pr-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
                                             />
                                         </div>
                                     </div>
                                     <div className="bg-gray-50 rounded-lg p-3 max-h-64 overflow-y-auto">
                                         <div className="flex flex-wrap gap-2">
-                                            {filteredAvailableTags.length >
+                                            {combinedAvailableCategories.length >
                                             0 ? (
-                                                filteredAvailableTags.map(
-                                                    (tag) => (
-                                                        <div
-                                                            key={tag.id}
-                                                            className="inline-flex items-center group relative"
-                                                        >
-                                                            {editingCategoryTagId ===
-                                                            tag.id ? (
-                                                                <input
-                                                                    type="text"
-                                                                    value={
-                                                                        editingCategoryTagName
-                                                                    }
-                                                                    onChange={(
-                                                                        e
-                                                                    ) =>
-                                                                        setEditingCategoryTagName(
+                                                combinedAvailableCategories.map(
+                                                    (item) => {
+                                                        // Check if this is an NDA category by checking if the name exists in availableCategories
+                                                        const isNdaCategory =
+                                                            availableCategories.has(
+                                                                item.name
+                                                            );
+                                                        const isCustomTag =
+                                                            !isNdaCategory;
+                                                        const isSelected =
+                                                            isNdaCategory
+                                                                ? selectedNdaCategories.has(
+                                                                      item.name
+                                                                  )
+                                                                : selectedSocialTags.has(
+                                                                      item.id
+                                                                  );
+
+                                                        return (
+                                                            <div
+                                                                key={item.id}
+                                                                className="inline-flex items-center group relative"
+                                                            >
+                                                                {isCustomTag &&
+                                                                editingCategoryTagId ===
+                                                                    item.id ? (
+                                                                    <input
+                                                                        type="text"
+                                                                        value={
+                                                                            editingCategoryTagName
+                                                                        }
+                                                                        onChange={(
                                                                             e
-                                                                                .target
-                                                                                .value
-                                                                        )
-                                                                    }
-                                                                    onBlur={() => {
-                                                                        updateTag(
-                                                                            tag.id,
-                                                                            editingCategoryTagName,
-                                                                            false
-                                                                        );
-                                                                    }}
-                                                                    onKeyDown={(
-                                                                        e
-                                                                    ) => {
-                                                                        if (
-                                                                            e.key ===
-                                                                            "Enter"
-                                                                        ) {
+                                                                        ) =>
+                                                                            setEditingCategoryTagName(
+                                                                                e
+                                                                                    .target
+                                                                                    .value
+                                                                            )
+                                                                        }
+                                                                        onBlur={() => {
                                                                             updateTag(
-                                                                                tag.id,
+                                                                                item.id,
                                                                                 editingCategoryTagName,
                                                                                 false
                                                                             );
-                                                                        } else if (
-                                                                            e.key ===
-                                                                            "Escape"
-                                                                        ) {
-                                                                            setEditingCategoryTagId(
-                                                                                null
-                                                                            );
-                                                                        }
-                                                                    }}
-                                                                    autoFocus
-                                                                    className="px-3 py-1.5 rounded-l-full text-sm border border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                                    onClick={(
-                                                                        e
-                                                                    ) =>
-                                                                        e.stopPropagation()
-                                                                    }
-                                                                />
-                                                            ) : (
-                                                                <>
-                                                                    <button
-                                                                        onClick={() => {
-                                                                            setSelectedSocialTags(
-                                                                                (
-                                                                                    prev
-                                                                                ) => {
-                                                                                    const newSet =
-                                                                                        new Set(
-                                                                                            prev
-                                                                                        );
-                                                                                    if (
-                                                                                        newSet.has(
-                                                                                            tag.id
-                                                                                        )
-                                                                                    ) {
-                                                                                        newSet.delete(
-                                                                                            tag.id
-                                                                                        );
-                                                                                    } else {
-                                                                                        newSet.add(
-                                                                                            tag.id
-                                                                                        );
-                                                                                    }
-                                                                                    return newSet;
-                                                                                }
-                                                                            );
                                                                         }}
-                                                                        className={`inline-flex items-center px-3 py-1.5 rounded-l-full text-sm transition-all relative ${
-                                                                            selectedSocialTags.has(
-                                                                                tag.id
-                                                                            )
-                                                                                ? "bg-blue-500 text-white"
-                                                                                : "bg-white text-gray-700 border border-gray-300 hover:border-blue-400 hover:bg-blue-50"
-                                                                        }`}
-                                                                    >
-                                                                        {
-                                                                            tag.name
+                                                                        onKeyDown={(
+                                                                            e
+                                                                        ) => {
+                                                                            if (
+                                                                                e.key ===
+                                                                                "Enter"
+                                                                            ) {
+                                                                                updateTag(
+                                                                                    item.id,
+                                                                                    editingCategoryTagName,
+                                                                                    false
+                                                                                );
+                                                                            } else if (
+                                                                                e.key ===
+                                                                                "Escape"
+                                                                            ) {
+                                                                                setEditingCategoryTagId(
+                                                                                    null
+                                                                                );
+                                                                            }
+                                                                        }}
+                                                                        autoFocus
+                                                                        className="px-3 py-1.5 rounded-l-full text-sm border border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                                        onClick={(
+                                                                            e
+                                                                        ) =>
+                                                                            e.stopPropagation()
                                                                         }
-                                                                        {tag.dataStructures && (
-                                                                            <span className="ml-2 text-xs opacity-70">
-                                                                                (
-                                                                                {
-                                                                                    tag
-                                                                                        .dataStructures
-                                                                                        .length
+                                                                    />
+                                                                ) : (
+                                                                    <>
+                                                                        <button
+                                                                            onClick={(
+                                                                                e
+                                                                            ) => {
+                                                                                e.stopPropagation();
+                                                                                if (
+                                                                                    isNdaCategory
+                                                                                ) {
+                                                                                    setSelectedNdaCategories(
+                                                                                        (
+                                                                                            prev
+                                                                                        ) => {
+                                                                                            const newSet =
+                                                                                                new Set(
+                                                                                                    prev
+                                                                                                );
+                                                                                            if (
+                                                                                                newSet.has(
+                                                                                                    item.name
+                                                                                                )
+                                                                                            ) {
+                                                                                                newSet.delete(
+                                                                                                    item.name
+                                                                                                );
+                                                                                            } else {
+                                                                                                newSet.add(
+                                                                                                    item.name
+                                                                                                );
+                                                                                            }
+                                                                                            return newSet;
+                                                                                        }
+                                                                                    );
+                                                                                } else {
+                                                                                    setSelectedSocialTags(
+                                                                                        (
+                                                                                            prev
+                                                                                        ) => {
+                                                                                            const newSet =
+                                                                                                new Set(
+                                                                                                    prev
+                                                                                                );
+                                                                                            if (
+                                                                                                newSet.has(
+                                                                                                    item.id
+                                                                                                )
+                                                                                            ) {
+                                                                                                newSet.delete(
+                                                                                                    item.id
+                                                                                                );
+                                                                                            } else {
+                                                                                                newSet.add(
+                                                                                                    item.id
+                                                                                                );
+                                                                                            }
+                                                                                            return newSet;
+                                                                                        }
+                                                                                    );
                                                                                 }
+                                                                            }}
+                                                                            className={`inline-flex items-center px-3 py-1.5 ${
+                                                                                isCustomTag
+                                                                                    ? "rounded-l-full"
+                                                                                    : "rounded-full"
+                                                                            } text-sm transition-all relative ${
+                                                                                isSelected
+                                                                                    ? "bg-blue-500 text-white"
+                                                                                    : "bg-white text-gray-700 border border-gray-300 hover:border-blue-400 hover:bg-blue-50"
+                                                                            }`}
+                                                                        >
+                                                                            {isCustomTag && (
+                                                                                <span className="mr-1 text-xs text-orange-500">
+                                                                                    ★
+                                                                                </span>
+                                                                            )}
+                                                                            {
+                                                                                item.name
+                                                                            }
+                                                                            {item.dataStructures && (
+                                                                                <span className="ml-2 text-xs opacity-70">
+                                                                                    (
+                                                                                    {
+                                                                                        item
+                                                                                            .dataStructures
+                                                                                            .length
+                                                                                    }
 
-                                                                                )
-                                                                            </span>
+                                                                                    )
+                                                                                </span>
+                                                                            )}
+                                                                        </button>
+                                                                        {isCustomTag && (
+                                                                            <>
+                                                                                <button
+                                                                                    onClick={(
+                                                                                        e
+                                                                                    ) => {
+                                                                                        e.stopPropagation();
+                                                                                        setEditingCategoryTagId(
+                                                                                            item.id
+                                                                                        );
+                                                                                        setEditingCategoryTagName(
+                                                                                            item.name
+                                                                                        );
+                                                                                    }}
+                                                                                    className={`px-2 py-1.5 text-sm transition-all border-l-0 inline-flex items-center justify-center ${
+                                                                                        isSelected
+                                                                                            ? "bg-blue-500 text-white hover:bg-blue-600"
+                                                                                            : "bg-white text-gray-700 border border-gray-300 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-400"
+                                                                                    }`}
+                                                                                    title="Edit tag name"
+                                                                                >
+                                                                                    <Pencil className="w-4 h-5" />
+                                                                                </button>
+                                                                                <button
+                                                                                    onClick={(
+                                                                                        e
+                                                                                    ) => {
+                                                                                        e.stopPropagation();
+                                                                                        deleteTag(
+                                                                                            item.id
+                                                                                        );
+                                                                                    }}
+                                                                                    className={`px-2 py-1.5 rounded-r-full text-sm transition-all border-l-0 inline-flex items-center justify-center ${
+                                                                                        isSelected
+                                                                                            ? "bg-blue-500 text-white hover:bg-red-600"
+                                                                                            : "bg-white text-gray-700 border border-gray-300 hover:bg-red-50 hover:text-red-600 hover:border-red-400"
+                                                                                    }`}
+                                                                                    title="Delete tag permanently"
+                                                                                >
+                                                                                    ×
+                                                                                </button>
+                                                                            </>
                                                                         )}
-                                                                    </button>
-                                                                </>
-                                                            )}
-                                                            <button
-                                                                onClick={(
-                                                                    e
-                                                                ) => {
-                                                                    e.stopPropagation();
-                                                                    setEditingCategoryTagId(
-                                                                        tag.id
-                                                                    );
-                                                                    setEditingCategoryTagName(
-                                                                        tag.name
-                                                                    );
-                                                                }}
-                                                                className={`px-2 py-1.5 text-sm transition-all border-l-0 inline-flex items-center justify-center ${
-                                                                    selectedSocialTags.has(
-                                                                        tag.id
-                                                                    )
-                                                                        ? "bg-blue-500 text-white hover:bg-blue-600"
-                                                                        : "bg-white text-gray-700 border border-gray-300 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-400"
-                                                                }`}
-                                                                title="Edit tag name"
-                                                            >
-                                                                <Pencil className="w-4 h-5" />
-                                                            </button>
-                                                            <button
-                                                                onClick={(
-                                                                    e
-                                                                ) => {
-                                                                    e.stopPropagation();
-                                                                    deleteTag(
-                                                                        tag.id
-                                                                    );
-                                                                }}
-                                                                className={`px-2 py-1.5 rounded-r-full text-sm transition-all border-l-0 inline-flex items-center justify-center ${
-                                                                    selectedSocialTags.has(
-                                                                        tag.id
-                                                                    )
-                                                                        ? "bg-blue-500 text-white hover:bg-red-600"
-                                                                        : "bg-white text-gray-700 border border-gray-300 hover:bg-red-50 hover:text-red-600 hover:border-red-400"
-                                                                }`}
-                                                                title="Delete tag permanently"
-                                                            >
-                                                                ×
-                                                            </button>
-                                                        </div>
-                                                    )
+                                                                    </>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    }
                                                 )
                                             ) : (
                                                 <p className="text-gray-500 text-sm">
-                                                    No custom category tags
-                                                    found
+                                                    No category tags found
                                                 </p>
                                             )}
                                         </div>
@@ -2532,8 +2844,10 @@ const DataCategorySearch = ({
                                 onClick={() => {
                                     setIsCategoriesModalOpen(false);
                                     setSelectedSocialTags(new Set());
+                                    setSelectedNdaCategories(new Set());
                                     setNewTagName("");
                                     setModalSearchTerm("");
+                                    setNdaCategorySearchTerm("");
                                 }}
                                 className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
                             >
@@ -2543,8 +2857,134 @@ const DataCategorySearch = ({
                                 onClick={async () => {
                                     try {
                                         setModalLoading(true);
-                                        const selectedTagIds =
-                                            Array.from(selectedSocialTags);
+
+                                        // Process selected NDA categories - create tags if they don't exist
+                                        const ndaCategoryTagIds = [];
+
+                                        // Fetch all tags to check for existing ones
+                                        const allTagsResponse = await fetch(
+                                            `${apiBaseUrl}/tags`
+                                        );
+                                        let allTags = [];
+                                        if (allTagsResponse.ok) {
+                                            allTags =
+                                                await allTagsResponse.json();
+                                        }
+
+                                        for (const categoryName of selectedNdaCategories) {
+                                            // Check if tag already exists (check all tags, not just availableTags)
+                                            let existingTag = allTags.find(
+                                                (tag) =>
+                                                    tag.name === categoryName &&
+                                                    (tag.tagType ===
+                                                        "Category" ||
+                                                        !tag.tagType ||
+                                                        tag.tagType === "")
+                                            );
+
+                                            if (!existingTag) {
+                                                // Create tag for this NDA category
+                                                const createResponse =
+                                                    await fetch(
+                                                        `${apiBaseUrl}/tags`,
+                                                        {
+                                                            method: "POST",
+                                                            headers: {
+                                                                "Content-Type":
+                                                                    "application/json",
+                                                            },
+                                                            body: JSON.stringify(
+                                                                {
+                                                                    name: categoryName,
+                                                                    tagType:
+                                                                        "Category",
+                                                                }
+                                                            ),
+                                                        }
+                                                    );
+
+                                                if (createResponse.ok) {
+                                                    existingTag =
+                                                        await createResponse.json();
+                                                    // Add to available tags and refresh
+                                                    setAvailableTags((prev) => [
+                                                        ...prev,
+                                                        existingTag,
+                                                    ]);
+                                                    allTags.push(existingTag);
+                                                } else {
+                                                    const errorText =
+                                                        await createResponse
+                                                            .text()
+                                                            .catch(
+                                                                () =>
+                                                                    "Unknown error"
+                                                            );
+                                                    console.error(
+                                                        `Failed to create tag for category ${categoryName}:`,
+                                                        errorText
+                                                    );
+                                                    throw new Error(
+                                                        `Failed to create tag for category "${categoryName}": ${errorText}`
+                                                    );
+                                                }
+                                            } else {
+                                                // Tag exists, make sure it's in availableTags
+                                                if (
+                                                    !availableTags.find(
+                                                        (t) =>
+                                                            t.id ===
+                                                            existingTag.id
+                                                    )
+                                                ) {
+                                                    setAvailableTags((prev) => [
+                                                        ...prev,
+                                                        existingTag,
+                                                    ]);
+                                                }
+                                            }
+
+                                            if (existingTag && existingTag.id) {
+                                                ndaCategoryTagIds.push(
+                                                    existingTag.id
+                                                );
+                                            } else {
+                                                console.error(
+                                                    "Tag created but missing ID:",
+                                                    existingTag
+                                                );
+                                                throw new Error(
+                                                    `Tag for category "${categoryName}" was created but is missing an ID`
+                                                );
+                                            }
+                                        }
+
+                                        // Combine custom tag IDs with NDA category tag IDs
+                                        const selectedTagIds = [
+                                            ...Array.from(selectedSocialTags),
+                                            ...ndaCategoryTagIds,
+                                        ];
+
+                                        // Validate that at least one category will remain after save
+                                        const visibleOriginalCategoriesAfterSave =
+                                            modalStructure.categories.filter(
+                                                (c) =>
+                                                    !isCategoryRemoved(
+                                                        modalStructure.shortName,
+                                                        c
+                                                    )
+                                            );
+                                        const totalCategoriesAfterSave =
+                                            visibleOriginalCategoriesAfterSave.length +
+                                            selectedTagIds.length;
+
+                                        if (totalCategoriesAfterSave < 1) {
+                                            setModalError(
+                                                "Cannot save: At least one category must remain. Please add a category before removing the last one."
+                                            );
+                                            setModalLoading(false);
+                                            return;
+                                        }
 
                                         const existingStructure =
                                             dataStructuresMap[
@@ -2576,6 +3016,18 @@ const DataCategorySearch = ({
                                             (id) => !selectedTagIds.includes(id)
                                         );
 
+                                        // Get the data structure ID from the existing structure
+                                        const dataStructureId =
+                                            existingStructure.dataStructureId ||
+                                            existingStructure.id ||
+                                            existingStructure.DataStructureID;
+
+                                        if (!dataStructureId) {
+                                            throw new Error(
+                                                `Data structure "${modalStructure.shortName}" is missing a dataStructureId`
+                                            );
+                                        }
+
                                         // Process removals
                                         for (const tagId of toRemove) {
                                             const response = await fetch(
@@ -2588,8 +3040,8 @@ const DataCategorySearch = ({
                                                     },
                                                     body: JSON.stringify({
                                                         tagId: tagId,
-                                                        dataStructureId:
-                                                            existingStructure.dataStructureId,
+                                                        DataStructureID:
+                                                            dataStructureId,
                                                     }),
                                                 }
                                             );
@@ -2606,6 +3058,41 @@ const DataCategorySearch = ({
 
                                         // Process additions
                                         for (const tagId of toAdd) {
+                                            if (!tagId) {
+                                                console.warn(
+                                                    "Skipping invalid tagId:",
+                                                    tagId
+                                                );
+                                                continue;
+                                            }
+
+                                            // Get the data structure ID from the existing structure
+                                            const dataStructureId =
+                                                existingStructure.dataStructureId ||
+                                                existingStructure.id ||
+                                                existingStructure.DataStructureID;
+
+                                            if (!dataStructureId) {
+                                                console.error(
+                                                    "Structure missing ID:",
+                                                    existingStructure
+                                                );
+                                                throw new Error(
+                                                    `Data structure "${modalStructure.shortName}" is missing a dataStructureId`
+                                                );
+                                            }
+
+                                            const requestBody = {
+                                                tagId: tagId,
+                                                DataStructureID:
+                                                    dataStructureId,
+                                            };
+
+                                            console.log(
+                                                "Assigning tag:",
+                                                requestBody
+                                            );
+
                                             const response = await fetch(
                                                 `/api/spinup/tags/assign`,
                                                 {
@@ -2614,29 +3101,65 @@ const DataCategorySearch = ({
                                                         "Content-Type":
                                                             "application/json",
                                                     },
-                                                    body: JSON.stringify({
-                                                        tagId: tagId,
-                                                        dataStructureId:
-                                                            existingStructure.dataStructureId,
-                                                    }),
+                                                    body: JSON.stringify(
+                                                        requestBody
+                                                    ),
                                                 }
                                             );
 
                                             if (!response.ok) {
-                                                const errorData =
-                                                    await response.json();
+                                                let errorData;
+                                                try {
+                                                    errorData =
+                                                        await response.json();
+                                                } catch {
+                                                    const errorText =
+                                                        await response
+                                                            .text()
+                                                            .catch(
+                                                                () =>
+                                                                    "Unknown error"
+                                                            );
+                                                    errorData = {
+                                                        error: `API returned ${response.status}`,
+                                                        details: errorText,
+                                                    };
+                                                }
+                                                console.error(
+                                                    "Failed to assign tag:",
+                                                    {
+                                                        requestBody,
+                                                        responseStatus:
+                                                            response.status,
+                                                        error: errorData,
+                                                    }
+                                                );
                                                 throw new Error(
-                                                    errorData.error ||
-                                                        "Failed to assign tag"
+                                                    errorData.details ||
+                                                        errorData.error ||
+                                                        `Failed to assign tag (${response.status}). Check console for details.`
                                                 );
                                             }
                                         }
 
-                                        // Update local state
-                                        const newTags = availableTags.filter(
+                                        // Update local state - include both custom tags and NDA category tags
+                                        const customTags = availableTags.filter(
                                             (tag) =>
-                                                selectedTagIds.includes(tag.id)
+                                                selectedSocialTags.has(tag.id)
                                         );
+
+                                        // Get NDA category tags (they should now be in availableTags after creation)
+                                        const ndaCategoryTags =
+                                            availableTags.filter((tag) =>
+                                                ndaCategoryTagIds.includes(
+                                                    tag.id
+                                                )
+                                            );
+
+                                        const newTags = [
+                                            ...customTags,
+                                            ...ndaCategoryTags,
+                                        ];
                                         setStructureTags((prev) => ({
                                             ...prev,
                                             [modalStructure.shortName]: newTags,
@@ -2644,8 +3167,10 @@ const DataCategorySearch = ({
 
                                         setIsCategoriesModalOpen(false);
                                         setSelectedSocialTags(new Set());
+                                        setSelectedNdaCategories(new Set());
                                         setNewTagName("");
                                         setModalSearchTerm("");
+                                        setNdaCategorySearchTerm("");
                                     } catch (err) {
                                         console.error(
                                             "Error saving category tags:",
@@ -2728,7 +3253,31 @@ const DataCategorySearch = ({
                                                     modalStructure.shortName
                                                 )
                                             }
+                                            disabled={(() => {
+                                                const isDataTypeCurrentlyRemoved =
+                                                    isDataTypeRemoved(
+                                                        modalStructure.shortName
+                                                    );
+                                                const customDataTypeTags =
+                                                    structureDataTypeTags[
+                                                        modalStructure.shortName
+                                                    ] || [];
+                                                const hasOriginalDataType =
+                                                    modalStructure.dataType &&
+                                                    !isDataTypeCurrentlyRemoved;
+                                                const totalVisibleDataTypes =
+                                                    (hasOriginalDataType
+                                                        ? 1
+                                                        : 0) +
+                                                    customDataTypeTags.length;
+                                                return (
+                                                    !isDataTypeCurrentlyRemoved &&
+                                                    totalVisibleDataTypes <= 1
+                                                );
+                                            })()}
                                             onChange={(e) => {
+                                                // Clear any previous errors
+                                                setModalError(null);
                                                 if (e.target.checked) {
                                                     // Restore data type
                                                     const restoreDataType =
@@ -2810,6 +3359,37 @@ const DataCategorySearch = ({
                                                         };
                                                     restoreDataType();
                                                 } else {
+                                                    // Check if this is the last visible data type
+                                                    const isDataTypeCurrentlyRemoved =
+                                                        isDataTypeRemoved(
+                                                            modalStructure.shortName
+                                                        );
+                                                    const customDataTypeTags =
+                                                        structureDataTypeTags[
+                                                            modalStructure
+                                                                .shortName
+                                                        ] || [];
+                                                    const hasOriginalDataType =
+                                                        modalStructure.dataType &&
+                                                        !isDataTypeCurrentlyRemoved;
+                                                    const totalVisibleDataTypes =
+                                                        (hasOriginalDataType
+                                                            ? 1
+                                                            : 0) +
+                                                        customDataTypeTags.length;
+
+                                                    if (
+                                                        totalVisibleDataTypes <=
+                                                        1
+                                                    ) {
+                                                        setModalError(
+                                                            "Cannot remove the last data type. At least one data type must remain."
+                                                        );
+                                                        // Reset checkbox
+                                                        e.target.checked = true;
+                                                        return;
+                                                    }
+
                                                     // Remove data type
                                                     removeOriginalDataType(
                                                         modalStructure.shortName
@@ -3190,8 +3770,8 @@ const DataCategorySearch = ({
                                                     },
                                                     body: JSON.stringify({
                                                         tagId: tagId,
-                                                        dataStructureId:
-                                                            existingStructure.dataStructureId,
+                                                        dataStructureShortName:
+                                                            modalStructure.shortName,
                                                     }),
                                                 }
                                             );
@@ -3218,8 +3798,8 @@ const DataCategorySearch = ({
                                                     },
                                                     body: JSON.stringify({
                                                         tagId: tagId,
-                                                        dataStructureId:
-                                                            existingStructure.dataStructureId,
+                                                        dataStructureShortName:
+                                                            modalStructure.shortName,
                                                     }),
                                                 }
                                             );
