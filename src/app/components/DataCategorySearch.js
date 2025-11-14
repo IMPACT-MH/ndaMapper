@@ -110,28 +110,21 @@ const DataCategorySearch = ({
             tag.name.toLowerCase().includes(modalSearchTerm.toLowerCase())
     );
 
-    // Filter available NDA categories based on search
+    // Filter available NDA categories based on search (use modalSearchTerm for unified search)
     const filteredNdaCategories = Array.from(availableCategories).filter(
         (category) =>
-            !ndaCategorySearchTerm ||
-            category.toLowerCase().includes(ndaCategorySearchTerm.toLowerCase())
+            !modalSearchTerm ||
+            category.toLowerCase().includes(modalSearchTerm.toLowerCase())
     );
 
-    // Combine custom tags and existing NDA categories for the "Available Custom Category Tags" section
+    // Combine custom tags and existing NDA categories into one unified list
     // Create a unified list where NDA categories are represented as pseudo-tag objects
     const combinedAvailableCategories = [
         ...filteredAvailableTags.map((tag) => ({
             ...tag,
             isNdaCategory: false,
         })),
-        ...Array.from(availableCategories)
-            .filter(
-                (category) =>
-                    !modalSearchTerm ||
-                    category
-                        .toLowerCase()
-                        .includes(modalSearchTerm.toLowerCase())
-            )
+        ...filteredNdaCategories
             .filter(
                 (category) =>
                     // Only include NDA categories that aren't already in availableTags
@@ -2384,33 +2377,54 @@ const DataCategorySearch = ({
                                 <div className="mb-4 p-3 bg-blue-50 rounded-lg">
                                     <h3 className="text-sm font-semibold text-blue-700 mb-2">
                                         Selected Categories (
-                                        {selectedSocialTags.size +
-                                            selectedNdaCategories.size}
+                                        {(() => {
+                                            // Count unique categories (exclude duplicates where tag name is in both)
+                                            let count =
+                                                selectedNdaCategories.size;
+                                            Array.from(
+                                                selectedSocialTags
+                                            ).forEach((tagId) => {
+                                                const tag = availableTags.find(
+                                                    (t) => t.id === tagId
+                                                );
+                                                if (
+                                                    tag &&
+                                                    !selectedNdaCategories.has(
+                                                        tag.name
+                                                    )
+                                                ) {
+                                                    count++;
+                                                }
+                                            });
+                                            return count;
+                                        })()}
                                         )
                                     </h3>
                                     <div className="flex flex-wrap gap-2">
-                                        {/* Show selected custom tags */}
+                                        {/* Show selected custom tags - exclude ones that are also in selectedNdaCategories */}
                                         {Array.from(selectedSocialTags).map(
                                             (tagId) => {
                                                 const tag = availableTags.find(
                                                     (t) => t.id === tagId
                                                 );
-                                                // Show star if this is a custom tag (NOT an existing NDA category)
-                                                const isCustomTag =
+                                                // Skip if this tag name is also in selectedNdaCategories (to avoid duplicates)
+                                                if (
                                                     tag &&
-                                                    !availableCategories.has(
+                                                    selectedNdaCategories.has(
                                                         tag.name
-                                                    );
+                                                    )
+                                                ) {
+                                                    return null;
+                                                }
+                                                // All tags from selectedSocialTags are custom tags (user created)
                                                 return tag ? (
                                                     <div
                                                         key={tag.id}
                                                         className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
                                                     >
-                                                        {isCustomTag && (
-                                                            <span className="text-orange-500">
-                                                                ★
-                                                            </span>
-                                                        )}
+                                                        <span className="text-orange-500">
+                                                            ★
+                                                        </span>
                                                         <span>{tag.name}</span>
                                                         <button
                                                             onClick={(e) => {
@@ -2473,117 +2487,53 @@ const DataCategorySearch = ({
                                 </div>
                             )}
 
-                            {/* NDA Categories Section */}
+                            {/* Unified Search */}
                             <div className="mb-4">
-                                <h3 className="text-sm font-semibold text-gray-700 mb-2">
-                                    NDA Categories
-                                </h3>
-                                <p className="text-xs text-gray-500 mb-3">
-                                    Search and add existing NDA categories
-                                </p>
-                                <div className="mb-4">
-                                    <div className="relative">
-                                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                                        <input
-                                            type="text"
-                                            value={ndaCategorySearchTerm}
-                                            onChange={(e) =>
-                                                setNdaCategorySearchTerm(
-                                                    e.target.value
-                                                )
-                                            }
-                                            placeholder="Search NDA categories..."
-                                            className="w-full pl-10 pr-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
-                                        />
-                                    </div>
-                                </div>
-                                <div className="bg-gray-50 rounded-lg p-3 max-h-64 overflow-y-auto">
-                                    <div className="flex flex-wrap gap-2">
-                                        {filteredNdaCategories.length > 0 ? (
-                                            filteredNdaCategories.map(
-                                                (category) => (
-                                                    <button
-                                                        key={category}
-                                                        onClick={() => {
-                                                            setSelectedNdaCategories(
-                                                                (prev) => {
-                                                                    const newSet =
-                                                                        new Set(
-                                                                            prev
-                                                                        );
-                                                                    if (
-                                                                        newSet.has(
-                                                                            category
-                                                                        )
-                                                                    ) {
-                                                                        newSet.delete(
-                                                                            category
-                                                                        );
-                                                                    } else {
-                                                                        newSet.add(
-                                                                            category
-                                                                        );
-                                                                    }
-                                                                    return newSet;
-                                                                }
-                                                            );
-                                                        }}
-                                                        className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
-                                                            selectedNdaCategories.has(
-                                                                category
-                                                            )
-                                                                ? "bg-blue-100 text-blue-700 border-blue-300 hover:bg-blue-200"
-                                                                : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
-                                                        }`}
-                                                    >
-                                                        {category}
-                                                    </button>
-                                                )
-                                            )
-                                        ) : (
-                                            <p className="text-sm text-gray-500">
-                                                No NDA categories found
-                                            </p>
-                                        )}
-                                    </div>
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                                    <input
+                                        type="text"
+                                        value={modalSearchTerm}
+                                        onChange={(e) =>
+                                            setModalSearchTerm(e.target.value)
+                                        }
+                                        placeholder="Search all categories..."
+                                        className="w-full pl-10 pr-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
+                                    />
                                 </div>
                             </div>
 
-                            {/* Available Tags */}
+                            {/* Combined Word Bank */}
                             {!tagLoading && (
                                 <div className="mb-4">
-                                    <h3 className="text-sm font-semibold text-gray-700 mb-2">
-                                        Available Custom Category Tags
-                                    </h3>
-                                    <div className="mb-4">
-                                        <div className="relative">
-                                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                                            <input
-                                                type="text"
-                                                value={modalSearchTerm}
-                                                onChange={(e) =>
-                                                    setModalSearchTerm(
-                                                        e.target.value
-                                                    )
-                                                }
-                                                placeholder="Search categories..."
-                                                className="w-full pl-10 pr-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
-                                            />
-                                        </div>
-                                    </div>
+                                    <p className="text-xs text-gray-500 mb-3">
+                                        <span className="text-orange-500">
+                                            ★
+                                        </span>{" "}
+                                        Custom tag
+                                    </p>
                                     <div className="bg-gray-50 rounded-lg p-3 max-h-64 overflow-y-auto">
                                         <div className="flex flex-wrap gap-2">
                                             {combinedAvailableCategories.length >
                                             0 ? (
                                                 combinedAvailableCategories.map(
                                                     (item) => {
-                                                        // Check if this is an NDA category by checking if the name exists in availableCategories
-                                                        const isNdaCategory =
-                                                            availableCategories.has(
-                                                                item.name
+                                                        // Check if this is a custom tag (from availableTags) vs NDA category (pseudo-tag)
+                                                        // Custom tags have a real ID from the API (UUID format), NDA categories have a temporary ID starting with "nda-category-"
+                                                        // Also check if it's in availableTags to be sure it's a custom tag
+                                                        const isFromAvailableTags =
+                                                            availableTags.some(
+                                                                (tag) =>
+                                                                    tag.id ===
+                                                                    item.id
                                                             );
                                                         const isCustomTag =
-                                                            !isNdaCategory;
+                                                            isFromAvailableTags ||
+                                                            !item.id.startsWith(
+                                                                "nda-category-"
+                                                            );
+                                                        const isNdaCategory =
+                                                            !isCustomTag;
                                                         const isSelected =
                                                             isNdaCategory
                                                                 ? selectedNdaCategories.has(
