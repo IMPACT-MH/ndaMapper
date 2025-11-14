@@ -83,6 +83,8 @@ const DataCategorySearch = ({
     const [availableTags, setAvailableTags] = useState([]);
     const [selectedSocialTags, setSelectedSocialTags] = useState(new Set());
     const [newTagName, setNewTagName] = useState("");
+    const [showCreateCategoryInput, setShowCreateCategoryInput] =
+        useState(false);
     const [editingCategoryTagId, setEditingCategoryTagId] = useState(null);
     const [editingCategoryTagName, setEditingCategoryTagName] = useState("");
 
@@ -90,6 +92,8 @@ const DataCategorySearch = ({
     const [availableDataTypeTags, setAvailableDataTypeTags] = useState([]);
     const [selectedDataTypeTags, setSelectedDataTypeTags] = useState(new Set());
     const [newDataTypeTagName, setNewDataTypeTagName] = useState("");
+    const [showCreateDataTypeInput, setShowCreateDataTypeInput] =
+        useState(false);
     const [editingDataTypeTagId, setEditingDataTypeTagId] = useState(null);
     const [editingDataTypeTagName, setEditingDataTypeTagName] = useState("");
 
@@ -438,18 +442,9 @@ const DataCategorySearch = ({
                 }
             });
 
-            // Add custom tags to available filters
-            setAvailableCategories((prev) => {
-                const updated = new Set(prev);
-                customCategoryTags.forEach((tag) => updated.add(tag));
-                return updated;
-            });
-
-            setAvailableDataTypes((prev) => {
-                const updated = new Set(prev);
-                customDataTypeTags.forEach((tag) => updated.add(tag));
-                return updated;
-            });
+            // Note: Do NOT add custom tags to availableCategories or availableDataTypes
+            // These should only contain NDA categories/data types from the API
+            // Custom tags are tracked separately in availableTags and availableDataTypeTags
         } catch (err) {
             console.error("Error fetching structure tags:", err);
             // Don't throw - just log the error and continue
@@ -1006,12 +1001,9 @@ const DataCategorySearch = ({
 
             setSelectedSocialTags((prev) => new Set([...prev, newTag.id]));
 
-            // Add to available categories filter
-            setAvailableCategories((prev) => {
-                const updated = new Set(prev);
-                updated.add(newTag.name);
-                return updated;
-            });
+            // Note: Do NOT add custom tags to availableCategories
+            // availableCategories should only contain NDA categories from the API
+            // Custom tags are tracked separately in availableTags
 
             setNewTagName("");
 
@@ -1131,15 +1123,9 @@ const DataCategorySearch = ({
                     prev.map((t) => (t.id === tagId ? updatedTag : t))
                 );
 
-                // Update available categories filter set
-                if (oldName) {
-                    setAvailableCategories((prev) => {
-                        const updated = new Set(prev);
-                        updated.delete(oldName);
-                        updated.add(updatedTag.name);
-                        return updated;
-                    });
-                }
+                // Note: Do NOT update availableCategories for custom tags
+                // availableCategories should only contain NDA categories from the API
+                // Custom tags are tracked separately in availableTags
 
                 setEditingCategoryTagId(null);
             }
@@ -1206,19 +1192,9 @@ const DataCategorySearch = ({
 
             // Remove from filter sets
             if (tagToDelete) {
-                if (isDataType) {
-                    setAvailableDataTypes((prev) => {
-                        const updated = new Set(prev);
-                        updated.delete(tagToDelete.name);
-                        return updated;
-                    });
-                } else {
-                    setAvailableCategories((prev) => {
-                        const updated = new Set(prev);
-                        updated.delete(tagToDelete.name);
-                        return updated;
-                    });
-                }
+                // Note: Do NOT remove from availableCategories or availableDataTypes
+                // These should only contain NDA categories/data types from the API
+                // Custom tags are tracked separately in availableTags and availableDataTypeTags
             }
 
             // Remove from selected tags Sets
@@ -2501,8 +2477,95 @@ const DataCategorySearch = ({
                                 </div>
                             )}
 
-                            {/* Unified Search */}
+                            {/* Categories Header with Create Button */}
                             <div className="mb-4">
+                                <div className="flex items-center justify-between mb-3">
+                                    <h3 className="text-sm font-semibold text-gray-700">
+                                        Categories
+                                    </h3>
+                                    <button
+                                        onClick={() => {
+                                            setShowCreateCategoryInput(
+                                                !showCreateCategoryInput
+                                            );
+                                            if (!showCreateCategoryInput) {
+                                                setNewTagName("");
+                                            }
+                                        }}
+                                        className="flex items-center justify-center w-6 h-6 bg-green-500 text-white rounded-full hover:bg-green-600 transition-colors"
+                                        title="Create new category tag"
+                                    >
+                                        <Plus className="w-4 h-4" />
+                                    </button>
+                                </div>
+
+                                {/* Create New Tag Input (shown when + is clicked) */}
+                                {showCreateCategoryInput && (
+                                    <div className="mb-3 space-y-2">
+                                        <input
+                                            type="text"
+                                            value={newTagName}
+                                            onChange={(e) =>
+                                                setNewTagName(e.target.value)
+                                            }
+                                            placeholder="Category tag name..."
+                                            className="w-full px-3 py-2 border rounded-lg focus:border-blue-500 focus:outline-none text-sm"
+                                            onKeyPress={(e) => {
+                                                if (
+                                                    e.key === "Enter" &&
+                                                    newTagName.trim()
+                                                ) {
+                                                    createTag()
+                                                        .then(() => {
+                                                            setShowCreateCategoryInput(
+                                                                false
+                                                            );
+                                                        })
+                                                        .catch(() => {
+                                                            // Error already handled in createTag
+                                                        });
+                                                }
+                                            }}
+                                            autoFocus
+                                        />
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={() => {
+                                                    createTag()
+                                                        .then(() => {
+                                                            setShowCreateCategoryInput(
+                                                                false
+                                                            );
+                                                        })
+                                                        .catch(() => {
+                                                            // Error already handled in createTag
+                                                        });
+                                                }}
+                                                disabled={
+                                                    !newTagName.trim() ||
+                                                    tagLoading
+                                                }
+                                                className="flex-1 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:bg-gray-300 transition-colors text-sm font-medium"
+                                            >
+                                                <Plus className="w-4 h-4 inline mr-2" />
+                                                Create & Add to Selection
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    setShowCreateCategoryInput(
+                                                        false
+                                                    );
+                                                    setNewTagName("");
+                                                }}
+                                                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
+                                            >
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Unified Search */}
                                 <div className="relative">
                                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                                     <input
@@ -2535,16 +2598,20 @@ const DataCategorySearch = ({
                                                         // Check if this is a custom tag (from availableTags) vs NDA category (pseudo-tag)
                                                         // Custom tags have a real ID from the API (UUID format), NDA categories have a temporary ID starting with "nda-category-"
                                                         // A tag is custom ONLY if it's in availableTags AND NOT in availableCategories (NDA categories list)
-                                                        const isNdaCategoryName =
-                                                            availableCategories.has(
-                                                                item.name
-                                                            );
+
                                                         // Check if item has a real UUID (not starting with "nda-category-")
                                                         const hasRealId =
                                                             item.id &&
                                                             !item.id.startsWith(
                                                                 "nda-category-"
                                                             );
+
+                                                        // Check if the name exists in NDA categories
+                                                        const isNdaCategoryName =
+                                                            availableCategories.has(
+                                                                item.name
+                                                            );
+
                                                         // Custom tag = has real ID AND NOT an NDA category name
                                                         const isCustomTag =
                                                             hasRealId &&
@@ -2768,42 +2835,6 @@ const DataCategorySearch = ({
                                     </div>
                                 </div>
                             )}
-
-                            {/* Create New Tag */}
-                            <div className="border-t pt-4">
-                                <h3 className="text-sm font-semibold text-gray-700 mb-2">
-                                    Create New Category Tag
-                                </h3>
-                                <div className="space-y-2">
-                                    <input
-                                        type="text"
-                                        value={newTagName}
-                                        onChange={(e) =>
-                                            setNewTagName(e.target.value)
-                                        }
-                                        placeholder="Category tag name..."
-                                        className="w-full px-3 py-2 border rounded-lg focus:border-blue-500 focus:outline-none text-sm"
-                                        onKeyPress={(e) => {
-                                            if (
-                                                e.key === "Enter" &&
-                                                newTagName.trim()
-                                            ) {
-                                                createTag();
-                                            }
-                                        }}
-                                    />
-                                    <button
-                                        onClick={createTag}
-                                        disabled={
-                                            !newTagName.trim() || tagLoading
-                                        }
-                                        className="w-full px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:bg-gray-300 transition-colors text-sm font-medium"
-                                    >
-                                        <Plus className="w-4 h-4 inline mr-2" />
-                                        Create & Add to Selection
-                                    </button>
-                                </div>
-                            </div>
                         </div>
 
                         <div className="flex justify-end gap-3 p-5 border-t">
@@ -2815,6 +2846,7 @@ const DataCategorySearch = ({
                                     setNewTagName("");
                                     setModalSearchTerm("");
                                     setNdaCategorySearchTerm("");
+                                    setShowCreateCategoryInput(false);
                                 }}
                                 className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
                             >
@@ -3165,7 +3197,10 @@ const DataCategorySearch = ({
             {isDataTypesModalOpen && modalStructure && (
                 <div
                     className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-                    onClick={() => setIsDataTypesModalOpen(false)}
+                    onClick={() => {
+                        setIsDataTypesModalOpen(false);
+                        setShowCreateDataTypeInput(false);
+                    }}
                 >
                     <div
                         className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[80vh] flex flex-col"
@@ -3183,7 +3218,10 @@ const DataCategorySearch = ({
                                 </p>
                             </div>
                             <button
-                                onClick={() => setIsDataTypesModalOpen(false)}
+                                onClick={() => {
+                                    setIsDataTypesModalOpen(false);
+                                    setShowCreateDataTypeInput(false);
+                                }}
                                 className="text-gray-400 hover:text-gray-600"
                             >
                                 <X className="w-5 h-5" />
@@ -3421,28 +3459,114 @@ const DataCategorySearch = ({
                                 </div>
                             )}
 
+                            {/* Data Types Header with Create Button */}
+                            <div className="mb-4">
+                                <div className="flex items-center justify-between mb-3">
+                                    <h3 className="text-sm font-semibold text-gray-700">
+                                        Data Types
+                                    </h3>
+                                    <button
+                                        onClick={() => {
+                                            setShowCreateDataTypeInput(
+                                                !showCreateDataTypeInput
+                                            );
+                                            if (!showCreateDataTypeInput) {
+                                                setNewDataTypeTagName("");
+                                            }
+                                        }}
+                                        className="flex items-center justify-center w-6 h-6 bg-green-500 text-white rounded-full hover:bg-green-600 transition-colors"
+                                        title="Create new data type tag"
+                                    >
+                                        <Plus className="w-4 h-4" />
+                                    </button>
+                                </div>
+
+                                {/* Create New Tag Input (shown when + is clicked) */}
+                                {showCreateDataTypeInput && (
+                                    <div className="mb-3 space-y-2">
+                                        <input
+                                            type="text"
+                                            value={newDataTypeTagName}
+                                            onChange={(e) =>
+                                                setNewDataTypeTagName(
+                                                    e.target.value
+                                                )
+                                            }
+                                            placeholder="Data type tag name..."
+                                            className="w-full px-3 py-2 border rounded-lg focus:border-blue-500 focus:outline-none text-sm"
+                                            onKeyPress={(e) => {
+                                                if (
+                                                    e.key === "Enter" &&
+                                                    newDataTypeTagName.trim()
+                                                ) {
+                                                    createDataTypeTag()
+                                                        .then(() => {
+                                                            setShowCreateDataTypeInput(
+                                                                false
+                                                            );
+                                                        })
+                                                        .catch(() => {
+                                                            // Error already handled in createDataTypeTag
+                                                        });
+                                                }
+                                            }}
+                                            autoFocus
+                                        />
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={() => {
+                                                    createDataTypeTag()
+                                                        .then(() => {
+                                                            setShowCreateDataTypeInput(
+                                                                false
+                                                            );
+                                                        })
+                                                        .catch(() => {
+                                                            // Error already handled in createDataTypeTag
+                                                        });
+                                                }}
+                                                disabled={
+                                                    !newDataTypeTagName.trim() ||
+                                                    tagLoading
+                                                }
+                                                className="flex-1 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:bg-gray-300 transition-colors text-sm font-medium"
+                                            >
+                                                <Plus className="w-4 h-4 inline mr-2" />
+                                                Create & Add to Selection
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    setShowCreateDataTypeInput(
+                                                        false
+                                                    );
+                                                    setNewDataTypeTagName("");
+                                                }}
+                                                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
+                                            >
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Unified Search */}
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                                    <input
+                                        type="text"
+                                        value={modalSearchTerm}
+                                        onChange={(e) =>
+                                            setModalSearchTerm(e.target.value)
+                                        }
+                                        placeholder="Search custom data types..."
+                                        className="w-full pl-10 pr-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
+                                    />
+                                </div>
+                            </div>
+
                             {/* Available Data Type Tags */}
                             {!tagLoading && (
                                 <div className="mb-4">
-                                    <h3 className="text-sm font-semibold text-gray-700 mb-2">
-                                        Available Custom Data Type Tags
-                                    </h3>
-                                    <div className="mb-4">
-                                        <div className="relative">
-                                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                                            <input
-                                                type="text"
-                                                value={modalSearchTerm}
-                                                onChange={(e) =>
-                                                    setModalSearchTerm(
-                                                        e.target.value
-                                                    )
-                                                }
-                                                placeholder="Search custom data types..."
-                                                className="w-full pl-10 pr-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
-                                            />
-                                        </div>
-                                    </div>
                                     <div className="bg-gray-50 rounded-lg p-3 max-h-64 overflow-y-auto">
                                         <div className="flex flex-wrap gap-2">
                                             {availableDataTypeTags.filter(
@@ -3631,45 +3755,6 @@ const DataCategorySearch = ({
                                     </div>
                                 </div>
                             )}
-
-                            {/* Create New Data Type Tag */}
-                            <div className="border-t pt-4">
-                                <h3 className="text-sm font-semibold text-gray-700 mb-2">
-                                    Create New Custom Data Type Tag
-                                </h3>
-                                <div className="space-y-2">
-                                    <input
-                                        type="text"
-                                        value={newDataTypeTagName}
-                                        onChange={(e) =>
-                                            setNewDataTypeTagName(
-                                                e.target.value
-                                            )
-                                        }
-                                        placeholder="Data type tag name..."
-                                        className="w-full px-3 py-2 border rounded-lg focus:border-blue-500 focus:outline-none text-sm"
-                                        onKeyPress={(e) => {
-                                            if (
-                                                e.key === "Enter" &&
-                                                newDataTypeTagName.trim()
-                                            ) {
-                                                createDataTypeTag();
-                                            }
-                                        }}
-                                    />
-                                    <button
-                                        onClick={createDataTypeTag}
-                                        disabled={
-                                            !newDataTypeTagName.trim() ||
-                                            tagLoading
-                                        }
-                                        className="w-full px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:bg-gray-300 transition-colors text-sm font-medium"
-                                    >
-                                        <Plus className="w-4 h-4 inline mr-2" />
-                                        Create & Add to Selection
-                                    </button>
-                                </div>
-                            </div>
                         </div>
 
                         <div className="flex justify-end gap-3 p-5 border-t">
@@ -3679,6 +3764,7 @@ const DataCategorySearch = ({
                                     setSelectedDataTypeTags(new Set());
                                     setNewDataTypeTagName("");
                                     setModalSearchTerm("");
+                                    setShowCreateDataTypeInput(false);
                                 }}
                                 className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
                             >
@@ -3811,6 +3897,7 @@ const DataCategorySearch = ({
                                         setSelectedDataTypeTags(new Set());
                                         setNewDataTypeTagName("");
                                         setModalSearchTerm("");
+                                        setShowCreateDataTypeInput(false);
                                     } catch (err) {
                                         console.error(
                                             "Error saving data type tags:",
