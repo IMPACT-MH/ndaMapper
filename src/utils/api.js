@@ -187,6 +187,67 @@ export const assignTag = async (
 };
 
 /**
+ * Log an audit trail entry
+ * @param {object} auditData - Audit data
+ * @param {string} auditData.action - Action type (create, update, delete, assign, remove)
+ * @param {string} auditData.tagId - Tag ID
+ * @param {string} auditData.tagName - Tag name
+ * @param {string} auditData.tagType - Tag type (Category, Data Type, etc.)
+ * @param {string} auditData.structureShortName - Structure short name (if applicable)
+ * @param {string} auditData.oldValue - Old value (for updates)
+ * @param {string} auditData.newValue - New value (for updates)
+ * @param {string} auditData.userId - User ID (optional)
+ * @param {object} auditData.metadata - Additional metadata (optional)
+ * @param {string} apiBaseUrl - Base URL for API
+ * @returns {Promise<void>}
+ */
+export const logAuditEvent = async (
+    auditData,
+    apiBaseUrl = "/api/spinup"
+) => {
+    try {
+        await apiCall(
+            "/audit",
+            {
+                method: "POST",
+                body: JSON.stringify(auditData),
+            },
+            apiBaseUrl
+        );
+    } catch (err) {
+        // Don't throw - audit logging should not break the main flow
+        console.error("Failed to log audit event:", err);
+    }
+};
+
+/**
+ * Fetch audit trail logs
+ * @param {object} filters - Filter options
+ * @param {string} filters.tagId - Filter by tag ID
+ * @param {string} filters.structureShortName - Filter by structure short name
+ * @param {string} filters.action - Filter by action type
+ * @param {number} filters.limit - Limit number of results
+ * @param {string} apiBaseUrl - Base URL for API
+ * @returns {Promise<Array>} Array of audit log entries
+ */
+export const fetchAuditLogs = async (
+    filters = {},
+    apiBaseUrl = "/api/spinup"
+) => {
+    const params = new URLSearchParams();
+    if (filters.tagId) params.append("tagId", filters.tagId);
+    if (filters.structureShortName)
+        params.append("structureShortName", filters.structureShortName);
+    if (filters.action) params.append("action", filters.action);
+    if (filters.limit) params.append("limit", filters.limit.toString());
+
+    const queryString = params.toString();
+    const endpoint = queryString ? `/audit?${queryString}` : "/audit";
+
+    return await apiCall(endpoint, { method: "GET" }, apiBaseUrl);
+};
+
+/**
  * Fetch data structures for a tag
  * @param {string} tagId - Tag ID
  * @param {string} apiBaseUrl - Base URL for API
