@@ -47,6 +47,8 @@ const DataStructureSearch = ({
     const [structureDataTypeTags, setStructureDataTypeTags] = useState({});
     const [isCurrentFilterCustomTag, setIsCurrentFilterCustomTag] =
         useState(false);
+    const [removedCategories, setRemovedCategories] = useState({});
+    const [availableCategories, setAvailableCategories] = useState(new Set());
     const apiBaseUrl = "/api/spinup";
 
     // Clear headers when CSV file is removed
@@ -111,6 +113,60 @@ const DataStructureSearch = ({
         checkIfCustomTag();
     }, [searchTerm, apiBaseUrl]);
 
+    // Fetch available categories and removed categories info
+    useEffect(() => {
+        const fetchCategoryInfo = async () => {
+            try {
+                // Fetch all structures to get available categories
+                const response = await fetch(
+                    "https://nda.nih.gov/api/datadictionary/datastructure"
+                );
+                if (response.ok) {
+                    const data = await response.json();
+                    const categories = new Set();
+                    data.forEach((structure) => {
+                        if (structure.categories) {
+                            structure.categories.forEach((cat) =>
+                                categories.add(cat)
+                            );
+                        }
+                    });
+                    setAvailableCategories(categories);
+                }
+
+                // Fetch removed categories from tags API
+                const tagsResponse = await fetch(`${apiBaseUrl}/tags`);
+                if (tagsResponse.ok) {
+                    const allTags = await tagsResponse.json();
+                    const removedCategoriesMap = {};
+                    const removedCategoryTags = allTags.filter(
+                        (tag) => tag.tagType === "Removed Category"
+                    );
+
+                    for (const tag of removedCategoryTags) {
+                        // Tag name format: "REMOVED_CATEGORY:structureShortName:categoryName"
+                        const parts = tag.name.split(":");
+                        if (parts.length >= 3) {
+                            const structureShortName = parts[1];
+                            const categoryName = parts.slice(2).join(":");
+                            if (!removedCategoriesMap[structureShortName]) {
+                                removedCategoriesMap[structureShortName] =
+                                    new Set();
+                            }
+                            removedCategoriesMap[structureShortName].add(
+                                categoryName
+                            );
+                        }
+                    }
+                    setRemovedCategories(removedCategoriesMap);
+                }
+            } catch (err) {
+                console.error("Error fetching category info:", err);
+            }
+        };
+        fetchCategoryInfo();
+    }, [apiBaseUrl]);
+
     // Fetch tags for selected structure
     useEffect(() => {
         if (!selectedStructure) return;
@@ -128,6 +184,16 @@ const DataStructureSearch = ({
                 const dataTypeTags = [];
 
                 for (const tag of allTags) {
+                    // Skip removed tags
+                    if (
+                        tag.tagType === "Removed Category" ||
+                        tag.tagType === "Removed Data Type" ||
+                        tag.name.startsWith("REMOVED_CATEGORY:") ||
+                        tag.name.startsWith("REMOVED_DATATYPE:")
+                    ) {
+                        continue;
+                    }
+
                     try {
                         const dsResponse = await fetch(
                             `${apiBaseUrl}/tags/${tag.id}/dataStructures`
@@ -688,74 +754,127 @@ const DataStructureSearch = ({
                                                                                     .shortName
                                                                             ] ||
                                                                             [];
-                                                                        if (
-                                                                            customCategoryTags.length >
-                                                                            0
-                                                                        ) {
-                                                                            return customCategoryTags.map(
+
+                                                                        // Get removed categories for this structure
+                                                                        const removedCategoriesForStructure =
+                                                                            removedCategories[
+                                                                                selectedStructure
+                                                                                    .shortName
+                                                                            ] ||
+                                                                            new Set();
+
+                                                                        // Get original categories (excluding removed ones)
+                                                                        const originalCategories =
+                                                                            (
+                                                                                selectedStructure.categories ||
+                                                                                []
+                                                                            ).filter(
+                                                                                (
+                                                                                    category
+                                                                                ) =>
+                                                                                    !removedCategoriesForStructure.has(
+                                                                                        category
+                                                                                    )
+                                                                            );
+
+                                                                        // Create a set of original category names to avoid duplicates
+                                                                        const originalCategoryNames =
+                                                                            new Set(
+                                                                                originalCategories
+                                                                            );
+
+                                                                        // Filter custom tags to exclude ones that match original category names
+                                                                        const uniqueCustomTags =
+                                                                            customCategoryTags.filter(
                                                                                 (
                                                                                     tag
-                                                                                ) => (
-                                                                                    <span
-                                                                                        key={
-                                                                                            tag.id
-                                                                                        }
-                                                                                        className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm cursor-pointer hover:bg-blue-200 transition-colors"
-                                                                                        onClick={(
-                                                                                            e
-                                                                                        ) => {
-                                                                                            e.preventDefault();
-                                                                                            e.stopPropagation();
-                                                                                            handleCategoryClick(
-                                                                                                tag.name
-                                                                                            );
-                                                                                        }}
-                                                                                    >
-                                                                                        {
-                                                                                            tag.name
-                                                                                        }
-                                                                                        <span className="ml-1 text-xs text-orange-500">
-                                                                                            ★
-                                                                                        </span>
-                                                                                    </span>
-                                                                                )
-                                                                            );
-                                                                        } else {
-                                                                            return (
-                                                                                selectedStructure.categories?.map(
-                                                                                    (
-                                                                                        category,
-                                                                                        index
-                                                                                    ) => (
-                                                                                        <span
-                                                                                            key={
-                                                                                                index
-                                                                                            }
-                                                                                            className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm cursor-pointer hover:bg-blue-200 transition-colors"
-                                                                                            onClick={(
-                                                                                                e
-                                                                                            ) => {
-                                                                                                e.preventDefault();
-                                                                                                e.stopPropagation();
-                                                                                                handleCategoryClick(
-                                                                                                    category
-                                                                                                );
-                                                                                            }}
-                                                                                        >
-                                                                                            {
-                                                                                                category
-                                                                                            }
-                                                                                        </span>
+                                                                                ) =>
+                                                                                    !originalCategoryNames.has(
+                                                                                        tag.name
                                                                                     )
-                                                                                ) || (
-                                                                                    <span className="text-gray-500">
-                                                                                        No
-                                                                                        categories
-                                                                                        specified
-                                                                                    </span>
-                                                                                )
+                                                                            );
+
+                                                                        // Check if a tag is truly custom (not in NDA categories)
+                                                                        const isTrulyCustomTag =
+                                                                            (
+                                                                                tagName
+                                                                            ) => {
+                                                                                return !availableCategories.has(
+                                                                                    tagName
+                                                                                );
+                                                                            };
+
+                                                                        // Combine original categories and unique custom tags
+                                                                        const allCategories =
+                                                                            [
+                                                                                ...originalCategories.map(
+                                                                                    (
+                                                                                        cat
+                                                                                    ) => ({
+                                                                                        name: cat,
+                                                                                        isCustom: false,
+                                                                                        id: `original-${cat}`,
+                                                                                    })
+                                                                                ),
+                                                                                ...uniqueCustomTags.map(
+                                                                                    (
+                                                                                        tag
+                                                                                    ) => ({
+                                                                                        name: tag.name,
+                                                                                        isCustom: true,
+                                                                                        isTrulyCustom:
+                                                                                            isTrulyCustomTag(
+                                                                                                tag.name
+                                                                                            ),
+                                                                                        id: tag.id,
+                                                                                    })
+                                                                                ),
+                                                                            ];
+
+                                                                        if (
+                                                                            allCategories.length ===
+                                                                            0
+                                                                        ) {
+                                                                            return (
+                                                                                <span className="text-gray-500">
+                                                                                    No
+                                                                                    categories
+                                                                                    specified
+                                                                                </span>
                                                                             );
                                                                         }
+
+                                                                        return allCategories.map(
+                                                                            (
+                                                                                item
+                                                                            ) => (
+                                                                                <span
+                                                                                    key={
+                                                                                        item.id
+                                                                                    }
+                                                                                    className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm cursor-pointer hover:bg-blue-200 transition-colors"
+                                                                                    onClick={(
+                                                                                        e
+                                                                                    ) => {
+                                                                                        e.preventDefault();
+                                                                                        e.stopPropagation();
+                                                                                        handleCategoryClick(
+                                                                                            item.name
+                                                                                        );
+                                                                                    }}
+                                                                                >
+                                                                                    {
+                                                                                        item.name
+                                                                                    }
+                                                                                    {item.isCustom &&
+                                                                                        item.isTrulyCustom && (
+                                                                                            <span className="ml-1 text-xs text-orange-500">
+                                                                                                ★
+                                                                                            </span>
+                                                                                        )}
+                                                                                </span>
+                                                                            )
+                                                                        );
                                                                     })()}
                                                                 </div>
                                                             </div>
