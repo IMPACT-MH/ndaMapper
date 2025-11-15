@@ -2463,7 +2463,7 @@ const DataCategorySearch = ({
                                     <div className="flex flex-wrap gap-2">
                                         {/* Show selected custom tags - exclude ones that are also in selectedNdaCategories */}
                                         {Array.from(selectedSocialTags).map(
-                                            (tagId) => {
+                                            (tagId, index) => {
                                                 const tag = availableTags.find(
                                                     (t) => t.id === tagId
                                                 );
@@ -2479,7 +2479,7 @@ const DataCategorySearch = ({
                                                 // All tags from selectedSocialTags are custom tags (user created)
                                                 return tag ? (
                                                     <div
-                                                        key={tag.id}
+                                                        key={`${tag.id}-${index}`}
                                                         className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
                                                     >
                                                         <span className="text-orange-500">
@@ -3540,14 +3540,14 @@ const DataCategorySearch = ({
                                     </h3>
                                     <div className="flex flex-wrap gap-2">
                                         {Array.from(selectedDataTypeTags).map(
-                                            (tagId) => {
+                                            (tagId, index) => {
                                                 const tag =
                                                     availableDataTypeTags.find(
                                                         (t) => t.id === tagId
                                                     );
                                                 return tag ? (
                                                     <div
-                                                        key={tag.id}
+                                                        key={`${tag.id}-${index}`}
                                                         className="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm"
                                                     >
                                                         <span>{tag.name}</span>
