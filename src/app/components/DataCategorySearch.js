@@ -955,7 +955,7 @@ const DataCategorySearch = ({
     };
 
     const groupedStructures = groupStructures(filteredStructures);
-    const totalCount = filteredStructures.length;
+    const totalCount = allStructures.length;
     const activeFilterCount =
         selectedFilters.categories.size + selectedFilters.dataTypes.size;
 
@@ -1432,7 +1432,7 @@ const DataCategorySearch = ({
                             databaseStructures.length > 0 && (
                                 <span className="ml-2 text-blue-600">
                                     <Database className="w-3 h-3 inline mr-1" />
-                                    {databaseName} filtered
+                                    {databaseName}
                                 </span>
                             )}
                     </div>
@@ -2059,9 +2059,15 @@ const DataCategorySearch = ({
                                                                                                             tag.name
                                                                                                         );
                                                                                                     // Only show star if it's a NEW tag (in availableTags but not an original NDA category)
-                                                                                                    const isNewTag = availableTags.some(
-                                                                                                        (t) => t.name === tag.name
-                                                                                                    ) && !isNdaCategory;
+                                                                                                    const isNewTag =
+                                                                                                        availableTags.some(
+                                                                                                            (
+                                                                                                                t
+                                                                                                            ) =>
+                                                                                                                t.name ===
+                                                                                                                tag.name
+                                                                                                        ) &&
+                                                                                                        !isNdaCategory;
                                                                                                     return (
                                                                                                         <span
                                                                                                             key={
@@ -2507,10 +2513,13 @@ const DataCategorySearch = ({
                                         {Array.from(selectedNdaCategories).map(
                                             (categoryName) => {
                                                 // Check if there's a custom tag with the same name
-                                                const customTagWithSameName = availableTags.find(
-                                                    (tag) => tag.name === categoryName
-                                                );
-                                                
+                                                const customTagWithSameName =
+                                                    availableTags.find(
+                                                        (tag) =>
+                                                            tag.name ===
+                                                            categoryName
+                                                    );
+
                                                 return (
                                                     <div
                                                         key={`nda-${categoryName}`}
@@ -2520,7 +2529,9 @@ const DataCategorySearch = ({
                                                             e.stopPropagation();
                                                         }}
                                                     >
-                                                        <span>{categoryName}</span>
+                                                        <span>
+                                                            {categoryName}
+                                                        </span>
                                                         <button
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
@@ -2539,9 +2550,13 @@ const DataCategorySearch = ({
                                                                     }
                                                                 );
                                                                 // Also remove custom tag with same name if it exists
-                                                                if (customTagWithSameName) {
+                                                                if (
+                                                                    customTagWithSameName
+                                                                ) {
                                                                     setSelectedSocialTags(
-                                                                        (prev) => {
+                                                                        (
+                                                                            prev
+                                                                        ) => {
                                                                             const newSet =
                                                                                 new Set(
                                                                                     prev

@@ -27,7 +27,6 @@ const DataElementSearch = ({
     const [isPartialSearch, setIsPartialSearch] = useState(false);
     const [recentSearches, setRecentSearches] = useState([]);
     const [totalElementCount, setTotalElementCount] = useState(0);
-    const [exactMatchOnly, setExactMatchOnly] = useState(false);
 
     useEffect(() => {
         const saved = localStorage.getItem("elementSearchHistory");
@@ -159,7 +158,9 @@ const DataElementSearch = ({
                     _score: nameMatch ? 100 : descriptionMatch ? 50 : 25, // Prioritize name matches
                     searchTerms: [searchTerm],
                     matchType: nameMatch
-                        ? exactMatch ? "exact" : "name"
+                        ? exactMatch
+                            ? "exact"
+                            : "name"
                         : descriptionMatch
                         ? "description"
                         : "notes",
@@ -195,7 +196,7 @@ const DataElementSearch = ({
             if (effectiveFilterEnabled && databaseElements.size > 0) {
                 const databaseMatches = searchDatabaseElements(
                     searchTerm.trim(),
-                    exactMatchOnly
+                    false
                 );
 
                 if (databaseMatches.length > 0) {
@@ -220,8 +221,11 @@ const DataElementSearch = ({
             const searchQuery = searchTerm.trim();
 
             // Add validation for very broad searches that might overwhelm the API
-            if (searchQuery.length < 2) {
-                setError("Search term must be at least 2 characters long");
+            // Elasticsearch typically requires at least 3 characters for reliable results
+            if (searchQuery.length < 3) {
+                setError(
+                    "Search term must be at least 3 characters long for Elasticsearch"
+                );
                 setLoading(false);
                 return;
             }
@@ -234,7 +238,7 @@ const DataElementSearch = ({
             const searchUrl = NDA_SEARCH_FULL("nda", "dataelement", {
                 size: 1000,
                 highlight: true,
-                ddsize: 1000,
+                ddsize: 100, // API limit: max 100 for ddsize
             });
 
             const partialResponse = await fetch(searchUrl, {
@@ -250,113 +254,43 @@ const DataElementSearch = ({
                     partialResponse.statusText || "Unknown error";
                 const status = partialResponse.status;
 
-                // If exact match query failed, try without field syntax
-                if (status === 400 && exactMatchOnly) {
-                    // Retry with just the search term - we'll filter client-side
-                    const retryUrl = NDA_SEARCH_FULL("nda", "dataelement", {
-                        size: 1000,
-                        highlight: true,
-                        ddsize: 1000,
-                    });
-                    
-                    const retryResponse = await fetch(retryUrl, {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "text/plain",
-                        },
-                        body: searchQuery, // Use plain search term
-                    });
-                    
-                    if (retryResponse.ok) {
-                        // Continue with retry response
-                        const searchResults = await retryResponse.json();
-                        // Process results (will be filtered client-side for exact match)
-                        if (!searchResults?.datadict?.results?.length) {
-                            setError(
-                                `No data elements found matching "${searchTerm}" exactly`
-                            );
-                            setLoading(false);
-                            return;
+                // If we get a 400 error, try to get more details from the response
+                if (status === 400) {
+                    let errorMessage = "Bad Request";
+                    try {
+                        // Clone the response so we can read it without consuming the original
+                        const clonedResponse = partialResponse.clone();
+                        const errorText = await clonedResponse.text();
+                        if (errorText) {
+                            try {
+                                const errorData = JSON.parse(errorText);
+                                errorMessage =
+                                    errorData.message ||
+                                    errorData.error ||
+                                    errorText;
+                            } catch {
+                                errorMessage = errorText;
+                            }
                         }
-                        // Continue processing with searchResults
-                        // We'll filter for exact matches in the processing step
-                        const elementDetails = await Promise.all(
-                            searchResults.datadict.results.map(async (result) => {
-                                try {
-                                    if (
-                                        !result ||
-                                        !result.name ||
-                                        typeof result.name !== "string"
-                                    ) {
-                                        return null;
-                                    }
-                                    
-                                    // Filter for exact match
-                                    if (result.name.toLowerCase() !== searchQuery.toLowerCase()) {
-                                        return null;
-                                    }
+                    } catch (e) {
+                        // If we can't read the error, use the status text
+                        errorMessage = statusText;
+                    }
 
-                                    const response = await fetch(
-                                        `https://nda.nih.gov/api/datadictionary/dataelement/${result.name}`
-                                    );
-
-                                    if (!response.ok) {
-                                        return null;
-                                    }
-
-                                    const fullData = await response.json();
-
-                                    return {
-                                        name: result.name,
-                                        type: fullData.type || result.type || "Text",
-                                        description:
-                                            fullData.description ||
-                                            "No description available",
-                                        notes: fullData.notes,
-                                        valueRange: fullData.valueRange,
-                                        dataStructures:
-                                            result.dataStructures?.map((ds) => ({
-                                                shortName: ds.shortName,
-                                                title: ds.title || "",
-                                                category: ds.category || "",
-                                            })) || [],
-                                        total_data_structures:
-                                            result.dataStructures?.length || 0,
-                                        _score: result._score,
-                                        searchTerms: [searchQuery],
-                                        matchType: "exact",
-                                        inDatabase: isElementInDatabase(result.name),
-                                    };
-                                } catch (err) {
-                                    return null;
-                                }
-                            })
+                    // For very short queries, Elasticsearch might have issues
+                    if (searchQuery.length < 3) {
+                        setError(
+                            `Search term "${searchQuery}" is too short. Elasticsearch requires at least 3 characters.`
                         );
-
-                        let validElements = elementDetails.filter(Boolean);
-
-                        if (effectiveFilterEnabled && databaseElements.size > 0) {
-                            validElements = validElements.filter(
-                                (element) => element.inDatabase
-                            );
-                        }
-
-                        validElements = validElements.sort(
-                            (a, b) => (b._score || 0) - (a._score || 0)
-                        );
-
-                        setMatchingElements(validElements);
-                        setIsPartialSearch(true);
-                        updateRecentSearches(searchTerm.trim());
-
-                        pushHistoryState("results", {
-                            results: validElements,
-                            searchTerm: searchTerm.trim(),
-                        });
-
                         setLoading(false);
                         return;
                     }
+
+                    setError(
+                        `Search failed (400): ${errorMessage}. The query "${searchQuery}" may not be supported by the Elasticsearch API. Try a different search term or check the query syntax.`
+                    );
+                    setLoading(false);
+                    return;
                 }
 
                 // Handle different types of API errors
@@ -383,16 +317,43 @@ const DataElementSearch = ({
 
             const searchResults = await partialResponse.json();
 
+            // If Elasticsearch returns no results, check database when filter is disabled
             if (!searchResults?.datadict?.results?.length) {
                 if (effectiveFilterEnabled && databaseElements.size > 0) {
                     setError(
                         `No data elements found containing "${searchTerm}" in your database. Try disabling the database filter to search all NDA elements.`
                     );
-                } else {
-                    setError(
-                        `No data elements found containing "${searchTerm}"`
+                    setLoading(false);
+                    return;
+                } else if (
+                    !effectiveFilterEnabled &&
+                    databaseElements.size > 0
+                ) {
+                    // Check database for matches even when filter is disabled
+                    const databaseMatches = searchDatabaseElements(
+                        searchQuery,
+                        false
                     );
+
+                    if (databaseMatches.length > 0) {
+                        // Found matches in database, show those
+                        setMatchingElements(databaseMatches);
+                        setIsPartialSearch(true);
+                        setTotalElementCount(databaseMatches.length);
+                        updateRecentSearches(searchTerm.trim());
+
+                        pushHistoryState("results", {
+                            results: databaseMatches,
+                            searchTerm: searchTerm.trim(),
+                        });
+
+                        setLoading(false);
+                        return;
+                    }
                 }
+
+                // No results from Elasticsearch or database
+                setError(`No data elements found containing "${searchTerm}"`);
                 setLoading(false);
                 return;
             }
@@ -414,9 +375,19 @@ const DataElementSearch = ({
                             return null;
                         }
 
-                        const response = await fetch(
-                            `https://nda.nih.gov/api/datadictionary/dataelement/${result.name}`
-                        );
+                        let response;
+                        try {
+                            response = await fetch(
+                                `https://nda.nih.gov/api/datadictionary/dataelement/${result.name}`
+                            );
+                        } catch (fetchError) {
+                            // Handle network errors, CORS issues, etc.
+                            console.warn(
+                                `Network error fetching details for ${result.name}:`,
+                                fetchError.message || fetchError
+                            );
+                            return null;
+                        }
 
                         if (!response.ok) {
                             console.warn(
@@ -425,7 +396,17 @@ const DataElementSearch = ({
                             return null;
                         }
 
-                        const fullData = await response.json();
+                        let fullData;
+                        try {
+                            fullData = await response.json();
+                        } catch (jsonError) {
+                            // Handle JSON parsing errors
+                            console.warn(
+                                `Failed to parse JSON for ${result.name}:`,
+                                jsonError.message || jsonError
+                            );
+                            return null;
+                        }
 
                         return {
                             name: result.name,
@@ -465,15 +446,39 @@ const DataElementSearch = ({
             // Filter out null results
             let validElements = elementDetails.filter(Boolean);
 
-            // Elasticsearch already handles exact match via phrase query, but we can still filter client-side for safety
-            if (exactMatchOnly) {
-                const searchLower = searchQuery.toLowerCase();
-                validElements = validElements.filter(
-                    (element) => element.name.toLowerCase() === searchLower
+            // When database filter is disabled, also check local database for matches
+            // and merge them with Elasticsearch results (to ensure we show all available elements)
+            if (!effectiveFilterEnabled && databaseElements.size > 0) {
+                const databaseMatches = searchDatabaseElements(
+                    searchQuery,
+                    false
                 );
+
+                // Merge database matches with Elasticsearch results
+                // Create a map of existing elements by name to avoid duplicates
+                const existingElementsMap = new Map();
+                validElements.forEach((el) => {
+                    existingElementsMap.set(el.name.toLowerCase(), el);
+                });
+
+                // Add database matches that aren't already in Elasticsearch results
+                databaseMatches.forEach((dbMatch) => {
+                    const key = dbMatch.name.toLowerCase();
+                    if (!existingElementsMap.has(key)) {
+                        // This element is in database but not in Elasticsearch results
+                        existingElementsMap.set(key, dbMatch);
+                        validElements.push(dbMatch);
+                    } else {
+                        // Element exists in both - ensure inDatabase flag is set
+                        const existing = existingElementsMap.get(key);
+                        if (existing) {
+                            existing.inDatabase = true;
+                        }
+                    }
+                });
             }
 
-            // Apply database filter if enabled
+            // Apply database filter if enabled (only show database elements)
             if (effectiveFilterEnabled && databaseElements.size > 0) {
                 validElements = validElements.filter(
                     (element) => element.inDatabase
@@ -486,11 +491,11 @@ const DataElementSearch = ({
                 const searchLower = searchQuery.toLowerCase();
                 const aExact = a.name.toLowerCase() === searchLower;
                 const bExact = b.name.toLowerCase() === searchLower;
-                
+
                 if (aExact && !bExact) return -1;
                 if (!aExact && bExact) return 1;
-                
-                // Then by Elasticsearch score
+
+                // Then by Elasticsearch score (database matches get high score)
                 return (b._score || 0) - (a._score || 0);
             });
 
@@ -565,8 +570,11 @@ const DataElementSearch = ({
             // Use the NDA Elasticsearch API
             const searchQuery = term.trim();
 
-            if (searchQuery.length < 2) {
-                setError("Search term must be at least 2 characters long");
+            // Elasticsearch typically requires at least 3 characters for reliable results
+            if (searchQuery.length < 3) {
+                setError(
+                    "Search term must be at least 3 characters long for Elasticsearch"
+                );
                 setLoading(false);
                 return;
             }
@@ -579,7 +587,7 @@ const DataElementSearch = ({
             const searchUrl = NDA_SEARCH_FULL("nda", "dataelement", {
                 size: 1000,
                 highlight: true,
-                ddsize: 1000,
+                ddsize: 100, // API limit: max 100 for ddsize
             });
 
             const partialResponse = await fetch(searchUrl, {
@@ -594,6 +602,45 @@ const DataElementSearch = ({
                 const statusText =
                     partialResponse.statusText || "Unknown error";
                 const status = partialResponse.status;
+
+                // If we get a 400 error, try to get more details from the response
+                if (status === 400) {
+                    let errorMessage = "Bad Request";
+                    try {
+                        // Clone the response so we can read it without consuming the original
+                        const clonedResponse = partialResponse.clone();
+                        const errorText = await clonedResponse.text();
+                        if (errorText) {
+                            try {
+                                const errorData = JSON.parse(errorText);
+                                errorMessage =
+                                    errorData.message ||
+                                    errorData.error ||
+                                    errorText;
+                            } catch {
+                                errorMessage = errorText;
+                            }
+                        }
+                    } catch (e) {
+                        // If we can't read the error, use the status text
+                        errorMessage = statusText;
+                    }
+
+                    // For very short queries, Elasticsearch might have issues
+                    if (searchQuery.length < 3) {
+                        setError(
+                            `Search term "${searchQuery}" is too short. Elasticsearch requires at least 3 characters.`
+                        );
+                        setLoading(false);
+                        return;
+                    }
+
+                    setError(
+                        `Search failed (400): ${errorMessage}. The query "${searchQuery}" may not be supported by the Elasticsearch API. Try a different search term or check the query syntax.`
+                    );
+                    setLoading(false);
+                    return;
+                }
 
                 if (status === 500) {
                     setError(
@@ -618,14 +665,43 @@ const DataElementSearch = ({
 
             const searchResults = await partialResponse.json();
 
+            // If Elasticsearch returns no results, check database when filter is disabled
             if (!searchResults?.datadict?.results?.length) {
                 if (databaseFilterEnabled && databaseElements.size > 0) {
                     setError(
                         `No data elements found containing "${term}" in your database. Try disabling the database filter to search all NDA elements.`
                     );
-                } else {
-                    setError(`No data elements found containing "${term}"`);
+                    setLoading(false);
+                    return;
+                } else if (
+                    !databaseFilterEnabled &&
+                    databaseElements.size > 0
+                ) {
+                    // Check database for matches even when filter is disabled
+                    const databaseMatches = searchDatabaseElements(
+                        searchQuery,
+                        false
+                    );
+
+                    if (databaseMatches.length > 0) {
+                        // Found matches in database, show those
+                        setMatchingElements(databaseMatches);
+                        setIsPartialSearch(true);
+                        setTotalElementCount(databaseMatches.length);
+                        updateRecentSearches(term.trim());
+
+                        pushHistoryState("results", {
+                            results: databaseMatches,
+                            searchTerm: term.trim(),
+                        });
+
+                        setLoading(false);
+                        return;
+                    }
                 }
+
+                // No results from Elasticsearch or database
+                setError(`No data elements found containing "${term}"`);
                 setLoading(false);
                 return;
             }
@@ -695,12 +771,36 @@ const DataElementSearch = ({
 
             let validElements = elementDetails.filter(Boolean);
 
-            // Apply exact match filter if enabled
-            if (exactMatchOnly) {
-                const searchLower = searchQuery.toLowerCase();
-                validElements = validElements.filter(
-                    (element) => element.name.toLowerCase() === searchLower
+            // When database filter is disabled, also check local database for matches
+            // and merge them with Elasticsearch results (to ensure we show all available elements)
+            if (!databaseFilterEnabled && databaseElements.size > 0) {
+                const databaseMatches = searchDatabaseElements(
+                    searchQuery,
+                    false
                 );
+
+                // Merge database matches with Elasticsearch results
+                // Create a map of existing elements by name to avoid duplicates
+                const existingElementsMap = new Map();
+                validElements.forEach((el) => {
+                    existingElementsMap.set(el.name.toLowerCase(), el);
+                });
+
+                // Add database matches that aren't already in Elasticsearch results
+                databaseMatches.forEach((dbMatch) => {
+                    const key = dbMatch.name.toLowerCase();
+                    if (!existingElementsMap.has(key)) {
+                        // This element is in database but not in Elasticsearch results
+                        existingElementsMap.set(key, dbMatch);
+                        validElements.push(dbMatch);
+                    } else {
+                        // Element exists in both - ensure inDatabase flag is set
+                        const existing = existingElementsMap.get(key);
+                        if (existing) {
+                            existing.inDatabase = true;
+                        }
+                    }
+                });
             }
 
             if (databaseFilterEnabled && databaseElements.size > 0) {
@@ -711,13 +811,15 @@ const DataElementSearch = ({
 
             // Sort by API's _score, but prioritize exact matches
             validElements = validElements.sort((a, b) => {
-                const aExact = a.name.toLowerCase() === searchQuery.toLowerCase();
-                const bExact = b.name.toLowerCase() === searchQuery.toLowerCase();
-                
+                const aExact =
+                    a.name.toLowerCase() === searchQuery.toLowerCase();
+                const bExact =
+                    b.name.toLowerCase() === searchQuery.toLowerCase();
+
                 // Exact matches first
                 if (aExact && !bExact) return -1;
                 if (!aExact && bExact) return 1;
-                
+
                 // Then by score
                 return (b._score || 0) - (a._score || 0);
             });
@@ -756,7 +858,7 @@ const DataElementSearch = ({
 
     // Database search function that accepts a term directly
     const searchDatabaseElementsWithTerm = (searchTerm) => {
-        return searchDatabaseElements(searchTerm, exactMatchOnly);
+        return searchDatabaseElements(searchTerm, false);
     };
 
     const handleKeyDown = (e) => {
@@ -874,27 +976,6 @@ const DataElementSearch = ({
                     >
                         Search
                     </button>
-                </div>
-                
-                {/* Exact Match Toggle */}
-                <div className="mb-3 flex items-center">
-                    <label className="flex items-center space-x-2 cursor-pointer">
-                        <input
-                            type="checkbox"
-                            checked={exactMatchOnly}
-                            onChange={(e) => {
-                                setExactMatchOnly(e.target.checked);
-                                // If we have a search term and results, re-search with new setting
-                                if (searchTerm.trim() && matchingElements.length > 0) {
-                                    handleSearchWithFilter();
-                                }
-                            }}
-                            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
-                        />
-                        <span className="text-sm text-gray-700">
-                            Exact match only (element name must match exactly)
-                        </span>
-                    </label>
                 </div>
 
                 {recentSearches.length > 0 && (
