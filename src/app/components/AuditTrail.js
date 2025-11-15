@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Clock, Tag, Database, User, X, Filter } from "lucide-react";
 import { fetchTags as apiFetchTags, fetchTagDataStructures } from "@/utils/api";
 
-const AuditTrail = ({ tagId, structureShortName, apiBaseUrl = "/api/spinup" }) => {
+const AuditTrail = ({ tagId, structureShortName, tagTypeFilter, apiBaseUrl = "/api/spinup" }) => {
     const [logs, setLogs] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -12,7 +12,7 @@ const AuditTrail = ({ tagId, structureShortName, apiBaseUrl = "/api/spinup" }) =
 
     useEffect(() => {
         loadLogs();
-    }, [tagId, structureShortName, filter, apiBaseUrl]);
+    }, [tagId, structureShortName, filter, tagTypeFilter, apiBaseUrl]);
 
     const loadLogs = async () => {
         setLoading(true);
@@ -40,6 +40,17 @@ const AuditTrail = ({ tagId, structureShortName, apiBaseUrl = "/api/spinup" }) =
                 !tag.name.startsWith("REMOVED_CATEGORY:") &&
                 !tag.name.startsWith("REMOVED_DATATYPE:")
             );
+            
+            // Filter by tag type if specified (Category or Data Type)
+            if (tagTypeFilter === "Category") {
+                filteredTags = filteredTags.filter(tag => 
+                    !tag.tagType || tag.tagType === "Category" || tag.tagType === ""
+                );
+            } else if (tagTypeFilter === "Data Type") {
+                filteredTags = filteredTags.filter(tag => 
+                    tag.tagType === "Data Type"
+                );
+            }
             
             if (tagId) {
                 filteredTags = filteredTags.filter(tag => tag.id === tagId);
@@ -128,7 +139,19 @@ const AuditTrail = ({ tagId, structureShortName, apiBaseUrl = "/api/spinup" }) =
             
             // Process removed tags for deletion audit entries - limit to first 20
             if (filter === "all" || filter === "delete") {
-                const removedTagsToProcess = removedTags.slice(0, 20);
+                // Filter removed tags by type if specified
+                let filteredRemovedTags = removedTags;
+                if (tagTypeFilter === "Category") {
+                    filteredRemovedTags = removedTags.filter(tag => 
+                        tag.tagType === "Removed Category" || tag.name.startsWith("REMOVED_CATEGORY:")
+                    );
+                } else if (tagTypeFilter === "Data Type") {
+                    filteredRemovedTags = removedTags.filter(tag => 
+                        tag.tagType === "Removed Data Type" || tag.name.startsWith("REMOVED_DATATYPE:")
+                    );
+                }
+                
+                const removedTagsToProcess = filteredRemovedTags.slice(0, 20);
                 
                 for (const removedTag of removedTagsToProcess) {
                     // Parse removed tag name to extract original tag info
@@ -176,8 +199,30 @@ const AuditTrail = ({ tagId, structureShortName, apiBaseUrl = "/api/spinup" }) =
                 finalLogs = auditLogs.filter(log => log.action === filter);
             }
             
-            // Sort by timestamp (newest first)
-            finalLogs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            // Sort by timestamp (newest first), then by action priority when timestamps are equal
+            // Priority: create (1) < update (2) < assign (3) < remove (4) < delete (5)
+            const actionPriority = {
+                create: 1,
+                update: 2,
+                assign: 3,
+                remove: 4,
+                delete: 5,
+            };
+            
+            finalLogs.sort((a, b) => {
+                const timeA = new Date(a.timestamp).getTime();
+                const timeB = new Date(b.timestamp).getTime();
+                
+                // First sort by timestamp (newest first)
+                if (timeB !== timeA) {
+                    return timeB - timeA;
+                }
+                
+                // If timestamps are equal, sort by action priority (create before assign)
+                const priorityA = actionPriority[a.action] || 99;
+                const priorityB = actionPriority[b.action] || 99;
+                return priorityA - priorityB;
+            });
             
             // Limit to 100 most recent
             setLogs(finalLogs.slice(0, 100));

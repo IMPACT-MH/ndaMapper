@@ -2798,6 +2798,7 @@ const DataCategorySearch = ({
                                     structureShortName={
                                         modalStructure?.shortName
                                     }
+                                    tagTypeFilter="Category"
                                     apiBaseUrl={apiBaseUrl}
                                 />
                             ) : (
@@ -4255,6 +4256,7 @@ const DataCategorySearch = ({
                                     structureShortName={
                                         modalStructure?.shortName
                                     }
+                                    tagTypeFilter="Data Type"
                                     apiBaseUrl={apiBaseUrl}
                                 />
                             ) : (
