@@ -424,18 +424,22 @@ const CategoryTagManagement = ({
                                                         <button
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
-                                                                if (
-                                                                    confirm(
-                                                                        `Permanently delete "${tag.name}" tag?`
-                                                                    )
-                                                                ) {
-                                                                    deleteTag(
-                                                                        tag.id
-                                                                    );
-                                                                }
+                                                                // Remove from selection (don't delete permanently)
+                                                                setSelectedTags(
+                                                                    (prev) => {
+                                                                        const newSet =
+                                                                            new Set(
+                                                                                prev
+                                                                            );
+                                                                        newSet.delete(
+                                                                            tag.id
+                                                                        );
+                                                                        return newSet;
+                                                                    }
+                                                                );
                                                             }}
                                                             className="ml-1 hover:bg-blue-200 rounded-full w-4 h-4 flex items-center justify-center text-blue-600 hover:text-blue-800 font-bold"
-                                                            title="Delete tag"
+                                                            title="Remove from selection"
                                                         >
                                                             ×
                                                         </button>

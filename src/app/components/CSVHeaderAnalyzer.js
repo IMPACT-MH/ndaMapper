@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Upload, AlertCircle, XCircle, CheckCircle } from "lucide-react";
+import { NDA_DATA_ELEMENT } from "@/const";
 
 const CSVHeaderAnalyzer = ({
     onStructureSelect,
@@ -87,12 +88,12 @@ const CSVHeaderAnalyzer = ({
                             .replace(/[_-]/g, "");
 
                         let response = await fetch(
-                            `https://nda.nih.gov/api/datadictionary/datastructure/dataElement/${header}`
+                            `${NDA_DATA_ELEMENT}/${header}`
                         );
 
                         if (!response.ok) {
                             response = await fetch(
-                                `https://nda.nih.gov/api/datadictionary/datastructure/dataElement/${normalizedHeader}`
+                                `${NDA_DATA_ELEMENT}/${normalizedHeader}`
                             );
                         }
 

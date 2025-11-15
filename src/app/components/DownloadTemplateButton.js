@@ -1,9 +1,10 @@
 import React from "react";
 import { Table } from "lucide-react";
+import { NDA_DATA_STRUCTURES } from "@/const";
 
 const DownloadTemplateButton = ({ shortName }) => {
     const download = () => {
-        window.location.href = `https://nda.nih.gov/api/datadictionary/datastructure/${shortName}/template`;
+        window.location.href = `${NDA_DATA_STRUCTURES}/${shortName}/template`;
     };
 
     return (

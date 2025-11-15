@@ -2505,35 +2505,63 @@ const DataCategorySearch = ({
                                         )}
                                         {/* Show selected NDA categories */}
                                         {Array.from(selectedNdaCategories).map(
-                                            (categoryName) => (
-                                                <div
-                                                    key={`nda-${categoryName}`}
-                                                    className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
-                                                >
-                                                    <span>{categoryName}</span>
-                                                    <button
+                                            (categoryName) => {
+                                                // Check if there's a custom tag with the same name
+                                                const customTagWithSameName = availableTags.find(
+                                                    (tag) => tag.name === categoryName
+                                                );
+                                                
+                                                return (
+                                                    <div
+                                                        key={`nda-${categoryName}`}
+                                                        className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
                                                         onClick={(e) => {
+                                                            // Prevent click from bubbling to parent
                                                             e.stopPropagation();
-                                                            setSelectedNdaCategories(
-                                                                (prev) => {
-                                                                    const newSet =
-                                                                        new Set(
-                                                                            prev
-                                                                        );
-                                                                    newSet.delete(
-                                                                        categoryName
-                                                                    );
-                                                                    return newSet;
-                                                                }
-                                                            );
                                                         }}
-                                                        className="ml-1 hover:bg-blue-200 rounded-full w-4 h-4 flex items-center justify-center text-blue-600 hover:text-blue-800 font-bold"
-                                                        title="Remove from selection"
                                                     >
-                                                        ×
-                                                    </button>
-                                                </div>
-                                            )
+                                                        <span>{categoryName}</span>
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                e.preventDefault();
+                                                                // Remove from NDA categories selection
+                                                                setSelectedNdaCategories(
+                                                                    (prev) => {
+                                                                        const newSet =
+                                                                            new Set(
+                                                                                prev
+                                                                            );
+                                                                        newSet.delete(
+                                                                            categoryName
+                                                                        );
+                                                                        return newSet;
+                                                                    }
+                                                                );
+                                                                // Also remove custom tag with same name if it exists
+                                                                if (customTagWithSameName) {
+                                                                    setSelectedSocialTags(
+                                                                        (prev) => {
+                                                                            const newSet =
+                                                                                new Set(
+                                                                                    prev
+                                                                                );
+                                                                            newSet.delete(
+                                                                                customTagWithSameName.id
+                                                                            );
+                                                                            return newSet;
+                                                                        }
+                                                                    );
+                                                                }
+                                                            }}
+                                                            className="ml-1 hover:bg-blue-200 rounded-full w-4 h-4 flex items-center justify-center text-blue-600 hover:text-blue-800 font-bold"
+                                                            title="Remove from selection"
+                                                        >
+                                                            ×
+                                                        </button>
+                                                    </div>
+                                                );
+                                            }
                                         )}
                                     </div>
                                 </div>

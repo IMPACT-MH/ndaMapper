@@ -1,9 +1,10 @@
 import React from "react";
 import { Download, FileText, Table } from "lucide-react";
+import { NDA_DATA_STRUCTURES } from "@/const";
 
 const DownloadStructureButton = ({ shortName }) => {
     const download = () => {
-        window.location.href = `https://nda.nih.gov/api/datadictionary/datastructure/${shortName}/csv`;
+        window.location.href = `${NDA_DATA_STRUCTURES}/${shortName}/csv`;
     };
 
     return (

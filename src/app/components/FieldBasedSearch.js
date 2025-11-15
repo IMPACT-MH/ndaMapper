@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { NDA_DATA_ELEMENT } from "@/const";
 
 const FieldBasedSearch = () => {
     const [searchFields, setSearchFields] = useState([]);
@@ -15,9 +16,7 @@ const FieldBasedSearch = () => {
             // Search for each field in parallel
             const searchPromises = fields.map(
                 (field) =>
-                    fetch(
-                        `https://nda.nih.gov/api/datadictionary/datastructure/dataElement/${field}`
-                    )
+                    fetch(`${NDA_DATA_ELEMENT}/${field}`)
                         .then((res) => res.json())
                         .catch(() => []) // Handle individual field failures gracefully
             );
