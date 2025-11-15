@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import { Search, X, AlertCircle, Info, Database } from "lucide-react";
+import { NDA_SEARCH_FULL } from "@/const";
 
 const DataElementSearch = ({
     onStructureSelect,
@@ -26,6 +27,7 @@ const DataElementSearch = ({
     const [isPartialSearch, setIsPartialSearch] = useState(false);
     const [recentSearches, setRecentSearches] = useState([]);
     const [totalElementCount, setTotalElementCount] = useState(0);
+    const [exactMatchOnly, setExactMatchOnly] = useState(false);
 
     useEffect(() => {
         const saved = localStorage.getItem("elementSearchHistory");
@@ -123,19 +125,28 @@ const DataElementSearch = ({
     };
 
     // Search within database elements for matching terms
-    const searchDatabaseElements = (searchTerm) => {
+    const searchDatabaseElements = (searchTerm, exactMatch = false) => {
         const searchLower = searchTerm.toLowerCase();
         const matches = [];
 
         for (const [elementName, elementData] of databaseElements) {
-            // Check if search term appears in name or description
-            const nameMatch = elementName.includes(searchLower);
-            const descriptionMatch = elementData.description
-                ?.toLowerCase()
-                .includes(searchLower);
-            const notesMatch = elementData.notes
-                ?.toLowerCase()
-                .includes(searchLower);
+            let nameMatch = false;
+            let descriptionMatch = false;
+            let notesMatch = false;
+
+            if (exactMatch) {
+                // Exact match: element name must exactly match (case-insensitive)
+                nameMatch = elementName.toLowerCase() === searchLower;
+            } else {
+                // Partial match: check if search term appears in name or description
+                nameMatch = elementName.includes(searchLower);
+                descriptionMatch = elementData.description
+                    ?.toLowerCase()
+                    .includes(searchLower);
+                notesMatch = elementData.notes
+                    ?.toLowerCase()
+                    .includes(searchLower);
+            }
 
             if (nameMatch || descriptionMatch || notesMatch) {
                 matches.push({
@@ -148,7 +159,7 @@ const DataElementSearch = ({
                     _score: nameMatch ? 100 : descriptionMatch ? 50 : 25, // Prioritize name matches
                     searchTerms: [searchTerm],
                     matchType: nameMatch
-                        ? "name"
+                        ? exactMatch ? "exact" : "name"
                         : descriptionMatch
                         ? "description"
                         : "notes",
@@ -183,7 +194,8 @@ const DataElementSearch = ({
             // If database filter is enabled, first try searching within database elements
             if (effectiveFilterEnabled && databaseElements.size > 0) {
                 const databaseMatches = searchDatabaseElements(
-                    searchTerm.trim()
+                    searchTerm.trim(),
+                    exactMatchOnly
                 );
 
                 if (databaseMatches.length > 0) {
@@ -204,7 +216,7 @@ const DataElementSearch = ({
                 }
             }
 
-            // Use the NDA search API for partial matches
+            // Use the NDA Elasticsearch API
             const searchQuery = searchTerm.trim();
 
             // Add validation for very broad searches that might overwhelm the API
@@ -214,21 +226,138 @@ const DataElementSearch = ({
                 return;
             }
 
-            const partialResponse = await fetch(
-                `https://nda.nih.gov/api/search/nda/dataelement/full?size=1000&highlight=true`,
-                {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "text/plain",
-                    },
-                    body: searchQuery,
-                }
-            );
+            // Build Elasticsearch query
+            // Use plain search term - we'll filter for exact matches client-side
+            // The Elasticsearch API doesn't reliably support phrase queries in simple text format
+            const esQuery = searchQuery;
+
+            const searchUrl = NDA_SEARCH_FULL("nda", "dataelement", {
+                size: 1000,
+                highlight: true,
+                ddsize: 1000,
+            });
+
+            const partialResponse = await fetch(searchUrl, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "text/plain",
+                },
+                body: esQuery,
+            });
 
             if (!partialResponse.ok) {
                 const statusText =
                     partialResponse.statusText || "Unknown error";
                 const status = partialResponse.status;
+
+                // If exact match query failed, try without field syntax
+                if (status === 400 && exactMatchOnly) {
+                    // Retry with just the search term - we'll filter client-side
+                    const retryUrl = NDA_SEARCH_FULL("nda", "dataelement", {
+                        size: 1000,
+                        highlight: true,
+                        ddsize: 1000,
+                    });
+                    
+                    const retryResponse = await fetch(retryUrl, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "text/plain",
+                        },
+                        body: searchQuery, // Use plain search term
+                    });
+                    
+                    if (retryResponse.ok) {
+                        // Continue with retry response
+                        const searchResults = await retryResponse.json();
+                        // Process results (will be filtered client-side for exact match)
+                        if (!searchResults?.datadict?.results?.length) {
+                            setError(
+                                `No data elements found matching "${searchTerm}" exactly`
+                            );
+                            setLoading(false);
+                            return;
+                        }
+                        // Continue processing with searchResults
+                        // We'll filter for exact matches in the processing step
+                        const elementDetails = await Promise.all(
+                            searchResults.datadict.results.map(async (result) => {
+                                try {
+                                    if (
+                                        !result ||
+                                        !result.name ||
+                                        typeof result.name !== "string"
+                                    ) {
+                                        return null;
+                                    }
+                                    
+                                    // Filter for exact match
+                                    if (result.name.toLowerCase() !== searchQuery.toLowerCase()) {
+                                        return null;
+                                    }
+
+                                    const response = await fetch(
+                                        `https://nda.nih.gov/api/datadictionary/dataelement/${result.name}`
+                                    );
+
+                                    if (!response.ok) {
+                                        return null;
+                                    }
+
+                                    const fullData = await response.json();
+
+                                    return {
+                                        name: result.name,
+                                        type: fullData.type || result.type || "Text",
+                                        description:
+                                            fullData.description ||
+                                            "No description available",
+                                        notes: fullData.notes,
+                                        valueRange: fullData.valueRange,
+                                        dataStructures:
+                                            result.dataStructures?.map((ds) => ({
+                                                shortName: ds.shortName,
+                                                title: ds.title || "",
+                                                category: ds.category || "",
+                                            })) || [],
+                                        total_data_structures:
+                                            result.dataStructures?.length || 0,
+                                        _score: result._score,
+                                        searchTerms: [searchQuery],
+                                        matchType: "exact",
+                                        inDatabase: isElementInDatabase(result.name),
+                                    };
+                                } catch (err) {
+                                    return null;
+                                }
+                            })
+                        );
+
+                        let validElements = elementDetails.filter(Boolean);
+
+                        if (effectiveFilterEnabled && databaseElements.size > 0) {
+                            validElements = validElements.filter(
+                                (element) => element.inDatabase
+                            );
+                        }
+
+                        validElements = validElements.sort(
+                            (a, b) => (b._score || 0) - (a._score || 0)
+                        );
+
+                        setMatchingElements(validElements);
+                        setIsPartialSearch(true);
+                        updateRecentSearches(searchTerm.trim());
+
+                        pushHistoryState("results", {
+                            results: validElements,
+                            searchTerm: searchTerm.trim(),
+                        });
+
+                        setLoading(false);
+                        return;
+                    }
+                }
 
                 // Handle different types of API errors
                 if (status === 500) {
@@ -336,6 +465,14 @@ const DataElementSearch = ({
             // Filter out null results
             let validElements = elementDetails.filter(Boolean);
 
+            // Elasticsearch already handles exact match via phrase query, but we can still filter client-side for safety
+            if (exactMatchOnly) {
+                const searchLower = searchQuery.toLowerCase();
+                validElements = validElements.filter(
+                    (element) => element.name.toLowerCase() === searchLower
+                );
+            }
+
             // Apply database filter if enabled
             if (effectiveFilterEnabled && databaseElements.size > 0) {
                 validElements = validElements.filter(
@@ -343,10 +480,19 @@ const DataElementSearch = ({
                 );
             }
 
-            // Sort by API's _score
-            validElements = validElements.sort(
-                (a, b) => (b._score || 0) - (a._score || 0)
-            );
+            // Sort by Elasticsearch's _score (already sorted by relevance)
+            validElements = validElements.sort((a, b) => {
+                // Prioritize exact matches first
+                const searchLower = searchQuery.toLowerCase();
+                const aExact = a.name.toLowerCase() === searchLower;
+                const bExact = b.name.toLowerCase() === searchLower;
+                
+                if (aExact && !bExact) return -1;
+                if (!aExact && bExact) return 1;
+                
+                // Then by Elasticsearch score
+                return (b._score || 0) - (a._score || 0);
+            });
 
             setMatchingElements(validElements);
             setIsPartialSearch(true);
@@ -416,7 +562,7 @@ const DataElementSearch = ({
                 }
             }
 
-            // Use the NDA search API for partial matches
+            // Use the NDA Elasticsearch API
             const searchQuery = term.trim();
 
             if (searchQuery.length < 2) {
@@ -425,16 +571,24 @@ const DataElementSearch = ({
                 return;
             }
 
-            const partialResponse = await fetch(
-                `https://nda.nih.gov/api/search/nda/dataelement/full?size=1000&highlight=true`,
-                {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "text/plain",
-                    },
-                    body: searchQuery,
-                }
-            );
+            // Build Elasticsearch query
+            // Use plain search term - we'll filter for exact matches client-side
+            // The Elasticsearch API doesn't reliably support phrase queries in simple text format
+            const esQuery = searchQuery;
+
+            const searchUrl = NDA_SEARCH_FULL("nda", "dataelement", {
+                size: 1000,
+                highlight: true,
+                ddsize: 1000,
+            });
+
+            const partialResponse = await fetch(searchUrl, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "text/plain",
+                },
+                body: esQuery,
+            });
 
             if (!partialResponse.ok) {
                 const statusText =
@@ -541,15 +695,32 @@ const DataElementSearch = ({
 
             let validElements = elementDetails.filter(Boolean);
 
+            // Apply exact match filter if enabled
+            if (exactMatchOnly) {
+                const searchLower = searchQuery.toLowerCase();
+                validElements = validElements.filter(
+                    (element) => element.name.toLowerCase() === searchLower
+                );
+            }
+
             if (databaseFilterEnabled && databaseElements.size > 0) {
                 validElements = validElements.filter(
                     (element) => element.inDatabase
                 );
             }
 
-            validElements = validElements.sort(
-                (a, b) => (b._score || 0) - (a._score || 0)
-            );
+            // Sort by API's _score, but prioritize exact matches
+            validElements = validElements.sort((a, b) => {
+                const aExact = a.name.toLowerCase() === searchQuery.toLowerCase();
+                const bExact = b.name.toLowerCase() === searchQuery.toLowerCase();
+                
+                // Exact matches first
+                if (aExact && !bExact) return -1;
+                if (!aExact && bExact) return 1;
+                
+                // Then by score
+                return (b._score || 0) - (a._score || 0);
+            });
 
             setMatchingElements(validElements);
             setIsPartialSearch(true);
@@ -585,40 +756,7 @@ const DataElementSearch = ({
 
     // Database search function that accepts a term directly
     const searchDatabaseElementsWithTerm = (searchTerm) => {
-        const searchLower = searchTerm.toLowerCase();
-        const matches = [];
-
-        for (const [elementName, elementData] of databaseElements) {
-            const nameMatch = elementName.includes(searchLower);
-            const descriptionMatch = elementData.description
-                ?.toLowerCase()
-                .includes(searchLower);
-            const notesMatch = elementData.notes
-                ?.toLowerCase()
-                .includes(searchLower);
-
-            if (nameMatch || descriptionMatch || notesMatch) {
-                matches.push({
-                    name: elementData.name,
-                    type: elementData.type || "String",
-                    description:
-                        elementData.description || "No description available",
-                    notes: elementData.notes,
-                    valueRange: elementData.valueRange,
-                    _score: nameMatch ? 100 : descriptionMatch ? 50 : 25,
-                    searchTerms: [searchTerm],
-                    matchType: nameMatch
-                        ? "name"
-                        : descriptionMatch
-                        ? "description"
-                        : "notes",
-                    inDatabase: true,
-                    dataStructures: [],
-                });
-            }
-        }
-
-        return matches.sort((a, b) => b._score - a._score);
+        return searchDatabaseElements(searchTerm, exactMatchOnly);
     };
 
     const handleKeyDown = (e) => {
@@ -710,7 +848,7 @@ const DataElementSearch = ({
                 <div className="relative mb-3">
                     <input
                         type="text"
-                        className="w-full p-4 pl-12 border rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full p-4 pl-12 pr-32 border rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         placeholder="Search element names and descriptions..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
@@ -723,7 +861,7 @@ const DataElementSearch = ({
                     {searchTerm && (
                         <button
                             onClick={handleClear}
-                            className="absolute right-16 top-4 text-gray-400 hover:text-gray-600"
+                            className="absolute right-24 top-4 text-gray-400 hover:text-gray-600"
                             aria-label="Clear search"
                         >
                             <X size={16} />
@@ -736,6 +874,27 @@ const DataElementSearch = ({
                     >
                         Search
                     </button>
+                </div>
+                
+                {/* Exact Match Toggle */}
+                <div className="mb-3 flex items-center">
+                    <label className="flex items-center space-x-2 cursor-pointer">
+                        <input
+                            type="checkbox"
+                            checked={exactMatchOnly}
+                            onChange={(e) => {
+                                setExactMatchOnly(e.target.checked);
+                                // If we have a search term and results, re-search with new setting
+                                if (searchTerm.trim() && matchingElements.length > 0) {
+                                    handleSearchWithFilter();
+                                }
+                            }}
+                            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                        />
+                        <span className="text-sm text-gray-700">
+                            Exact match only (element name must match exactly)
+                        </span>
+                    </label>
                 </div>
 
                 {recentSearches.length > 0 && (
