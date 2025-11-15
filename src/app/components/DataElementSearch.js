@@ -1074,7 +1074,7 @@ const DataElementSearch = ({
                                 databaseElements.size > 0 && (
                                     <p className="text-sm text-blue-600">
                                         <Database className="w-3 h-3 inline mr-1" />
-                                        Database filtered
+                                        {databaseName} filtered
                                     </p>
                                 )}
                         </div>
