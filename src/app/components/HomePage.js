@@ -51,19 +51,77 @@ const HomePage = () => {
     const [structureDataTypeTags, setStructureDataTypeTags] = useState({});
     const apiBaseUrl = "/api/spinup";
 
-    // Load saved tab from localStorage after mount
+    // Browser history integration for tabs
     useEffect(() => {
-        const savedTab = localStorage.getItem("activeTab");
-        if (savedTab) {
-            setActiveTab(savedTab);
+        // Check if there's a tab in the URL hash or history state
+        const hash = window.location.hash.replace("#", "");
+        const urlTab = Object.values(Tabs).find((tab) => hash === tab);
+
+        // Check history state
+        const historyState = window.history.state;
+        const stateTab = historyState?.tab;
+
+        // Priority: history state > URL hash > localStorage > default
+        const initialTab =
+            stateTab ||
+            urlTab ||
+            localStorage.getItem("activeTab") ||
+            Tabs.STRUCTURE_SEARCH;
+
+        if (initialTab && Object.values(Tabs).includes(initialTab)) {
+            setActiveTab(initialTab);
+            // Update URL hash if not already set
+            if (!urlTab && initialTab !== Tabs.STRUCTURE_SEARCH) {
+                window.history.replaceState(
+                    { tab: initialTab },
+                    "",
+                    `#${initialTab}`
+                );
+            }
         }
+
         setIsLoading(false);
     }, []);
 
-    // Save tab to localStorage when it changes
+    // Handle browser back/forward buttons
     useEffect(() => {
+        const handlePopState = (event) => {
+            const state = event.state;
+            if (state?.tab && Object.values(Tabs).includes(state.tab)) {
+                setActiveTab(state.tab);
+            } else {
+                // Check URL hash
+                const hash = window.location.hash.replace("#", "");
+                const urlTab = Object.values(Tabs).find((tab) => hash === tab);
+                if (urlTab) {
+                    setActiveTab(urlTab);
+                } else {
+                    // Default to structure search
+                    setActiveTab(Tabs.STRUCTURE_SEARCH);
+                }
+            }
+        };
+
+        window.addEventListener("popstate", handlePopState);
+        return () => window.removeEventListener("popstate", handlePopState);
+    }, []);
+
+    // Save tab to localStorage and update browser history when it changes
+    useEffect(() => {
+        if (isLoading) return; // Don't update on initial load
+
         localStorage.setItem("activeTab", activeTab);
-    }, [activeTab]);
+
+        // Update URL hash
+        const newHash =
+            activeTab === Tabs.STRUCTURE_SEARCH ? "" : `#${activeTab}`;
+        const newUrl = window.location.pathname + (newHash || "");
+
+        // Push to history (but don't push on initial load)
+        if (window.history.state?.tab !== activeTab) {
+            window.history.pushState({ tab: activeTab }, "", newUrl);
+        }
+    }, [activeTab, isLoading]);
 
     // Fetch database elements when filter is enabled
     // Fetch database data once when filter is enabled (optimized - single fetch for both)
