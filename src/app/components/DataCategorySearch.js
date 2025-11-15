@@ -1274,11 +1274,14 @@ const DataCategorySearch = ({
     };
 
     const createTag = async () => {
-        if (!newTagName.trim()) return;
+        // Allow spaces, only check that it's not empty after trimming whitespace
+        const trimmedName = newTagName.trim();
+        if (!trimmedName) return;
 
         try {
+            // Preserve the name as-is (spaces allowed, only trimmed for validation)
             const newTag = await apiCreateTag(
-                newTagName.trim(),
+                newTagName, // Keep original with spaces
                 "Category",
                 apiBaseUrl
             );
@@ -1301,11 +1304,14 @@ const DataCategorySearch = ({
     };
 
     const createDataTypeTag = async () => {
-        if (!newDataTypeTagName.trim()) return;
+        // Allow spaces, only check that it's not empty after trimming whitespace
+        const trimmedName = newDataTypeTagName.trim();
+        if (!trimmedName) return;
 
         try {
+            // Preserve the name as-is (spaces allowed, only trimmed for validation)
             const newTag = await apiCreateTag(
-                newDataTypeTagName.trim(),
+                newDataTypeTagName, // Keep original with spaces
                 "Data Type",
                 apiBaseUrl
             );
@@ -2906,107 +2912,154 @@ const DataCategorySearch = ({
                                 </div>
                             )}
 
-                            {/* Categories Header with Create Button */}
+                            {/* Categories Header */}
                             <div className="mb-4">
                                 <div className="flex items-center justify-between mb-3">
                                     <h3 className="text-sm font-semibold text-gray-700">
                                         Categories
                                     </h3>
-                                    <button
-                                        onClick={() => {
-                                            setShowCreateCategoryInput(
-                                                !showCreateCategoryInput
-                                            );
-                                            if (!showCreateCategoryInput) {
-                                                setNewTagName("");
-                                            }
-                                        }}
-                                        className="flex items-center justify-center w-6 h-6 bg-green-500 text-white rounded-full hover:bg-green-600 transition-colors"
-                                        title="Create new category tag"
-                                    >
-                                        <Plus className="w-4 h-4" />
-                                    </button>
                                 </div>
 
-                                {/* Create New Tag Input (shown when + is clicked) */}
-                                {showCreateCategoryInput && (
-                                    <div className="mb-3 space-y-2">
+                                {/* Create New Tag Input (shown when + is clicked or search has no results) */}
+                                {(showCreateCategoryInput ||
+                                    combinedAvailableCategories.length === 0) &&
+                                    modalSearchTerm.trim() && (
+                                        <div className="mb-3 animate-[fadeIn_0.2s_ease-out]">
+                                            <div className="flex items-center gap-2">
+                                                <input
+                                                    type="text"
+                                                    value={modalSearchTerm}
+                                                    onChange={(e) => {
+                                                        setModalSearchTerm(
+                                                            e.target.value
+                                                        );
+                                                    }}
+                                                    placeholder="Category tag name..."
+                                                    className="flex-1 px-3 py-2 border rounded-l-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 focus:outline-none text-sm transition-all"
+                                                    onKeyPress={async (e) => {
+                                                        const tagName =
+                                                            modalSearchTerm.trim();
+                                                        if (
+                                                            e.key === "Enter" &&
+                                                            tagName
+                                                        ) {
+                                                            setNewTagName(
+                                                                tagName
+                                                            );
+                                                            setShowCreateCategoryInput(
+                                                                true
+                                                            );
+                                                            try {
+                                                                await createTag();
+                                                                setShowCreateCategoryInput(
+                                                                    false
+                                                                );
+                                                                setModalSearchTerm(
+                                                                    ""
+                                                                );
+                                                            } catch (err) {
+                                                                // Error already handled in createTag
+                                                            }
+                                                        } else if (
+                                                            e.key === "Escape"
+                                                        ) {
+                                                            setModalSearchTerm(
+                                                                ""
+                                                            );
+                                                            setShowCreateCategoryInput(
+                                                                false
+                                                            );
+                                                        }
+                                                    }}
+                                                    autoFocus
+                                                />
+                                                <button
+                                                    onClick={async () => {
+                                                        const tagName =
+                                                            modalSearchTerm.trim();
+                                                        if (tagName) {
+                                                            setNewTagName(
+                                                                tagName
+                                                            );
+                                                            setShowCreateCategoryInput(
+                                                                true
+                                                            );
+                                                            try {
+                                                                await createTag();
+                                                                setShowCreateCategoryInput(
+                                                                    false
+                                                                );
+                                                                setModalSearchTerm(
+                                                                    ""
+                                                                );
+                                                            } catch (err) {
+                                                                // Error already handled in createTag
+                                                            }
+                                                        }
+                                                    }}
+                                                    disabled={
+                                                        !modalSearchTerm.trim() ||
+                                                        tagLoading
+                                                    }
+                                                    className="px-4 py-2 bg-green-500 text-white rounded-r-lg hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all font-medium text-sm flex items-center gap-2"
+                                                >
+                                                    <Plus className="w-4 h-4" />
+                                                    Add
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                {/* Unified Search with + button on right - Hide when input is shown */}
+                                {!(
+                                    showCreateCategoryInput ||
+                                    (combinedAvailableCategories.length === 0 &&
+                                        modalSearchTerm.trim())
+                                ) && (
+                                    <div className="relative">
+                                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                                         <input
                                             type="text"
-                                            value={newTagName}
+                                            value={modalSearchTerm}
                                             onChange={(e) =>
-                                                setNewTagName(e.target.value)
+                                                setModalSearchTerm(
+                                                    e.target.value
+                                                )
                                             }
-                                            placeholder="Category tag name..."
-                                            className="w-full px-3 py-2 border rounded-lg focus:border-blue-500 focus:outline-none text-sm"
-                                            onKeyPress={(e) => {
-                                                if (
-                                                    e.key === "Enter" &&
-                                                    newTagName.trim()
-                                                ) {
-                                                    createTag()
-                                                        .then(() => {
-                                                            setShowCreateCategoryInput(
-                                                                false
-                                                            );
-                                                        })
-                                                        .catch(() => {
-                                                            // Error already handled in createTag
-                                                        });
-                                                }
-                                            }}
-                                            autoFocus
+                                            placeholder="Search all categories..."
+                                            className="w-full pl-10 pr-12 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
                                         />
-                                        <div className="flex gap-2">
+                                        {/* + button on the right side of search box */}
+                                        {modalSearchTerm.trim() && (
                                             <button
                                                 onClick={() => {
-                                                    createTag()
-                                                        .then(() => {
-                                                            setShowCreateCategoryInput(
-                                                                false
-                                                            );
-                                                        })
-                                                        .catch(() => {
-                                                            // Error already handled in createTag
-                                                        });
+                                                    // Check if there's an exact match
+                                                    const exactMatch =
+                                                        combinedAvailableCategories.some(
+                                                            (item) =>
+                                                                item.name.toLowerCase() ===
+                                                                modalSearchTerm
+                                                                    .trim()
+                                                                    .toLowerCase()
+                                                        );
+                                                    if (!exactMatch) {
+                                                        // No exact match, show input to create
+                                                        setNewTagName(
+                                                            modalSearchTerm.trim()
+                                                        );
+                                                        setShowCreateCategoryInput(
+                                                            true
+                                                        );
+                                                    }
                                                 }}
-                                                disabled={
-                                                    !newTagName.trim() ||
-                                                    tagLoading
-                                                }
-                                                className="flex-1 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:bg-gray-300 transition-colors text-sm font-medium"
+                                                className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center justify-center w-6 h-6 bg-green-500 text-white rounded-full hover:bg-green-600 transition-all hover:scale-110 active:scale-95"
+                                                title="Create new category tag"
                                             >
-                                                <Plus className="w-4 h-4 inline mr-2" />
-                                                Create & Add to Selection
+                                                <Plus className="w-4 h-4" />
                                             </button>
-                                            <button
-                                                onClick={() => {
-                                                    setShowCreateCategoryInput(
-                                                        false
-                                                    );
-                                                    setNewTagName("");
-                                                }}
-                                                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
-                                            >
-                                                Cancel
-                                            </button>
-                                        </div>
+                                        )}
                                     </div>
                                 )}
-
-                                {/* Unified Search */}
-                                <div className="relative">
-                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                                    <input
-                                        type="text"
-                                        value={modalSearchTerm}
-                                        onChange={(e) =>
-                                            setModalSearchTerm(e.target.value)
-                                        }
-                                        placeholder="Search all categories..."
-                                        className="w-full pl-10 pr-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
-                                    />
-                                </div>
                             </div>
 
                             {/* Combined Word Bank */}
@@ -3021,245 +3074,241 @@ const DataCategorySearch = ({
                                     <div className="bg-gray-50 rounded-lg p-3 max-h-64 overflow-y-auto">
                                         <div className="flex flex-wrap gap-2">
                                             {combinedAvailableCategories.length >
-                                            0 ? (
-                                                combinedAvailableCategories.map(
-                                                    (item, index) => {
-                                                        // Check if this is a custom tag (from availableTags) vs NDA category (pseudo-tag)
-                                                        // Custom tags have a real ID from the API (UUID format), NDA categories have a temporary ID starting with "nda-category-"
-                                                        // A tag is custom ONLY if it's in availableTags AND NOT in availableCategories (NDA categories list)
+                                            0
+                                                ? combinedAvailableCategories.map(
+                                                      (item, index) => {
+                                                          // Check if this is a custom tag (from availableTags) vs NDA category (pseudo-tag)
+                                                          // Custom tags have a real ID from the API (UUID format), NDA categories have a temporary ID starting with "nda-category-"
+                                                          // A tag is custom ONLY if it's in availableTags AND NOT in availableCategories (NDA categories list)
 
-                                                        // Check if item has a real UUID (not starting with "nda-category-")
-                                                        const hasRealId =
-                                                            item.id &&
-                                                            !item.id.startsWith(
-                                                                "nda-category-"
-                                                            );
+                                                          // Check if item has a real UUID (not starting with "nda-category-")
+                                                          const hasRealId =
+                                                              item.id &&
+                                                              !item.id.startsWith(
+                                                                  "nda-category-"
+                                                              );
 
-                                                        // Check if the name exists in NDA categories
-                                                        const isNdaCategoryName =
-                                                            availableCategories.has(
-                                                                item.name
-                                                            );
+                                                          // Check if the name exists in NDA categories
+                                                          const isNdaCategoryName =
+                                                              availableCategories.has(
+                                                                  item.name
+                                                              );
 
-                                                        // Custom tag = has real ID AND NOT an NDA category name
-                                                        const isCustomTag =
-                                                            hasRealId &&
-                                                            !isNdaCategoryName;
-                                                        const isNdaCategory =
-                                                            !isCustomTag;
-                                                        const isSelected =
-                                                            isNdaCategory
-                                                                ? selectedNdaCategories.has(
-                                                                      item.name
-                                                                  )
-                                                                : selectedSocialTags.has(
-                                                                      item.id
-                                                                  );
+                                                          // Custom tag = has real ID AND NOT an NDA category name
+                                                          const isCustomTag =
+                                                              hasRealId &&
+                                                              !isNdaCategoryName;
+                                                          const isNdaCategory =
+                                                              !isCustomTag;
+                                                          const isSelected =
+                                                              isNdaCategory
+                                                                  ? selectedNdaCategories.has(
+                                                                        item.name
+                                                                    )
+                                                                  : selectedSocialTags.has(
+                                                                        item.id
+                                                                    );
 
-                                                        return (
-                                                            <div
-                                                                key={`${item.id}-${index}`}
-                                                                className="inline-flex items-center group relative"
-                                                            >
-                                                                {isCustomTag &&
-                                                                editingCategoryTagId ===
-                                                                    item.id ? (
-                                                                    <input
-                                                                        type="text"
-                                                                        value={
-                                                                            editingCategoryTagName
-                                                                        }
-                                                                        onChange={(
-                                                                            e
-                                                                        ) =>
-                                                                            setEditingCategoryTagName(
-                                                                                e
-                                                                                    .target
-                                                                                    .value
-                                                                            )
-                                                                        }
-                                                                        onBlur={() => {
-                                                                            updateTag(
-                                                                                item.id,
-                                                                                editingCategoryTagName,
-                                                                                false
-                                                                            );
-                                                                        }}
-                                                                        onKeyDown={(
-                                                                            e
-                                                                        ) => {
-                                                                            if (
-                                                                                e.key ===
-                                                                                "Enter"
-                                                                            ) {
-                                                                                updateTag(
-                                                                                    item.id,
-                                                                                    editingCategoryTagName,
-                                                                                    false
-                                                                                );
-                                                                            } else if (
-                                                                                e.key ===
-                                                                                "Escape"
-                                                                            ) {
-                                                                                setEditingCategoryTagId(
-                                                                                    null
-                                                                                );
-                                                                            }
-                                                                        }}
-                                                                        autoFocus
-                                                                        className="px-3 py-1.5 rounded-l-full text-sm border border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                                        onClick={(
-                                                                            e
-                                                                        ) =>
-                                                                            e.stopPropagation()
-                                                                        }
-                                                                    />
-                                                                ) : (
-                                                                    <>
-                                                                        <button
-                                                                            onClick={(
-                                                                                e
-                                                                            ) => {
-                                                                                e.stopPropagation();
-                                                                                if (
-                                                                                    isNdaCategory
-                                                                                ) {
-                                                                                    setSelectedNdaCategories(
-                                                                                        (
-                                                                                            prev
-                                                                                        ) => {
-                                                                                            const newSet =
-                                                                                                new Set(
-                                                                                                    prev
-                                                                                                );
-                                                                                            if (
-                                                                                                newSet.has(
-                                                                                                    item.name
-                                                                                                )
-                                                                                            ) {
-                                                                                                newSet.delete(
-                                                                                                    item.name
-                                                                                                );
-                                                                                            } else {
-                                                                                                newSet.add(
-                                                                                                    item.name
-                                                                                                );
-                                                                                            }
-                                                                                            return newSet;
-                                                                                        }
-                                                                                    );
-                                                                                } else {
-                                                                                    setSelectedSocialTags(
-                                                                                        (
-                                                                                            prev
-                                                                                        ) => {
-                                                                                            const newSet =
-                                                                                                new Set(
-                                                                                                    prev
-                                                                                                );
-                                                                                            if (
-                                                                                                newSet.has(
-                                                                                                    item.id
-                                                                                                )
-                                                                                            ) {
-                                                                                                newSet.delete(
-                                                                                                    item.id
-                                                                                                );
-                                                                                            } else {
-                                                                                                newSet.add(
-                                                                                                    item.id
-                                                                                                );
-                                                                                            }
-                                                                                            return newSet;
-                                                                                        }
-                                                                                    );
-                                                                                }
-                                                                            }}
-                                                                            className={`inline-flex items-center px-3 py-1.5 ${
-                                                                                isCustomTag
-                                                                                    ? "rounded-l-full"
-                                                                                    : "rounded-full"
-                                                                            } text-sm transition-all relative ${
-                                                                                isSelected
-                                                                                    ? "bg-blue-500 text-white"
-                                                                                    : "bg-white text-gray-700 border border-gray-300 hover:border-blue-400 hover:bg-blue-50"
-                                                                            }`}
-                                                                        >
-                                                                            {isCustomTag && (
-                                                                                <span className="mr-1 text-xs text-orange-500">
-                                                                                    ★
-                                                                                </span>
-                                                                            )}
-                                                                            {
-                                                                                item.name
-                                                                            }
-                                                                            {item.dataStructures && (
-                                                                                <span className="ml-2 text-xs opacity-70">
-                                                                                    (
-                                                                                    {
-                                                                                        item
-                                                                                            .dataStructures
-                                                                                            .length
-                                                                                    }
+                                                          return (
+                                                              <div
+                                                                  key={`${item.id}-${index}`}
+                                                                  className="inline-flex items-center group relative"
+                                                              >
+                                                                  {isCustomTag &&
+                                                                  editingCategoryTagId ===
+                                                                      item.id ? (
+                                                                      <input
+                                                                          type="text"
+                                                                          value={
+                                                                              editingCategoryTagName
+                                                                          }
+                                                                          onChange={(
+                                                                              e
+                                                                          ) =>
+                                                                              setEditingCategoryTagName(
+                                                                                  e
+                                                                                      .target
+                                                                                      .value
+                                                                              )
+                                                                          }
+                                                                          onBlur={() => {
+                                                                              updateTag(
+                                                                                  item.id,
+                                                                                  editingCategoryTagName,
+                                                                                  false
+                                                                              );
+                                                                          }}
+                                                                          onKeyDown={(
+                                                                              e
+                                                                          ) => {
+                                                                              if (
+                                                                                  e.key ===
+                                                                                  "Enter"
+                                                                              ) {
+                                                                                  updateTag(
+                                                                                      item.id,
+                                                                                      editingCategoryTagName,
+                                                                                      false
+                                                                                  );
+                                                                              } else if (
+                                                                                  e.key ===
+                                                                                  "Escape"
+                                                                              ) {
+                                                                                  setEditingCategoryTagId(
+                                                                                      null
+                                                                                  );
+                                                                              }
+                                                                          }}
+                                                                          autoFocus
+                                                                          className="px-3 py-1.5 rounded-l-full text-sm border border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                                          onClick={(
+                                                                              e
+                                                                          ) =>
+                                                                              e.stopPropagation()
+                                                                          }
+                                                                      />
+                                                                  ) : (
+                                                                      <>
+                                                                          <button
+                                                                              onClick={(
+                                                                                  e
+                                                                              ) => {
+                                                                                  e.stopPropagation();
+                                                                                  if (
+                                                                                      isNdaCategory
+                                                                                  ) {
+                                                                                      setSelectedNdaCategories(
+                                                                                          (
+                                                                                              prev
+                                                                                          ) => {
+                                                                                              const newSet =
+                                                                                                  new Set(
+                                                                                                      prev
+                                                                                                  );
+                                                                                              if (
+                                                                                                  newSet.has(
+                                                                                                      item.name
+                                                                                                  )
+                                                                                              ) {
+                                                                                                  newSet.delete(
+                                                                                                      item.name
+                                                                                                  );
+                                                                                              } else {
+                                                                                                  newSet.add(
+                                                                                                      item.name
+                                                                                                  );
+                                                                                              }
+                                                                                              return newSet;
+                                                                                          }
+                                                                                      );
+                                                                                  } else {
+                                                                                      setSelectedSocialTags(
+                                                                                          (
+                                                                                              prev
+                                                                                          ) => {
+                                                                                              const newSet =
+                                                                                                  new Set(
+                                                                                                      prev
+                                                                                                  );
+                                                                                              if (
+                                                                                                  newSet.has(
+                                                                                                      item.id
+                                                                                                  )
+                                                                                              ) {
+                                                                                                  newSet.delete(
+                                                                                                      item.id
+                                                                                                  );
+                                                                                              } else {
+                                                                                                  newSet.add(
+                                                                                                      item.id
+                                                                                                  );
+                                                                                              }
+                                                                                              return newSet;
+                                                                                          }
+                                                                                      );
+                                                                                  }
+                                                                              }}
+                                                                              className={`inline-flex items-center px-3 py-1.5 ${
+                                                                                  isCustomTag
+                                                                                      ? "rounded-l-full"
+                                                                                      : "rounded-full"
+                                                                              } text-sm transition-all relative ${
+                                                                                  isSelected
+                                                                                      ? "bg-blue-500 text-white"
+                                                                                      : "bg-white text-gray-700 border border-gray-300 hover:border-blue-400 hover:bg-blue-50"
+                                                                              }`}
+                                                                          >
+                                                                              {isCustomTag && (
+                                                                                  <span className="mr-1 text-xs text-orange-500">
+                                                                                      ★
+                                                                                  </span>
+                                                                              )}
+                                                                              {
+                                                                                  item.name
+                                                                              }
+                                                                              {item.dataStructures && (
+                                                                                  <span className="ml-2 text-xs opacity-70">
+                                                                                      (
+                                                                                      {
+                                                                                          item
+                                                                                              .dataStructures
+                                                                                              .length
+                                                                                      }
 
-                                                                                    )
-                                                                                </span>
-                                                                            )}
-                                                                        </button>
-                                                                        {isCustomTag && (
-                                                                            <>
-                                                                                <button
-                                                                                    onClick={(
-                                                                                        e
-                                                                                    ) => {
-                                                                                        e.stopPropagation();
-                                                                                        setEditingCategoryTagId(
-                                                                                            item.id
-                                                                                        );
-                                                                                        setEditingCategoryTagName(
-                                                                                            item.name
-                                                                                        );
-                                                                                    }}
-                                                                                    className={`px-2 py-1.5 text-sm transition-all border-l-0 inline-flex items-center justify-center ${
-                                                                                        isSelected
-                                                                                            ? "bg-blue-500 text-white hover:bg-blue-600"
-                                                                                            : "bg-white text-gray-700 border border-gray-300 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-400"
-                                                                                    }`}
-                                                                                    title="Edit tag name"
-                                                                                >
-                                                                                    <Pencil className="w-4 h-5" />
-                                                                                </button>
-                                                                                <button
-                                                                                    onClick={(
-                                                                                        e
-                                                                                    ) => {
-                                                                                        e.stopPropagation();
-                                                                                        deleteTag(
-                                                                                            item.id
-                                                                                        );
-                                                                                    }}
-                                                                                    className={`px-2 py-1.5 rounded-r-full text-sm transition-all border-l-0 inline-flex items-center justify-center ${
-                                                                                        isSelected
-                                                                                            ? "bg-blue-500 text-white hover:bg-red-600"
-                                                                                            : "bg-white text-gray-700 border border-gray-300 hover:bg-red-50 hover:text-red-600 hover:border-red-400"
-                                                                                    }`}
-                                                                                    title="Delete tag permanently"
-                                                                                >
-                                                                                    ×
-                                                                                </button>
-                                                                            </>
-                                                                        )}
-                                                                    </>
-                                                                )}
-                                                            </div>
-                                                        );
-                                                    }
-                                                )
-                                            ) : (
-                                                <p className="text-gray-500 text-sm">
-                                                    No category tags found
-                                                </p>
-                                            )}
+                                                                                      )
+                                                                                  </span>
+                                                                              )}
+                                                                          </button>
+                                                                          {isCustomTag && (
+                                                                              <>
+                                                                                  <button
+                                                                                      onClick={(
+                                                                                          e
+                                                                                      ) => {
+                                                                                          e.stopPropagation();
+                                                                                          setEditingCategoryTagId(
+                                                                                              item.id
+                                                                                          );
+                                                                                          setEditingCategoryTagName(
+                                                                                              item.name
+                                                                                          );
+                                                                                      }}
+                                                                                      className={`px-2 py-1.5 text-sm transition-all border-l-0 inline-flex items-center justify-center ${
+                                                                                          isSelected
+                                                                                              ? "bg-blue-500 text-white hover:bg-blue-600"
+                                                                                              : "bg-white text-gray-700 border border-gray-300 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-400"
+                                                                                      }`}
+                                                                                      title="Edit tag name"
+                                                                                  >
+                                                                                      <Pencil className="w-4 h-5" />
+                                                                                  </button>
+                                                                                  <button
+                                                                                      onClick={(
+                                                                                          e
+                                                                                      ) => {
+                                                                                          e.stopPropagation();
+                                                                                          deleteTag(
+                                                                                              item.id
+                                                                                          );
+                                                                                      }}
+                                                                                      className={`px-2 py-1.5 rounded-r-full text-sm transition-all border-l-0 inline-flex items-center justify-center ${
+                                                                                          isSelected
+                                                                                              ? "bg-blue-500 text-white hover:bg-red-600"
+                                                                                              : "bg-white text-gray-700 border border-gray-300 hover:bg-red-50 hover:text-red-600 hover:border-red-400"
+                                                                                      }`}
+                                                                                      title="Delete tag permanently"
+                                                                                  >
+                                                                                      ×
+                                                                                  </button>
+                                                                              </>
+                                                                          )}
+                                                                      </>
+                                                                  )}
+                                                              </div>
+                                                          );
+                                                      }
+                                                  )
+                                                : null}
                                         </div>
                                     </div>
                                 </div>
@@ -3915,103 +3964,347 @@ const DataCategorySearch = ({
                                     <h3 className="text-sm font-semibold text-gray-700">
                                         Data Types
                                     </h3>
-                                    <button
-                                        onClick={() => {
-                                            setShowCreateDataTypeInput(
-                                                !showCreateDataTypeInput
-                                            );
-                                            if (!showCreateDataTypeInput) {
-                                                setNewDataTypeTagName("");
-                                            }
-                                        }}
-                                        className="flex items-center justify-center w-6 h-6 bg-green-500 text-white rounded-full hover:bg-green-600 transition-colors"
-                                        title="Create new data type tag"
-                                    >
-                                        <Plus className="w-4 h-4" />
-                                    </button>
-                                </div>
-
-                                {/* Create New Tag Input (shown when + is clicked) */}
-                                {showCreateDataTypeInput && (
-                                    <div className="mb-3 space-y-2">
-                                        <input
-                                            type="text"
-                                            value={newDataTypeTagName}
-                                            onChange={(e) =>
-                                                setNewDataTypeTagName(
-                                                    e.target.value
-                                                )
-                                            }
-                                            placeholder="Data type tag name..."
-                                            className="w-full px-3 py-2 border rounded-lg focus:border-blue-500 focus:outline-none text-sm"
-                                            onKeyPress={(e) => {
-                                                if (
-                                                    e.key === "Enter" &&
-                                                    newDataTypeTagName.trim()
-                                                ) {
-                                                    createDataTypeTag()
-                                                        .then(() => {
-                                                            setShowCreateDataTypeInput(
-                                                                false
+                                    {/* Show + button when there's a search term but no exact match */}
+                                    {modalSearchTerm.trim() && (
+                                        <button
+                                            onClick={() => {
+                                                // Compute combined list to check for exact match
+                                                const filteredAvailableDataTypeTags =
+                                                    availableDataTypeTags.filter(
+                                                        (tag) =>
+                                                            !modalSearchTerm ||
+                                                            tag.name
+                                                                .toLowerCase()
+                                                                .includes(
+                                                                    modalSearchTerm.toLowerCase()
+                                                                )
+                                                    );
+                                                const filteredNdaDataTypes =
+                                                    Array.from(
+                                                        availableDataTypes
+                                                    ).filter(
+                                                        (dataType) =>
+                                                            !modalSearchTerm ||
+                                                            dataType
+                                                                .toLowerCase()
+                                                                .includes(
+                                                                    modalSearchTerm.toLowerCase()
+                                                                )
+                                                    );
+                                                const combinedMap = new Map();
+                                                filteredAvailableDataTypeTags.forEach(
+                                                    (tag) => {
+                                                        combinedMap.set(
+                                                            tag.id,
+                                                            tag
+                                                        );
+                                                    }
+                                                );
+                                                filteredNdaDataTypes
+                                                    .filter(
+                                                        (dataType) =>
+                                                            !availableDataTypeTags.some(
+                                                                (tag) =>
+                                                                    tag.name ===
+                                                                    dataType
+                                                            )
+                                                    )
+                                                    .forEach((dataType) => {
+                                                        const ndaId = `nda-datatype-${dataType}`;
+                                                        if (
+                                                            !combinedMap.has(
+                                                                ndaId
+                                                            )
+                                                        ) {
+                                                            combinedMap.set(
+                                                                ndaId,
+                                                                {
+                                                                    id: ndaId,
+                                                                    name: dataType,
+                                                                    isNdaDataType: true,
+                                                                }
                                                             );
-                                                        })
-                                                        .catch(() => {
-                                                            // Error already handled in createDataTypeTag
-                                                        });
+                                                        }
+                                                    });
+                                                const combinedAvailableDataTypes =
+                                                    Array.from(
+                                                        combinedMap.values()
+                                                    );
+
+                                                const exactMatch =
+                                                    combinedAvailableDataTypes.some(
+                                                        (item) =>
+                                                            item.name.toLowerCase() ===
+                                                            modalSearchTerm
+                                                                .trim()
+                                                                .toLowerCase()
+                                                    );
+                                                if (!exactMatch) {
+                                                    // No exact match, show input to create
+                                                    setNewDataTypeTagName(
+                                                        modalSearchTerm.trim()
+                                                    );
+                                                    setShowCreateDataTypeInput(
+                                                        true
+                                                    );
                                                 }
                                             }}
-                                            autoFocus
-                                        />
-                                        <div className="flex gap-2">
-                                            <button
-                                                onClick={() => {
-                                                    createDataTypeTag()
-                                                        .then(() => {
-                                                            setShowCreateDataTypeInput(
-                                                                false
-                                                            );
-                                                        })
-                                                        .catch(() => {
-                                                            // Error already handled in createDataTypeTag
-                                                        });
-                                                }}
-                                                disabled={
-                                                    !newDataTypeTagName.trim() ||
-                                                    tagLoading
-                                                }
-                                                className="flex-1 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:bg-gray-300 transition-colors text-sm font-medium"
-                                            >
-                                                <Plus className="w-4 h-4 inline mr-2" />
-                                                Create & Add to Selection
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    setShowCreateDataTypeInput(
-                                                        false
-                                                    );
-                                                    setNewDataTypeTagName("");
-                                                }}
-                                                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
-                                            >
-                                                Cancel
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Unified Search */}
-                                <div className="relative">
-                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                                    <input
-                                        type="text"
-                                        value={modalSearchTerm}
-                                        onChange={(e) =>
-                                            setModalSearchTerm(e.target.value)
-                                        }
-                                        placeholder="Search all data types..."
-                                        className="w-full pl-10 pr-4 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
-                                    />
+                                            className="flex items-center justify-center w-6 h-6 bg-green-500 text-white rounded-full hover:bg-green-600 transition-all hover:scale-110 active:scale-95"
+                                            title="Create new data type tag"
+                                        >
+                                            <Plus className="w-4 h-4" />
+                                        </button>
+                                    )}
                                 </div>
+
+                                {/* Create New Tag Input (shown when + is clicked or search has no results) */}
+                                {(() => {
+                                    // Compute combined list to check if we have results
+                                    const filteredAvailableDataTypeTags =
+                                        availableDataTypeTags.filter(
+                                            (tag) =>
+                                                !modalSearchTerm ||
+                                                tag.name
+                                                    .toLowerCase()
+                                                    .includes(
+                                                        modalSearchTerm.toLowerCase()
+                                                    )
+                                        );
+                                    const filteredNdaDataTypes = Array.from(
+                                        availableDataTypes
+                                    ).filter(
+                                        (dataType) =>
+                                            !modalSearchTerm ||
+                                            dataType
+                                                .toLowerCase()
+                                                .includes(
+                                                    modalSearchTerm.toLowerCase()
+                                                )
+                                    );
+                                    const combinedMap = new Map();
+                                    filteredAvailableDataTypeTags.forEach(
+                                        (tag) => {
+                                            combinedMap.set(tag.id, tag);
+                                        }
+                                    );
+                                    filteredNdaDataTypes
+                                        .filter(
+                                            (dataType) =>
+                                                !availableDataTypeTags.some(
+                                                    (tag) =>
+                                                        tag.name === dataType
+                                                )
+                                        )
+                                        .forEach((dataType) => {
+                                            const ndaId = `nda-datatype-${dataType}`;
+                                            if (!combinedMap.has(ndaId)) {
+                                                combinedMap.set(ndaId, {
+                                                    id: ndaId,
+                                                    name: dataType,
+                                                    isNdaDataType: true,
+                                                });
+                                            }
+                                        });
+                                    const combinedAvailableDataTypes =
+                                        Array.from(combinedMap.values());
+
+                                    return (
+                                        (showCreateDataTypeInput ||
+                                            combinedAvailableDataTypes.length ===
+                                                0) &&
+                                        modalSearchTerm.trim() && (
+                                            <div className="mb-3 animate-[fadeIn_0.2s_ease-out]">
+                                                <div className="flex items-center gap-2">
+                                                    <input
+                                                        type="text"
+                                                        value={modalSearchTerm}
+                                                        onChange={(e) => {
+                                                            setModalSearchTerm(
+                                                                e.target.value
+                                                            );
+                                                        }}
+                                                        placeholder="Data type tag name..."
+                                                        className="flex-1 px-3 py-2 border rounded-l-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 focus:outline-none text-sm transition-all"
+                                                        onKeyPress={async (
+                                                            e
+                                                        ) => {
+                                                            const tagName =
+                                                                modalSearchTerm.trim();
+                                                            if (
+                                                                e.key ===
+                                                                    "Enter" &&
+                                                                tagName
+                                                            ) {
+                                                                setNewDataTypeTagName(
+                                                                    tagName
+                                                                );
+                                                                setShowCreateDataTypeInput(
+                                                                    true
+                                                                );
+                                                                try {
+                                                                    await createDataTypeTag();
+                                                                    setShowCreateDataTypeInput(
+                                                                        false
+                                                                    );
+                                                                    setModalSearchTerm(
+                                                                        ""
+                                                                    );
+                                                                } catch (err) {
+                                                                    // Error already handled in createDataTypeTag
+                                                                }
+                                                            } else if (
+                                                                e.key ===
+                                                                "Escape"
+                                                            ) {
+                                                                setModalSearchTerm(
+                                                                    ""
+                                                                );
+                                                            }
+                                                        }}
+                                                        autoFocus
+                                                    />
+                                                    <button
+                                                        onClick={async () => {
+                                                            const tagName =
+                                                                modalSearchTerm.trim();
+                                                            if (tagName) {
+                                                                setNewDataTypeTagName(
+                                                                    tagName
+                                                                );
+                                                                setShowCreateDataTypeInput(
+                                                                    true
+                                                                );
+                                                                try {
+                                                                    await createDataTypeTag();
+                                                                    setShowCreateDataTypeInput(
+                                                                        false
+                                                                    );
+                                                                    setModalSearchTerm(
+                                                                        ""
+                                                                    );
+                                                                } catch (err) {
+                                                                    // Error already handled in createDataTypeTag
+                                                                }
+                                                            }
+                                                        }}
+                                                        disabled={
+                                                            !modalSearchTerm.trim() ||
+                                                            tagLoading
+                                                        }
+                                                        className="px-4 py-2 bg-green-500 text-white rounded-r-lg hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all font-medium text-sm flex items-center gap-2"
+                                                    >
+                                                        <Plus className="w-4 h-4" />
+                                                        Add
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )
+                                    );
+                                })()}
+
+                                {/* Unified Search - Hide when no results and search term exists */}
+                                {(() => {
+                                    // Compute combined list to check if we have results
+                                    const filteredAvailableDataTypeTags =
+                                        availableDataTypeTags.filter(
+                                            (tag) =>
+                                                !modalSearchTerm ||
+                                                tag.name
+                                                    .toLowerCase()
+                                                    .includes(
+                                                        modalSearchTerm.toLowerCase()
+                                                    )
+                                        );
+                                    const filteredNdaDataTypes = Array.from(
+                                        availableDataTypes
+                                    ).filter(
+                                        (dataType) =>
+                                            !modalSearchTerm ||
+                                            dataType
+                                                .toLowerCase()
+                                                .includes(
+                                                    modalSearchTerm.toLowerCase()
+                                                )
+                                    );
+                                    const combinedMap = new Map();
+                                    filteredAvailableDataTypeTags.forEach(
+                                        (tag) => {
+                                            combinedMap.set(tag.id, tag);
+                                        }
+                                    );
+                                    filteredNdaDataTypes
+                                        .filter(
+                                            (dataType) =>
+                                                !availableDataTypeTags.some(
+                                                    (tag) =>
+                                                        tag.name === dataType
+                                                )
+                                        )
+                                        .forEach((dataType) => {
+                                            const ndaId = `nda-datatype-${dataType}`;
+                                            if (!combinedMap.has(ndaId)) {
+                                                combinedMap.set(ndaId, {
+                                                    id: ndaId,
+                                                    name: dataType,
+                                                    isNdaDataType: true,
+                                                });
+                                            }
+                                        });
+                                    const combinedAvailableDataTypes =
+                                        Array.from(combinedMap.values());
+
+                                    return (
+                                        !(
+                                            showCreateDataTypeInput ||
+                                            (combinedAvailableDataTypes.length ===
+                                                0 &&
+                                                modalSearchTerm.trim())
+                                        ) && (
+                                            <div className="relative">
+                                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                                                <input
+                                                    type="text"
+                                                    value={modalSearchTerm}
+                                                    onChange={(e) =>
+                                                        setModalSearchTerm(
+                                                            e.target.value
+                                                        )
+                                                    }
+                                                    placeholder="Search all data types..."
+                                                    className="w-full pl-10 pr-12 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
+                                                />
+                                                {/* + button on the right side of search box */}
+                                                {modalSearchTerm.trim() && (
+                                                    <button
+                                                        onClick={() => {
+                                                            const exactMatch =
+                                                                combinedAvailableDataTypes.some(
+                                                                    (item) =>
+                                                                        item.name.toLowerCase() ===
+                                                                        modalSearchTerm
+                                                                            .trim()
+                                                                            .toLowerCase()
+                                                                );
+                                                            if (!exactMatch) {
+                                                                // No exact match, show input to create
+                                                                setNewDataTypeTagName(
+                                                                    modalSearchTerm.trim()
+                                                                );
+                                                                setShowCreateDataTypeInput(
+                                                                    true
+                                                                );
+                                                            }
+                                                        }}
+                                                        className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center justify-center w-6 h-6 bg-green-500 text-white rounded-full hover:bg-green-600 transition-all hover:scale-110 active:scale-95"
+                                                        title="Create new data type tag"
+                                                    >
+                                                        <Plus className="w-4 h-4" />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        )
+                                    );
+                                })()}
                             </div>
 
                             {/* Combined Word Bank */}
@@ -4104,208 +4397,204 @@ const DataCategorySearch = ({
                                                     );
 
                                                 return combinedAvailableDataTypes.length >
-                                                    0 ? (
-                                                    combinedAvailableDataTypes.map(
-                                                        (item, index) => {
-                                                            // Check if this is a custom tag
-                                                            const hasRealId =
-                                                                item.id &&
-                                                                !item.id.startsWith(
-                                                                    "nda-datatype-"
-                                                                );
+                                                    0
+                                                    ? combinedAvailableDataTypes.map(
+                                                          (item, index) => {
+                                                              // Check if this is a custom tag
+                                                              const hasRealId =
+                                                                  item.id &&
+                                                                  !item.id.startsWith(
+                                                                      "nda-datatype-"
+                                                                  );
 
-                                                            // Check if the name exists in NDA data types
-                                                            const isNdaDataTypeName =
-                                                                availableDataTypes.has(
-                                                                    item.name
-                                                                );
+                                                              // Check if the name exists in NDA data types
+                                                              const isNdaDataTypeName =
+                                                                  availableDataTypes.has(
+                                                                      item.name
+                                                                  );
 
-                                                            // Custom tag = has real ID AND NOT an NDA data type name
-                                                            const isCustomTag =
-                                                                hasRealId &&
-                                                                !isNdaDataTypeName;
-                                                            const isNdaDataType =
-                                                                !isCustomTag;
+                                                              // Custom tag = has real ID AND NOT an NDA data type name
+                                                              const isCustomTag =
+                                                                  hasRealId &&
+                                                                  !isNdaDataTypeName;
+                                                              const isNdaDataType =
+                                                                  !isCustomTag;
 
-                                                            const isSelected =
-                                                                isNdaDataType
-                                                                    ? false // NDA data types can't be selected (they're just for display)
-                                                                    : selectedDataTypeTags.has(
-                                                                          item.id
-                                                                      );
+                                                              const isSelected =
+                                                                  isNdaDataType
+                                                                      ? false // NDA data types can't be selected (they're just for display)
+                                                                      : selectedDataTypeTags.has(
+                                                                            item.id
+                                                                        );
 
-                                                            return (
-                                                                <div
-                                                                    key={`${item.id}-${index}`}
-                                                                    className="inline-flex items-center group relative"
-                                                                >
-                                                                    {isCustomTag &&
-                                                                    editingDataTypeTagId ===
-                                                                        item.id ? (
-                                                                        <input
-                                                                            type="text"
-                                                                            value={
-                                                                                editingDataTypeTagName
-                                                                            }
-                                                                            onChange={(
-                                                                                e
-                                                                            ) =>
-                                                                                setEditingDataTypeTagName(
-                                                                                    e
-                                                                                        .target
-                                                                                        .value
-                                                                                )
-                                                                            }
-                                                                            onBlur={() => {
-                                                                                updateTag(
-                                                                                    item.id,
-                                                                                    editingDataTypeTagName,
-                                                                                    true
-                                                                                );
-                                                                            }}
-                                                                            onKeyDown={(
-                                                                                e
-                                                                            ) => {
-                                                                                if (
-                                                                                    e.key ===
-                                                                                    "Enter"
-                                                                                ) {
-                                                                                    updateTag(
-                                                                                        item.id,
-                                                                                        editingDataTypeTagName,
-                                                                                        true
-                                                                                    );
-                                                                                } else if (
-                                                                                    e.key ===
-                                                                                    "Escape"
-                                                                                ) {
-                                                                                    setEditingDataTypeTagId(
-                                                                                        null
-                                                                                    );
-                                                                                }
-                                                                            }}
-                                                                            autoFocus
-                                                                            className="px-3 py-1.5 rounded-l-full text-sm border border-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-500"
-                                                                            onClick={(
-                                                                                e
-                                                                            ) =>
-                                                                                e.stopPropagation()
-                                                                            }
-                                                                        />
-                                                                    ) : (
-                                                                        <>
-                                                                            <button
-                                                                                onClick={() => {
-                                                                                    if (
-                                                                                        !isNdaDataType
-                                                                                    ) {
-                                                                                        // Only allow one data type to be selected at a time
-                                                                                        if (
-                                                                                            selectedDataTypeTags.has(
-                                                                                                item.id
-                                                                                            )
-                                                                                        ) {
-                                                                                            // If already selected, deselect it
-                                                                                            setSelectedDataTypeTags(
-                                                                                                new Set()
-                                                                                            );
-                                                                                        } else {
-                                                                                            // Select only this one (clear all others)
-                                                                                            setSelectedDataTypeTags(
-                                                                                                new Set(
-                                                                                                    [
-                                                                                                        item.id,
-                                                                                                    ]
-                                                                                                )
-                                                                                            );
-                                                                                        }
-                                                                                    }
-                                                                                }}
-                                                                                className={`px-3 py-1.5 ${
-                                                                                    isCustomTag
-                                                                                        ? "rounded-l-full"
-                                                                                        : "rounded-full"
-                                                                                } text-sm transition-all inline-flex items-center ${
-                                                                                    isSelected
-                                                                                        ? "bg-blue-500 text-white hover:bg-blue-600"
-                                                                                        : "bg-white text-gray-700 border border-gray-300 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-400"
-                                                                                }`}
-                                                                            >
-                                                                                {isCustomTag && (
-                                                                                    <span className="mr-1 text-xs text-orange-500">
-                                                                                        ★
-                                                                                    </span>
-                                                                                )}
-                                                                                {
-                                                                                    item.name
-                                                                                }
-                                                                                {item.dataStructures && (
-                                                                                    <span className="ml-2 text-xs opacity-70">
-                                                                                        (
-                                                                                        {
-                                                                                            item
-                                                                                                .dataStructures
-                                                                                                .length
-                                                                                        }
+                                                              return (
+                                                                  <div
+                                                                      key={`${item.id}-${index}`}
+                                                                      className="inline-flex items-center group relative"
+                                                                  >
+                                                                      {isCustomTag &&
+                                                                      editingDataTypeTagId ===
+                                                                          item.id ? (
+                                                                          <input
+                                                                              type="text"
+                                                                              value={
+                                                                                  editingDataTypeTagName
+                                                                              }
+                                                                              onChange={(
+                                                                                  e
+                                                                              ) =>
+                                                                                  setEditingDataTypeTagName(
+                                                                                      e
+                                                                                          .target
+                                                                                          .value
+                                                                                  )
+                                                                              }
+                                                                              onBlur={() => {
+                                                                                  updateTag(
+                                                                                      item.id,
+                                                                                      editingDataTypeTagName,
+                                                                                      true
+                                                                                  );
+                                                                              }}
+                                                                              onKeyDown={(
+                                                                                  e
+                                                                              ) => {
+                                                                                  if (
+                                                                                      e.key ===
+                                                                                      "Enter"
+                                                                                  ) {
+                                                                                      updateTag(
+                                                                                          item.id,
+                                                                                          editingDataTypeTagName,
+                                                                                          true
+                                                                                      );
+                                                                                  } else if (
+                                                                                      e.key ===
+                                                                                      "Escape"
+                                                                                  ) {
+                                                                                      setEditingDataTypeTagId(
+                                                                                          null
+                                                                                      );
+                                                                                  }
+                                                                              }}
+                                                                              autoFocus
+                                                                              className="px-3 py-1.5 rounded-l-full text-sm border border-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                                                                              onClick={(
+                                                                                  e
+                                                                              ) =>
+                                                                                  e.stopPropagation()
+                                                                              }
+                                                                          />
+                                                                      ) : (
+                                                                          <>
+                                                                              <button
+                                                                                  onClick={() => {
+                                                                                      if (
+                                                                                          !isNdaDataType
+                                                                                      ) {
+                                                                                          // Only allow one data type to be selected at a time
+                                                                                          if (
+                                                                                              selectedDataTypeTags.has(
+                                                                                                  item.id
+                                                                                              )
+                                                                                          ) {
+                                                                                              // If already selected, deselect it
+                                                                                              setSelectedDataTypeTags(
+                                                                                                  new Set()
+                                                                                              );
+                                                                                          } else {
+                                                                                              // Select only this one (clear all others)
+                                                                                              setSelectedDataTypeTags(
+                                                                                                  new Set(
+                                                                                                      [
+                                                                                                          item.id,
+                                                                                                      ]
+                                                                                                  )
+                                                                                              );
+                                                                                          }
+                                                                                      }
+                                                                                  }}
+                                                                                  className={`px-3 py-1.5 ${
+                                                                                      isCustomTag
+                                                                                          ? "rounded-l-full"
+                                                                                          : "rounded-full"
+                                                                                  } text-sm transition-all inline-flex items-center ${
+                                                                                      isSelected
+                                                                                          ? "bg-blue-500 text-white hover:bg-blue-600"
+                                                                                          : "bg-white text-gray-700 border border-gray-300 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-400"
+                                                                                  }`}
+                                                                              >
+                                                                                  {isCustomTag && (
+                                                                                      <span className="mr-1 text-xs text-orange-500">
+                                                                                          ★
+                                                                                      </span>
+                                                                                  )}
+                                                                                  {
+                                                                                      item.name
+                                                                                  }
+                                                                                  {item.dataStructures && (
+                                                                                      <span className="ml-2 text-xs opacity-70">
+                                                                                          (
+                                                                                          {
+                                                                                              item
+                                                                                                  .dataStructures
+                                                                                                  .length
+                                                                                          }
 
-                                                                                        )
-                                                                                    </span>
-                                                                                )}
-                                                                            </button>
-                                                                            {isCustomTag && (
-                                                                                <>
-                                                                                    <button
-                                                                                        onClick={(
-                                                                                            e
-                                                                                        ) => {
-                                                                                            e.stopPropagation();
-                                                                                            setEditingDataTypeTagId(
-                                                                                                item.id
-                                                                                            );
-                                                                                            setEditingDataTypeTagName(
-                                                                                                item.name
-                                                                                            );
-                                                                                        }}
-                                                                                        className={`px-2 py-1.5 text-sm transition-all border-l-0 inline-flex items-center justify-center ${
-                                                                                            isSelected
-                                                                                                ? "bg-blue-500 text-white hover:bg-blue-600"
-                                                                                                : "bg-white text-gray-700 border border-gray-300 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-400"
-                                                                                        }`}
-                                                                                        title="Edit tag name"
-                                                                                    >
-                                                                                        <Pencil className="w-4 h-5" />
-                                                                                    </button>
-                                                                                    <button
-                                                                                        onClick={(
-                                                                                            e
-                                                                                        ) => {
-                                                                                            e.stopPropagation();
-                                                                                            deleteTag(
-                                                                                                item.id
-                                                                                            );
-                                                                                        }}
-                                                                                        className={`px-2 py-1.5 rounded-r-full text-sm transition-all border-l-0 inline-flex items-center justify-center ${
-                                                                                            isSelected
-                                                                                                ? "bg-blue-500 text-white hover:bg-red-600"
-                                                                                                : "bg-white text-gray-700 border border-gray-300 hover:bg-red-50 hover:text-red-600 hover:border-red-400"
-                                                                                        }`}
-                                                                                        title="Delete tag permanently"
-                                                                                    >
-                                                                                        ×
-                                                                                    </button>
-                                                                                </>
-                                                                            )}
-                                                                        </>
-                                                                    )}
-                                                                </div>
-                                                            );
-                                                        }
-                                                    )
-                                                ) : (
-                                                    <p className="text-gray-500 text-sm">
-                                                        No data types found
-                                                    </p>
-                                                );
+                                                                                          )
+                                                                                      </span>
+                                                                                  )}
+                                                                              </button>
+                                                                              {isCustomTag && (
+                                                                                  <>
+                                                                                      <button
+                                                                                          onClick={(
+                                                                                              e
+                                                                                          ) => {
+                                                                                              e.stopPropagation();
+                                                                                              setEditingDataTypeTagId(
+                                                                                                  item.id
+                                                                                              );
+                                                                                              setEditingDataTypeTagName(
+                                                                                                  item.name
+                                                                                              );
+                                                                                          }}
+                                                                                          className={`px-2 py-1.5 text-sm transition-all border-l-0 inline-flex items-center justify-center ${
+                                                                                              isSelected
+                                                                                                  ? "bg-blue-500 text-white hover:bg-blue-600"
+                                                                                                  : "bg-white text-gray-700 border border-gray-300 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-400"
+                                                                                          }`}
+                                                                                          title="Edit tag name"
+                                                                                      >
+                                                                                          <Pencil className="w-4 h-5" />
+                                                                                      </button>
+                                                                                      <button
+                                                                                          onClick={(
+                                                                                              e
+                                                                                          ) => {
+                                                                                              e.stopPropagation();
+                                                                                              deleteTag(
+                                                                                                  item.id
+                                                                                              );
+                                                                                          }}
+                                                                                          className={`px-2 py-1.5 rounded-r-full text-sm transition-all border-l-0 inline-flex items-center justify-center ${
+                                                                                              isSelected
+                                                                                                  ? "bg-blue-500 text-white hover:bg-red-600"
+                                                                                                  : "bg-white text-gray-700 border border-gray-300 hover:bg-red-50 hover:text-red-600 hover:border-red-400"
+                                                                                          }`}
+                                                                                          title="Delete tag permanently"
+                                                                                      >
+                                                                                          ×
+                                                                                      </button>
+                                                                                  </>
+                                                                              )}
+                                                                          </>
+                                                                      )}
+                                                                  </div>
+                                                              );
+                                                          }
+                                                      )
+                                                    : null;
                                             })()}
                                         </div>
                                     </div>

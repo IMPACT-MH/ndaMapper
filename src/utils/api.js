@@ -5,7 +5,11 @@
  * @param {string} apiBaseUrl - Base URL for API
  * @returns {Promise<any>} Parsed JSON response
  */
-export const apiCall = async (endpoint, options = {}, apiBaseUrl = "/api/spinup") => {
+export const apiCall = async (
+    endpoint,
+    options = {},
+    apiBaseUrl = "/api/spinup"
+) => {
     try {
         const response = await fetch(`${apiBaseUrl}${endpoint}`, {
             ...options,
@@ -79,9 +83,12 @@ export const fetchTags = async (apiBaseUrl = "/api/spinup") => {
  * @returns {Promise<object>} Created tag
  */
 export const createTag = async (name, tagType, apiBaseUrl = "/api/spinup") => {
-    if (!name || !name.trim()) {
+    // Validate: only check that it's not empty after trimming whitespace
+    const trimmedName = name ? name.trim() : "";
+    if (!trimmedName) {
         throw new Error("Tag name cannot be empty");
     }
+    // Check length on original name (spaces allowed)
     if (name.length > 100) {
         throw new Error("Tag name too long (max 100 characters)");
     }
@@ -89,12 +96,13 @@ export const createTag = async (name, tagType, apiBaseUrl = "/api/spinup") => {
         throw new Error("Tag name cannot contain colons");
     }
 
+    // Preserve original name with spaces (only trimmed for validation)
     const newTag = await apiCall(
         "/tags",
         {
             method: "POST",
             body: JSON.stringify({
-                name: name.trim(),
+                name: name, // Keep original with spaces
                 tagType: tagType,
             }),
         },
@@ -126,11 +134,18 @@ export const updateTag = async (tagId, newName, apiBaseUrl = "/api/spinup") => {
         throw new Error("Tag name cannot contain colons");
     }
 
+    // Validate: only check that it's not empty after trimming whitespace
+    const trimmedName = newName ? newName.trim() : "";
+    if (!trimmedName) {
+        throw new Error("Tag name cannot be empty");
+    }
+
+    // Preserve original name with spaces (only trimmed for validation)
     return await apiCall(
         `/tags/${tagId}`,
         {
             method: "PUT",
-            body: JSON.stringify({ name: newName.trim() }),
+            body: JSON.stringify({ name: newName }), // Keep original with spaces
         },
         apiBaseUrl
     );
@@ -184,4 +199,3 @@ export const fetchTagDataStructures = async (
     const data = await apiCall(`/tags/${tagId}/dataStructures`, {}, apiBaseUrl);
     return Array.isArray(data?.dataStructures) ? data.dataStructures : [];
 };
-
