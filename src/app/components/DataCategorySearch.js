@@ -713,35 +713,15 @@ const DataCategorySearch = ({
         );
     };
 
-    // Check if a filter item is a custom tag (not an original category/dataType)
+    // Check if a filter item is a custom tag (only new tags, not original categories/dataTypes)
     const isCustomTag = (item, isCategory) => {
         if (isCategory) {
-            // Check if it's a custom tag in availableTags
+            // Only return true if it's actually a new custom tag in availableTags
             // availableTags already contains only category tags (filtered to exclude data type tags)
-            const isInAvailableTags = availableTags.some(
-                (tag) => tag.name === item
-            );
-            // If it's in availableTags, it's a custom tag
-            if (isInAvailableTags) {
-                return true;
-            }
-            // Otherwise, check if it's NOT in the original categories
-            return !allStructures.some((structure) =>
-                structure.categories?.includes(item)
-            );
+            return availableTags.some((tag) => tag.name === item);
         } else {
-            // Check if it's a custom tag in availableDataTypeTags
-            const isInAvailableDataTypeTags = availableDataTypeTags.some(
-                (tag) => tag.name === item
-            );
-            // If it's in availableDataTypeTags, it's a custom tag
-            if (isInAvailableDataTypeTags) {
-                return true;
-            }
-            // Otherwise, check if it's NOT in the original data types
-            return !allStructures.some(
-                (structure) => structure.dataType === item
-            );
+            // Only return true if it's actually a new custom tag in availableDataTypeTags
+            return availableDataTypeTags.some((tag) => tag.name === item);
         }
     };
 
@@ -2078,6 +2058,10 @@ const DataCategorySearch = ({
                                                                                                         availableCategories.has(
                                                                                                             tag.name
                                                                                                         );
+                                                                                                    // Only show star if it's a NEW tag (in availableTags but not an original NDA category)
+                                                                                                    const isNewTag = availableTags.some(
+                                                                                                        (t) => t.name === tag.name
+                                                                                                    ) && !isNdaCategory;
                                                                                                     return (
                                                                                                         <span
                                                                                                             key={
@@ -2097,9 +2081,11 @@ const DataCategorySearch = ({
                                                                                                             {
                                                                                                                 tag.name
                                                                                                             }
-                                                                                                            <span className="ml-1 text-xs text-orange-500">
-                                                                                                                ★
-                                                                                                            </span>
+                                                                                                            {isNewTag && (
+                                                                                                                <span className="ml-1 text-xs text-orange-500">
+                                                                                                                    ★
+                                                                                                                </span>
+                                                                                                            )}
                                                                                                         </span>
                                                                                                     );
                                                                                                 }
