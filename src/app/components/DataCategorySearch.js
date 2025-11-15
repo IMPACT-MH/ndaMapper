@@ -1119,7 +1119,7 @@ const DataCategorySearch = ({
             }
 
             const updatedTag = await response.json();
-            const newName = updatedTag.name;
+            const updatedName = updatedTag.name;
 
             // Find old tag name before updating
             let oldName;
@@ -1176,7 +1176,7 @@ const DataCategorySearch = ({
 
             // Update selectedFilters if the old tag name was selected
             // Filters use tag names, so we need to update them when a tag is renamed
-            if (oldName && newName && oldName !== newName) {
+            if (oldName && updatedName && oldName !== updatedName) {
                 setSelectedFilters((prev) => {
                     const updated = { ...prev };
 
@@ -1185,14 +1185,14 @@ const DataCategorySearch = ({
                         if (updated.dataTypes.has(oldName)) {
                             updated.dataTypes = new Set(updated.dataTypes);
                             updated.dataTypes.delete(oldName);
-                            updated.dataTypes.add(newName);
+                            updated.dataTypes.add(updatedName);
                         }
                     } else {
                         // Update category filters
                         if (updated.categories.has(oldName)) {
                             updated.categories = new Set(updated.categories);
                             updated.categories.delete(oldName);
-                            updated.categories.add(newName);
+                            updated.categories.add(updatedName);
                         }
                     }
 
