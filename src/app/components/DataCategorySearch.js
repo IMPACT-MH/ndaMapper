@@ -3148,6 +3148,20 @@ const DataCategorySearch = ({
                                             (id) => !selectedTagIds.includes(id)
                                         );
 
+                                        // If nothing has changed, cancel and close modal
+                                        if (
+                                            toAdd.length === 0 &&
+                                            toRemove.length === 0
+                                        ) {
+                                            setIsCategoriesModalOpen(false);
+                                            setSelectedSocialTags(new Set());
+                                            setSelectedNdaCategories(new Set());
+                                            setNewTagName("");
+                                            setModalSearchTerm("");
+                                            setNdaCategorySearchTerm("");
+                                            return;
+                                        }
+
                                         // Get the data structure ID from the existing structure
                                         const dataStructureId =
                                             existingStructure.dataStructureId ||
@@ -4070,6 +4084,39 @@ const DataCategorySearch = ({
                                             throw new Error(
                                                 `Data structure "${modalStructure.shortName}" not found in backend`
                                             );
+                                        }
+
+                                        // Get current tag IDs for this structure
+                                        const currentDataTypeTagIds = new Set(
+                                            (
+                                                structureDataTypeTags[
+                                                    modalStructure.shortName
+                                                ] || []
+                                            ).map((t) => t.id)
+                                        );
+
+                                        // Check if anything has changed
+                                        const selectedTagIdsSet = new Set(
+                                            selectedTagIds
+                                        );
+                                        const hasChanges =
+                                            selectedTagIdsSet.size !==
+                                                currentDataTypeTagIds.size ||
+                                            !Array.from(
+                                                selectedTagIdsSet
+                                            ).every((id) =>
+                                                currentDataTypeTagIds.has(id)
+                                            );
+
+                                        // If nothing has changed, cancel and close modal
+                                        if (!hasChanges) {
+                                            setIsDataTypesModalOpen(false);
+                                            setSelectedDataTypeTags(new Set());
+                                            setNewDataTypeTagName("");
+                                            setModalSearchTerm("");
+                                            setShowCreateDataTypeInput(false);
+                                            setModalLoading(false);
+                                            return;
                                         }
 
                                         // Assign tags to structure

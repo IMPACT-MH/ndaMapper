@@ -190,6 +190,15 @@ const CategoryTagManagement = ({
                 (id) => !selectedTags.has(id)
             );
 
+            // If nothing has changed, cancel and close modal
+            if (toAdd.length === 0 && toRemove.length === 0) {
+                setIsModalOpen(false);
+                setSelectedTags(new Set());
+                setClickedNdaCategory(null);
+                setLoading(false);
+                return;
+            }
+
             // Process removals
             for (const tagId of toRemove) {
                 await removeTag(tagId);
