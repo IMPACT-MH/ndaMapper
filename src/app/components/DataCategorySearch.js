@@ -233,68 +233,90 @@ const DataCategorySearch = ({
         [getPluralSingularVariations]
     );
 
-    // Helper function to compute filtered and combined categories for modal search
-    // IMPORTANT: This must work EXACTLY like computeFilteredCombinedDataTypes
-    const computeFilteredCombinedCategories = useCallback(
-        (searchTerm) => {
-            // Build from unfiltered sources, exactly like data types
-            // When searchTerm is empty, return ALL categories for duplicate checking
+    // Helper function for case-insensitive search matching
+    const matchesSearchTerm = useCallback((text, searchTerm) => {
+        if (!searchTerm) return true;
+        return text.toLowerCase().includes(searchTerm.toLowerCase());
+    }, []);
+
+    // Generic helper to combine tags and NDA items
+    const combineTagsAndNdaItems = useCallback(
+        (
+            tags,
+            ndaItems,
+            searchTerm,
+            ndaIdPrefix,
+            ndaItemKey,
+            tagNameKey = "name",
+            additionalProps = {}
+        ) => {
             const combinedMap = new Map();
 
-            // First, add all category tags (exclude data type tags)
-            // Filter by searchTerm only if provided
-            availableTags
+            // Add tags that match search term
+            tags.filter((tag) =>
+                matchesSearchTerm(tag[tagNameKey], searchTerm)
+            ).forEach((tag) => {
+                combinedMap.set(tag.id, tag);
+            });
+
+            // Add NDA items that match search term and aren't already in tags
+            Array.from(ndaItems)
+                .filter((item) => matchesSearchTerm(item, searchTerm))
+                .filter((item) => !tags.some((tag) => tag[tagNameKey] === item))
+                .forEach((item) => {
+                    const ndaId = `${ndaIdPrefix}-${item}`;
+                    if (!combinedMap.has(ndaId)) {
+                        combinedMap.set(ndaId, {
+                            id: ndaId,
+                            name: item,
+                            [ndaItemKey]: true,
+                            ...additionalProps,
+                        });
+                    }
+                });
+
+            return Array.from(combinedMap.values());
+        },
+        [matchesSearchTerm]
+    );
+
+    // Helper function to add matched item to filtered list if not already present
+    const addMatchedItemIfNeeded = useCallback((filtered, matchedItem) => {
+        if (!matchedItem) return filtered;
+        const alreadyInList = filtered.some(
+            (item) =>
+                item.id === matchedItem.id || item.name === matchedItem.name
+        );
+        return alreadyInList ? filtered : [matchedItem, ...filtered];
+    }, []);
+
+    // Helper function to compute filtered and combined categories for modal search
+    const computeFilteredCombinedCategories = useCallback(
+        (searchTerm) => {
+            // Filter category tags (exclude data type tags)
+            const categoryTags = availableTags
                 .filter(
                     (tag) =>
                         tag &&
                         tag.id &&
                         (!tag.tagType || tag.tagType !== "Data Type")
                 )
-                .filter(
-                    (tag) =>
-                        !searchTerm ||
-                        tag.name
-                            .toLowerCase()
-                            .includes(searchTerm.toLowerCase())
-                )
-                .forEach((tag) => {
-                    combinedMap.set(tag.id, {
-                        ...tag,
-                        isNdaCategory: false,
-                    });
-                });
+                .map((tag) => ({
+                    ...tag,
+                    isNdaCategory: false,
+                }));
 
-            // Then, add NDA categories that aren't already in availableTags
-            // Filter by searchTerm only if provided
-            Array.from(availableCategories)
-                .filter(
-                    (category) =>
-                        !searchTerm ||
-                        category
-                            .toLowerCase()
-                            .includes(searchTerm.toLowerCase())
-                )
-                .filter(
-                    (category) =>
-                        category &&
-                        !availableTags.some(
-                            (tag) => tag && tag.name === category
-                        )
-                )
-                .forEach((category) => {
-                    const ndaId = `nda-category-${category}`;
-                    if (!combinedMap.has(ndaId)) {
-                        combinedMap.set(ndaId, {
-                            id: ndaId,
-                            name: category,
-                            isNdaCategory: true,
-                            tagType: "Category",
-                        });
-                    }
-                });
-            return Array.from(combinedMap.values());
+            return combineTagsAndNdaItems(
+                categoryTags,
+                availableCategories,
+                searchTerm,
+                "nda-category",
+                "isNdaCategory",
+                "name",
+                { tagType: "Category" }
+            );
         },
-        [availableTags, availableCategories]
+        [availableTags, availableCategories, combineTagsAndNdaItems]
     );
 
     // Use the same function for both display and duplicate checking
@@ -302,83 +324,38 @@ const DataCategorySearch = ({
     // Also include matched item if there's a plural/singular match
     const combinedAvailableCategories = useMemo(() => {
         const filtered = computeFilteredCombinedCategories(modalSearchTerm);
-        // If there's a matched item (from plural/singular detection) and it's not already in the list, add it
-        if (matchedCategoryItem) {
-            const alreadyInList = filtered.some(
-                (item) =>
-                    item.id === matchedCategoryItem.id ||
-                    item.name === matchedCategoryItem.name
-            );
-            if (!alreadyInList) {
-                return [matchedCategoryItem, ...filtered];
-            }
-        }
-        return filtered;
+        return addMatchedItemIfNeeded(filtered, matchedCategoryItem);
     }, [
         computeFilteredCombinedCategories,
         modalSearchTerm,
         matchedCategoryItem,
+        addMatchedItemIfNeeded,
     ]);
 
     // Helper function to compute filtered and combined data types for modal search
     const computeFilteredCombinedDataTypes = useCallback(
         (searchTerm) => {
-            const filteredAvailableDataTypeTags = availableDataTypeTags.filter(
-                (tag) =>
-                    !searchTerm ||
-                    tag.name.toLowerCase().includes(searchTerm.toLowerCase())
+            return combineTagsAndNdaItems(
+                availableDataTypeTags,
+                availableDataTypes,
+                searchTerm,
+                "nda-datatype",
+                "isNdaDataType"
             );
-            const filteredNdaDataTypes = Array.from(availableDataTypes).filter(
-                (dataType) =>
-                    !searchTerm ||
-                    dataType.toLowerCase().includes(searchTerm.toLowerCase())
-            );
-            const combinedMap = new Map();
-            filteredAvailableDataTypeTags.forEach((tag) => {
-                combinedMap.set(tag.id, tag);
-            });
-            filteredNdaDataTypes
-                .filter(
-                    (dataType) =>
-                        !availableDataTypeTags.some(
-                            (tag) => tag.name === dataType
-                        )
-                )
-                .forEach((dataType) => {
-                    const ndaId = `nda-datatype-${dataType}`;
-                    if (!combinedMap.has(ndaId)) {
-                        combinedMap.set(ndaId, {
-                            id: ndaId,
-                            name: dataType,
-                            isNdaDataType: true,
-                        });
-                    }
-                });
-            return Array.from(combinedMap.values());
         },
-        [availableDataTypeTags, availableDataTypes]
+        [availableDataTypeTags, availableDataTypes, combineTagsAndNdaItems]
     );
 
     // Use the same function for both display and duplicate checking
     // Also include matched item if there's a plural/singular match
     const combinedAvailableDataTypes = useMemo(() => {
         const filtered = computeFilteredCombinedDataTypes(modalSearchTerm);
-        // If there's a matched item (from plural/singular detection) and it's not already in the list, add it
-        if (matchedDataTypeItem) {
-            const alreadyInList = filtered.some(
-                (item) =>
-                    item.id === matchedDataTypeItem.id ||
-                    item.name === matchedDataTypeItem.name
-            );
-            if (!alreadyInList) {
-                return [matchedDataTypeItem, ...filtered];
-            }
-        }
-        return filtered;
+        return addMatchedItemIfNeeded(filtered, matchedDataTypeItem);
     }, [
         computeFilteredCombinedDataTypes,
         modalSearchTerm,
         matchedDataTypeItem,
+        addMatchedItemIfNeeded,
     ]);
 
     // Add this useEffect to fetch once
