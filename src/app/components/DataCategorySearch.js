@@ -32,7 +32,16 @@ const DataCategorySearch = ({
     const [modifiedDataTypes, setModifiedDataTypes] = useState({});
 
     // Grouping and filtering states
-    const [groupBy, setGroupBy] = useState("dataType"); // "category" or "dataType"
+    // Initialize groupBy from localStorage or default to "dataType"
+    const [groupBy, setGroupBy] = useState(() => {
+        if (typeof window !== "undefined") {
+            const saved = localStorage.getItem("dataCategoryGroupBy");
+            return saved === "category" || saved === "dataType"
+                ? saved
+                : "dataType";
+        }
+        return "dataType";
+    });
     const [expandedGroups, setExpandedGroups] = useState(new Set());
     const [selectedFilters, setSelectedFilters] = useState({
         categories: new Set(),
@@ -1446,7 +1455,17 @@ const DataCategorySearch = ({
                         </label>
                         <select
                             value={groupBy}
-                            onChange={(e) => setGroupBy(e.target.value)}
+                            onChange={(e) => {
+                                const newValue = e.target.value;
+                                setGroupBy(newValue);
+                                // Save to localStorage
+                                if (typeof window !== "undefined") {
+                                    localStorage.setItem(
+                                        "dataCategoryGroupBy",
+                                        newValue
+                                    );
+                                }
+                            }}
                             className="border border-gray-300 rounded px-3 py-1 text-sm focus:ring-2 focus:ring-blue-500"
                         >
                             <option value="dataType">Data Type</option>
