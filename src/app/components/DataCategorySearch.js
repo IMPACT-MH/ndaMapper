@@ -3936,45 +3936,32 @@ const DataCategorySearch = ({
                                                                                     if (
                                                                                         !isNdaDataType
                                                                                     ) {
-                                                                                        setSelectedDataTypeTags(
-                                                                                            (
-                                                                                                prev
-                                                                                            ) => {
-                                                                                                const newSet =
-                                                                                                    new Set(
-                                                                                                        prev
-                                                                                                    );
-                                                                                                if (
-                                                                                                    newSet.has(
-                                                                                                        item.id
-                                                                                                    )
-                                                                                                ) {
-                                                                                                    newSet.delete(
-                                                                                                        item.id
-                                                                                                    );
-                                                                                                } else {
-                                                                                                    newSet.add(
-                                                                                                        item.id
-                                                                                                    );
-                                                                                                }
-                                                                                                return newSet;
-                                                                                            }
-                                                                                        );
+                                                                                        // Only allow one data type to be selected at a time
+                                                                                        if (
+                                                                                            selectedDataTypeTags.has(
+                                                                                                item.id
+                                                                                            )
+                                                                                        ) {
+                                                                                            // If already selected, deselect it
+                                                                                            setSelectedDataTypeTags(
+                                                                                                new Set()
+                                                                                            );
+                                                                                        } else {
+                                                                                            // Select only this one (clear all others)
+                                                                                            setSelectedDataTypeTags(
+                                                                                                new Set(
+                                                                                                    [
+                                                                                                        item.id,
+                                                                                                    ]
+                                                                                                )
+                                                                                            );
+                                                                                        }
                                                                                     }
                                                                                 }}
-                                                                                disabled={
-                                                                                    isNdaDataType
-                                                                                }
-                                                                                className={`inline-flex items-center px-3 py-1.5 ${
-                                                                                    isCustomTag
-                                                                                        ? "rounded-l-full"
-                                                                                        : "rounded-full"
-                                                                                } text-sm transition-all relative ${
+                                                                                className={`px-3 py-1.5 rounded-full text-sm transition-all inline-flex items-center ${
                                                                                     isSelected
-                                                                                        ? "bg-gray-100 text-gray-700 border-2 border-gray-400"
-                                                                                        : isNdaDataType
-                                                                                        ? "bg-gray-50 text-gray-500 border border-gray-200 cursor-not-allowed"
-                                                                                        : "bg-gray-100 text-gray-700 border border-gray-300 hover:border-gray-400 hover:bg-gray-200"
+                                                                                        ? "bg-blue-500 text-white hover:bg-blue-600"
+                                                                                        : "bg-white text-gray-700 border border-gray-300 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-400"
                                                                                 }`}
                                                                             >
                                                                                 {isCustomTag && (
@@ -3998,49 +3985,6 @@ const DataCategorySearch = ({
                                                                                     </span>
                                                                                 )}
                                                                             </button>
-                                                                            {isCustomTag && (
-                                                                                <>
-                                                                                    <button
-                                                                                        onClick={(
-                                                                                            e
-                                                                                        ) => {
-                                                                                            e.stopPropagation();
-                                                                                            setEditingDataTypeTagId(
-                                                                                                item.id
-                                                                                            );
-                                                                                            setEditingDataTypeTagName(
-                                                                                                item.name
-                                                                                            );
-                                                                                        }}
-                                                                                        className={`px-2 py-1.5 text-sm transition-all border-l-0 inline-flex items-center justify-center ${
-                                                                                            isSelected
-                                                                                                ? "bg-gray-100 text-gray-700 border-2 border-gray-400 hover:bg-blue-50 hover:text-blue-600"
-                                                                                                : "bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200 hover:text-gray-800 hover:border-gray-400"
-                                                                                        }`}
-                                                                                        title="Edit tag name"
-                                                                                    >
-                                                                                        <Pencil className="w-4 h-5" />
-                                                                                    </button>
-                                                                                    <button
-                                                                                        onClick={(
-                                                                                            e
-                                                                                        ) => {
-                                                                                            e.stopPropagation();
-                                                                                            deleteTag(
-                                                                                                item.id
-                                                                                            );
-                                                                                        }}
-                                                                                        className={`px-2 py-1.5 rounded-r-full text-sm transition-all border-l-0 inline-flex items-center justify-center ${
-                                                                                            isSelected
-                                                                                                ? "bg-gray-100 text-gray-700 border-2 border-gray-400 hover:bg-red-50 hover:text-red-600"
-                                                                                                : "bg-gray-100 text-gray-700 border border-gray-300 hover:bg-red-50 hover:text-red-600 hover:border-red-400"
-                                                                                        }`}
-                                                                                        title="Delete tag permanently"
-                                                                                    >
-                                                                                        ×
-                                                                                    </button>
-                                                                                </>
-                                                                            )}
                                                                         </>
                                                                     )}
                                                                 </div>
@@ -4063,9 +4007,6 @@ const DataCategorySearch = ({
                             <button
                                 onClick={() => {
                                     setIsDataTypesModalOpen(false);
-                                    setSelectedDataTypeTags(new Set());
-                                    setNewDataTypeTagName("");
-                                    setModalSearchTerm("");
                                     setShowCreateDataTypeInput(false);
                                 }}
                                 className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
@@ -4076,31 +4017,9 @@ const DataCategorySearch = ({
                                 onClick={async () => {
                                     try {
                                         setModalLoading(true);
-                                        const selectedTagIds =
-                                            Array.from(selectedDataTypeTags);
+                                        setModalError(null);
 
-                                        // Validate that at least one data type will remain after save
-                                        const isDataTypeCurrentlyRemoved =
-                                            isDataTypeRemoved(
-                                                modalStructure.shortName
-                                            );
-                                        const visibleOriginalDataTypeAfterSave =
-                                            modalStructure.dataType &&
-                                            !isDataTypeCurrentlyRemoved
-                                                ? 1
-                                                : 0;
-                                        const totalDataTypesAfterSave =
-                                            visibleOriginalDataTypeAfterSave +
-                                            selectedTagIds.length;
-
-                                        if (totalDataTypesAfterSave < 1) {
-                                            setModalError(
-                                                "Cannot save: At least one data type must remain. Please add a data type before removing the last one."
-                                            );
-                                            setModalLoading(false);
-                                            return;
-                                        }
-
+                                        // Get existing structure
                                         const existingStructure =
                                             dataStructuresMap[
                                                 modalStructure.shortName
@@ -4113,7 +4032,7 @@ const DataCategorySearch = ({
                                         }
 
                                         // Get current tag IDs for this structure
-                                        const currentDataTypeTagIds = new Set(
+                                        const currentTagIds = new Set(
                                             (
                                                 structureDataTypeTags[
                                                     modalStructure.shortName
@@ -4121,34 +4040,47 @@ const DataCategorySearch = ({
                                             ).map((t) => t.id)
                                         );
 
-                                        // Check if anything has changed
-                                        const selectedTagIdsSet = new Set(
-                                            selectedTagIds
+                                        // Find tags to add and remove
+                                        const toAdd = Array.from(
+                                            selectedDataTypeTags
+                                        ).filter(
+                                            (id) => !currentTagIds.has(id)
                                         );
-                                        const hasChanges =
-                                            selectedTagIdsSet.size !==
-                                                currentDataTypeTagIds.size ||
-                                            !Array.from(
-                                                selectedTagIdsSet
-                                            ).every((id) =>
-                                                currentDataTypeTagIds.has(id)
-                                            );
+                                        const toRemove = Array.from(
+                                            currentTagIds
+                                        ).filter(
+                                            (id) =>
+                                                !selectedDataTypeTags.has(id)
+                                        );
 
                                         // If nothing has changed, cancel and close modal
-                                        if (!hasChanges) {
+                                        if (
+                                            toAdd.length === 0 &&
+                                            toRemove.length === 0
+                                        ) {
                                             setIsDataTypesModalOpen(false);
                                             setSelectedDataTypeTags(new Set());
                                             setNewDataTypeTagName("");
                                             setModalSearchTerm("");
-                                            setShowCreateDataTypeInput(false);
-                                            setModalLoading(false);
                                             return;
                                         }
 
-                                        // Assign tags to structure
-                                        for (const tagId of selectedTagIds) {
+                                        // Get the data structure ID from the existing structure
+                                        const dataStructureId =
+                                            existingStructure.dataStructureId ||
+                                            existingStructure.id ||
+                                            existingStructure.DataStructureID;
+
+                                        if (!dataStructureId) {
+                                            throw new Error(
+                                                `Data structure "${modalStructure.shortName}" is missing a dataStructureId`
+                                            );
+                                        }
+
+                                        // Process removals
+                                        for (const tagId of toRemove) {
                                             const response = await fetch(
-                                                `${apiBaseUrl}/tags/assign`,
+                                                `/api/spinup/tags/remove`,
                                                 {
                                                     method: "POST",
                                                     headers: {
@@ -4156,81 +4088,104 @@ const DataCategorySearch = ({
                                                             "application/json",
                                                     },
                                                     body: JSON.stringify({
+                                                        tagId: tagId,
                                                         DataStructureID:
-                                                            existingStructure.dataStructureId ||
-                                                            existingStructure.id ||
-                                                            existingStructure.DataStructureID,
-                                                        TagID: tagId,
+                                                            dataStructureId,
                                                     }),
                                                 }
                                             );
 
                                             if (!response.ok) {
-                                                const errorData = await response
-                                                    .json()
-                                                    .catch(() => ({}));
+                                                const errorData =
+                                                    await response.json();
                                                 throw new Error(
                                                     errorData.error ||
-                                                        `Failed to assign tag ${tagId}`
+                                                        "Failed to remove tag"
                                                 );
                                             }
                                         }
 
-                                        // Get all currently assigned tags for this structure
-                                        const allTagsResponse = await fetch(
-                                            `${apiBaseUrl}/tags`
-                                        );
-                                        if (!allTagsResponse.ok) {
-                                            throw new Error(
-                                                "Failed to fetch all tags"
+                                        // Process additions
+                                        for (const tagId of toAdd) {
+                                            if (!tagId) {
+                                                console.warn(
+                                                    "Skipping invalid tagId:",
+                                                    tagId
+                                                );
+                                                continue;
+                                            }
+
+                                            // Get the data structure ID from the existing structure
+                                            const dataStructureId =
+                                                existingStructure.dataStructureId ||
+                                                existingStructure.id ||
+                                                existingStructure.DataStructureID;
+
+                                            if (!dataStructureId) {
+                                                console.error(
+                                                    "Structure missing ID:",
+                                                    existingStructure
+                                                );
+                                                throw new Error(
+                                                    `Data structure "${modalStructure.shortName}" is missing a dataStructureId`
+                                                );
+                                            }
+
+                                            const requestBody = {
+                                                tagId: tagId,
+                                                DataStructureID:
+                                                    dataStructureId,
+                                            };
+
+                                            console.log(
+                                                "Assigning tag:",
+                                                requestBody
                                             );
+
+                                            const response = await fetch(
+                                                `/api/spinup/tags/assign`,
+                                                {
+                                                    method: "POST",
+                                                    headers: {
+                                                        "Content-Type":
+                                                            "application/json",
+                                                    },
+                                                    body: JSON.stringify(
+                                                        requestBody
+                                                    ),
+                                                }
+                                            );
+
+                                            if (!response.ok) {
+                                                const errorData =
+                                                    await response.json();
+                                                throw new Error(
+                                                    errorData.error ||
+                                                        "Failed to assign tag"
+                                                );
+                                            }
                                         }
-                                        const allTags =
-                                            await allTagsResponse.json();
 
-                                        // Find tags assigned to this structure
-                                        const structureTagIds = new Set();
-                                        for (const tagId of selectedTagIds) {
-                                            structureTagIds.add(tagId);
-                                        }
+                                        // Refresh structure tags
+                                        await fetchStructureTags();
 
-                                        // Get tag details for selected tags
-                                        const assignedTags = allTags.filter(
-                                            (tag) => structureTagIds.has(tag.id)
-                                        );
-
-                                        // Update structure tags state
-                                        setStructureDataTypeTags((prev) => ({
-                                            ...prev,
-                                            [modalStructure.shortName]:
-                                                assignedTags,
-                                        }));
-
-                                        setModifiedDataTypes((prev) => ({
-                                            ...prev,
-                                            [modalStructure.shortName]: true,
-                                        }));
-
+                                        // Close modal
                                         setIsDataTypesModalOpen(false);
                                         setSelectedDataTypeTags(new Set());
                                         setNewDataTypeTagName("");
                                         setModalSearchTerm("");
-                                        setShowCreateDataTypeInput(false);
                                     } catch (err) {
                                         console.error(
                                             "Error saving data type tags:",
                                             err
                                         );
-                                        setModalError(
-                                            "Failed to save data type tags: " +
-                                                err.message
-                                        );
+                                        setModalError(err.message);
                                     } finally {
                                         setModalLoading(false);
                                     }
                                 }}
                                 disabled={modalLoading}
-                                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-300"
+                                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-400"
                             >
                                 {modalLoading ? "Saving..." : "Save Changes"}
                             </button>
