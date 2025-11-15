@@ -748,104 +748,174 @@ const DataCategorySearch = ({
     };
 
     const removeOriginalCategory = async (structureShortName, categoryName) => {
-        // Count how many structures have this category
-        let structureCount = 0;
-        (Array.isArray(allStructures)
-            ? allStructures
-            : Object.values(allStructures)
-        ).forEach((structure) => {
-            if (
-                structure.categories &&
-                structure.categories.includes(categoryName)
-            ) {
-                structureCount++;
-            }
-        });
+        // Check if this is a custom tag (not an NDA category)
+        const isCustomTag = availableTags.some(
+            (tag) => tag.name === categoryName
+        );
+        // Only show confirmation modal for custom tags
+        if (isCustomTag) {
+            // Count how many structures have this category
+            let structureCount = 0;
+            (Array.isArray(allStructures)
+                ? allStructures
+                : Object.values(allStructures)
+            ).forEach((structure) => {
+                if (
+                    structure.categories &&
+                    structure.categories.includes(categoryName)
+                ) {
+                    structureCount++;
+                }
+            });
 
-        // Show confirmation modal
-        setDeleteConfirmModal({
-            isOpen: true,
-            type: "category",
-            itemName: categoryName,
-            itemId: null,
-            structureShortName: structureShortName,
-            structureCount: structureCount,
-            onConfirm: async () => {
-                try {
-                    // Update local state immediately
-                    setRemovedOriginalCategories((prev) => {
-                        const updated = { ...prev };
-                        if (!updated[structureShortName]) {
-                            updated[structureShortName] = new Set();
-                        }
-                        updated[structureShortName].add(categoryName);
-                        return updated;
-                    });
+            // Show confirmation modal
+            setDeleteConfirmModal({
+                isOpen: true,
+                type: "category",
+                itemName: categoryName,
+                itemId: null,
+                structureShortName: structureShortName,
+                structureCount: structureCount,
+                onConfirm: async () => {
+                    try {
+                        // Update local state immediately
+                        setRemovedOriginalCategories((prev) => {
+                            const updated = { ...prev };
+                            if (!updated[structureShortName]) {
+                                updated[structureShortName] = new Set();
+                            }
+                            updated[structureShortName].add(categoryName);
+                            return updated;
+                        });
 
-                    // Save to backend using tags API
-                    const tagName = `REMOVED_CATEGORY:${structureShortName}:${categoryName}`;
+                        // Save to backend using tags API
+                        const tagName = `REMOVED_CATEGORY:${structureShortName}:${categoryName}`;
 
-                    // Check if tag already exists
-                    const tagsResponse = await fetch(`${apiBaseUrl}/tags`);
-                    if (tagsResponse.ok) {
-                        const allTags = await tagsResponse.json();
-                        const existingTag = allTags.find(
-                            (tag) =>
-                                tag.name === tagName &&
-                                tag.tagType === "Removed Category"
-                        );
-
-                        if (!existingTag) {
-                            // Create the tag
-                            const createResponse = await fetch(
-                                `${apiBaseUrl}/tags`,
-                                {
-                                    method: "POST",
-                                    headers: {
-                                        "Content-Type": "application/json",
-                                    },
-                                    body: JSON.stringify({
-                                        name: tagName,
-                                        tagType: "Removed Category",
-                                        description: `Removed category ${categoryName} from structure ${structureShortName}`,
-                                    }),
-                                }
+                        // Check if tag already exists
+                        const tagsResponse = await fetch(`${apiBaseUrl}/tags`);
+                        if (tagsResponse.ok) {
+                            const allTags = await tagsResponse.json();
+                            const existingTag = allTags.find(
+                                (tag) =>
+                                    tag.name === tagName &&
+                                    tag.tagType === "Removed Category"
                             );
 
-                            if (createResponse.ok) {
-                                const newTag = await createResponse.json();
-                                // Assign tag to the structure
-                                await fetch(`${apiBaseUrl}/tags/assign`, {
-                                    method: "POST",
-                                    headers: {
-                                        "Content-Type": "application/json",
-                                    },
-                                    body: JSON.stringify({
-                                        tagId: newTag.id,
-                                        dataStructureShortName:
-                                            structureShortName,
-                                    }),
-                                });
+                            if (!existingTag) {
+                                // Create the tag
+                                const createResponse = await fetch(
+                                    `${apiBaseUrl}/tags`,
+                                    {
+                                        method: "POST",
+                                        headers: {
+                                            "Content-Type": "application/json",
+                                        },
+                                        body: JSON.stringify({
+                                            name: tagName,
+                                            tagType: "Removed Category",
+                                            description: `Removed category ${categoryName} from structure ${structureShortName}`,
+                                        }),
+                                    }
+                                );
+
+                                if (createResponse.ok) {
+                                    const newTag = await createResponse.json();
+                                    // Assign tag to the structure
+                                    await fetch(`${apiBaseUrl}/tags/assign`, {
+                                        method: "POST",
+                                        headers: {
+                                            "Content-Type": "application/json",
+                                        },
+                                        body: JSON.stringify({
+                                            tagId: newTag.id,
+                                            dataStructureShortName:
+                                                structureShortName,
+                                        }),
+                                    });
+                                }
                             }
                         }
-                    }
 
-                    // Close modal on success
-                    setDeleteConfirmModal({
-                        isOpen: false,
-                        type: null,
-                        itemName: null,
-                        itemId: null,
-                        structureShortName: null,
-                        structureCount: 0,
-                        onConfirm: null,
-                    });
-                } catch (err) {
-                    console.error("Error removing category:", err);
-                    setModalError(`Failed to remove category: ${err.message}`);
+                        // Close modal on success
+                        setDeleteConfirmModal({
+                            isOpen: false,
+                            type: null,
+                            itemName: null,
+                            itemId: null,
+                            structureShortName: null,
+                            structureCount: 0,
+                            onConfirm: null,
+                        });
+                    } catch (err) {
+                        console.error("Error removing category:", err);
+                        setModalError(
+                            `Failed to remove category: ${err.message}`
+                        );
+                    }
+                },
+            });
+            return; // Exit early for custom tags
+        }
+
+        // For NDA categories, remove directly without confirmation
+        try {
+            // Update local state immediately
+            setRemovedOriginalCategories((prev) => {
+                const updated = { ...prev };
+                if (!updated[structureShortName]) {
+                    updated[structureShortName] = new Set();
                 }
-            },
-        });
+                updated[structureShortName].add(categoryName);
+                return updated;
+            });
+
+            // Save to backend using tags API
+            const tagName = `REMOVED_CATEGORY:${structureShortName}:${categoryName}`;
+
+            // Check if tag already exists
+            const tagsResponse = await fetch(`${apiBaseUrl}/tags`);
+            if (tagsResponse.ok) {
+                const allTags = await tagsResponse.json();
+                const existingTag = allTags.find(
+                    (tag) =>
+                        tag.name === tagName &&
+                        tag.tagType === "Removed Category"
+                );
+
+                if (!existingTag) {
+                    // Create the tag
+                    const createResponse = await fetch(`${apiBaseUrl}/tags`, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify({
+                            name: tagName,
+                            tagType: "Removed Category",
+                            description: `Removed category ${categoryName} from structure ${structureShortName}`,
+                        }),
+                    });
+
+                    if (createResponse.ok) {
+                        const newTag = await createResponse.json();
+                        // Assign tag to the structure
+                        await fetch(`${apiBaseUrl}/tags/assign`, {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                            },
+                            body: JSON.stringify({
+                                tagId: newTag.id,
+                                dataStructureShortName: structureShortName,
+                            }),
+                        });
+                    }
+                }
+            }
+        } catch (err) {
+            console.error("Error removing category:", err);
+            setModalError(`Failed to remove category: ${err.message}`);
+        }
     };
 
     const isCategoryRemoved = (structureShortName, categoryName) => {
@@ -860,98 +930,165 @@ const DataCategorySearch = ({
         const dataTypeName =
             dataStructuresMap[structureShortName]?.dataType || "this data type";
 
-        // Count how many structures have this data type
-        let structureCount = 0;
-        (Array.isArray(allStructures)
-            ? allStructures
-            : Object.values(allStructures)
-        ).forEach((structure) => {
-            if (structure.dataType === dataTypeName) {
-                structureCount++;
-            }
-        });
+        // Check if this is a custom tag (not an NDA data type)
+        const isCustomTag = availableDataTypeTags.some(
+            (tag) => tag.name === dataTypeName
+        );
+        // Only show confirmation modal for custom tags
+        if (isCustomTag) {
+            // Count how many structures have this data type
+            let structureCount = 0;
+            (Array.isArray(allStructures)
+                ? allStructures
+                : Object.values(allStructures)
+            ).forEach((structure) => {
+                if (structure.dataType === dataTypeName) {
+                    structureCount++;
+                }
+            });
 
-        // Show confirmation modal
-        setDeleteConfirmModal({
-            isOpen: true,
-            type: "dataType",
-            itemName: dataTypeName,
-            itemId: null,
-            structureShortName: structureShortName,
-            structureCount: structureCount,
-            onConfirm: async () => {
-                try {
-                    // Update local state immediately
-                    setRemovedOriginalDataTypes((prev) => {
-                        const updated = { ...prev };
-                        updated[structureShortName] = true;
-                        return updated;
-                    });
+            // Show confirmation modal
+            setDeleteConfirmModal({
+                isOpen: true,
+                type: "dataType",
+                itemName: dataTypeName,
+                itemId: null,
+                structureShortName: structureShortName,
+                structureCount: structureCount,
+                onConfirm: async () => {
+                    try {
+                        // Update local state immediately
+                        setRemovedOriginalDataTypes((prev) => {
+                            const updated = { ...prev };
+                            updated[structureShortName] = true;
+                            return updated;
+                        });
 
-                    // Save to backend using tags API
-                    const tagName = `REMOVED_DATATYPE:${structureShortName}`;
+                        // Save to backend using tags API
+                        const tagName = `REMOVED_DATATYPE:${structureShortName}`;
 
-                    // Check if tag already exists
-                    const tagsResponse = await fetch(`${apiBaseUrl}/tags`);
-                    if (tagsResponse.ok) {
-                        const allTags = await tagsResponse.json();
-                        const existingTag = allTags.find(
-                            (tag) =>
-                                tag.name === tagName &&
-                                tag.tagType === "Removed Data Type"
-                        );
-
-                        if (!existingTag) {
-                            // Create the tag
-                            const createResponse = await fetch(
-                                `${apiBaseUrl}/tags`,
-                                {
-                                    method: "POST",
-                                    headers: {
-                                        "Content-Type": "application/json",
-                                    },
-                                    body: JSON.stringify({
-                                        name: tagName,
-                                        tagType: "Removed Data Type",
-                                        description: `Removed data type from structure ${structureShortName}`,
-                                    }),
-                                }
+                        // Check if tag already exists
+                        const tagsResponse = await fetch(`${apiBaseUrl}/tags`);
+                        if (tagsResponse.ok) {
+                            const allTags = await tagsResponse.json();
+                            const existingTag = allTags.find(
+                                (tag) =>
+                                    tag.name === tagName &&
+                                    tag.tagType === "Removed Data Type"
                             );
 
-                            if (createResponse.ok) {
-                                const newTag = await createResponse.json();
-                                // Assign tag to the structure
-                                await fetch(`${apiBaseUrl}/tags/assign`, {
-                                    method: "POST",
-                                    headers: {
-                                        "Content-Type": "application/json",
-                                    },
-                                    body: JSON.stringify({
-                                        tagId: newTag.id,
-                                        dataStructureShortName:
-                                            structureShortName,
-                                    }),
-                                });
+                            if (!existingTag) {
+                                // Create the tag
+                                const createResponse = await fetch(
+                                    `${apiBaseUrl}/tags`,
+                                    {
+                                        method: "POST",
+                                        headers: {
+                                            "Content-Type": "application/json",
+                                        },
+                                        body: JSON.stringify({
+                                            name: tagName,
+                                            tagType: "Removed Data Type",
+                                            description: `Removed data type from structure ${structureShortName}`,
+                                        }),
+                                    }
+                                );
+
+                                if (createResponse.ok) {
+                                    const newTag = await createResponse.json();
+                                    // Assign tag to the structure
+                                    await fetch(`${apiBaseUrl}/tags/assign`, {
+                                        method: "POST",
+                                        headers: {
+                                            "Content-Type": "application/json",
+                                        },
+                                        body: JSON.stringify({
+                                            tagId: newTag.id,
+                                            dataStructureShortName:
+                                                structureShortName,
+                                        }),
+                                    });
+                                }
                             }
                         }
-                    }
 
-                    // Close modal on success
-                    setDeleteConfirmModal({
-                        isOpen: false,
-                        type: null,
-                        itemName: null,
-                        itemId: null,
-                        structureShortName: null,
-                        structureCount: 0,
-                        onConfirm: null,
+                        // Close modal on success
+                        setDeleteConfirmModal({
+                            isOpen: false,
+                            type: null,
+                            itemName: null,
+                            itemId: null,
+                            structureShortName: null,
+                            structureCount: 0,
+                            onConfirm: null,
+                        });
+                    } catch (err) {
+                        console.error("Error removing data type:", err);
+                        setModalError(
+                            `Failed to remove data type: ${err.message}`
+                        );
+                    }
+                },
+            });
+            return; // Exit early for custom tags
+        }
+
+        // For NDA data types, remove directly without confirmation
+        try {
+            // Update local state immediately
+            setRemovedOriginalDataTypes((prev) => {
+                const updated = { ...prev };
+                updated[structureShortName] = true;
+                return updated;
+            });
+
+            // Save to backend using tags API
+            const tagName = `REMOVED_DATATYPE:${structureShortName}`;
+
+            // Check if tag already exists
+            const tagsResponse = await fetch(`${apiBaseUrl}/tags`);
+            if (tagsResponse.ok) {
+                const allTags = await tagsResponse.json();
+                const existingTag = allTags.find(
+                    (tag) =>
+                        tag.name === tagName &&
+                        tag.tagType === "Removed Data Type"
+                );
+
+                if (!existingTag) {
+                    // Create the tag
+                    const createResponse = await fetch(`${apiBaseUrl}/tags`, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify({
+                            name: tagName,
+                            tagType: "Removed Data Type",
+                            description: `Removed data type from structure ${structureShortName}`,
+                        }),
                     });
-                } catch (err) {
-                    console.error("Error removing data type:", err);
-                    setModalError(`Failed to remove data type: ${err.message}`);
+
+                    if (createResponse.ok) {
+                        const newTag = await createResponse.json();
+                        // Assign tag to the structure
+                        await fetch(`${apiBaseUrl}/tags/assign`, {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                            },
+                            body: JSON.stringify({
+                                tagId: newTag.id,
+                                dataStructureShortName: structureShortName,
+                            }),
+                        });
+                    }
                 }
-            },
-        });
+            }
+        } catch (err) {
+            console.error("Error removing data type:", err);
+            setModalError(`Failed to remove data type: ${err.message}`);
+        }
     };
 
     const isDataTypeRemoved = (structureShortName) => {
