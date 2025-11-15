@@ -236,26 +236,24 @@ const DataCategorySearch = ({
     const computeFilteredCombinedCategories = useCallback(
         (searchTerm) => {
             // Build from unfiltered sources, exactly like data types
-            const filteredAvailableTags = availableTags.filter(
-                (tag) =>
-                    !searchTerm ||
-                    tag.name.toLowerCase().includes(searchTerm.toLowerCase())
-            );
-            const filteredNdaCategories = Array.from(
-                availableCategories
-            ).filter(
-                (category) =>
-                    !searchTerm ||
-                    category.toLowerCase().includes(searchTerm.toLowerCase())
-            );
+            // When searchTerm is empty, return ALL categories for duplicate checking
             const combinedMap = new Map();
-            // Only include category tags (exclude data type tags)
-            filteredAvailableTags
+
+            // First, add all category tags (exclude data type tags)
+            // Filter by searchTerm only if provided
+            availableTags
                 .filter(
                     (tag) =>
                         tag &&
                         tag.id &&
                         (!tag.tagType || tag.tagType !== "Data Type")
+                )
+                .filter(
+                    (tag) =>
+                        !searchTerm ||
+                        tag.name
+                            .toLowerCase()
+                            .includes(searchTerm.toLowerCase())
                 )
                 .forEach((tag) => {
                     combinedMap.set(tag.id, {
@@ -263,7 +261,17 @@ const DataCategorySearch = ({
                         isNdaCategory: false,
                     });
                 });
-            filteredNdaCategories
+
+            // Then, add NDA categories that aren't already in availableTags
+            // Filter by searchTerm only if provided
+            Array.from(availableCategories)
+                .filter(
+                    (category) =>
+                        !searchTerm ||
+                        category
+                            .toLowerCase()
+                            .includes(searchTerm.toLowerCase())
+                )
                 .filter(
                     (category) =>
                         category &&
@@ -2661,7 +2669,11 @@ const DataCategorySearch = ({
             {isCategoriesModalOpen && modalStructure && (
                 <div
                     className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-                    onClick={() => setIsCategoriesModalOpen(false)}
+                    onClick={() => {
+                        setIsCategoriesModalOpen(false);
+                        setModalSearchTerm("");
+                        setCategoryError(null);
+                    }}
                 >
                     <div
                         className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[80vh] flex flex-col"
@@ -2679,7 +2691,11 @@ const DataCategorySearch = ({
                                 </p>
                             </div>
                             <button
-                                onClick={() => setIsCategoriesModalOpen(false)}
+                                onClick={() => {
+                                    setIsCategoriesModalOpen(false);
+                                    setModalSearchTerm("");
+                                    setCategoryError(null);
+                                }}
                                 className="text-gray-400 hover:text-gray-600"
                             >
                                 <X className="w-5 h-5" />
@@ -3149,20 +3165,21 @@ const DataCategorySearch = ({
                                                             e.key === "Enter" &&
                                                             tagName
                                                         ) {
-                                                            try {
-                                                                // Pass tagName directly to createTag to avoid async state issues
+                                                            // Pass tagName directly to createTag to avoid async state issues
+                                                            const result =
                                                                 await createTag(
                                                                     tagName
                                                                 );
+                                                            // Only close input and clear search if tag was created successfully
+                                                            if (result) {
                                                                 setShowCreateCategoryInput(
                                                                     false
                                                                 );
                                                                 setModalSearchTerm(
                                                                     ""
                                                                 );
-                                                            } catch (err) {
-                                                                // Error already handled in createTag
                                                             }
+                                                            // Error is already displayed below search bar by createTag
                                                         } else if (
                                                             e.key === "Escape"
                                                         ) {
@@ -3295,12 +3312,13 @@ const DataCategorySearch = ({
                                                 <Plus className="w-4 h-4" />
                                             </button>
                                         )}
-                                        {/* Error message for existing category */}
-                                        {categoryError && (
-                                            <div className="mt-2 px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 animate-[fadeIn_0.2s_ease-out]">
-                                                {categoryError}
-                                            </div>
-                                        )}
+                                    </div>
+                                )}
+
+                                {/* Error message for existing category - always visible below search/create input */}
+                                {categoryError && (
+                                    <div className="mt-2 px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 animate-[fadeIn_0.2s_ease-out]">
+                                        {categoryError}
                                     </div>
                                 )}
                             </div>
@@ -3568,6 +3586,7 @@ const DataCategorySearch = ({
                                     setModalSearchTerm("");
                                     setNdaCategorySearchTerm("");
                                     setShowCreateCategoryInput(false);
+                                    setCategoryError(null);
                                 }}
                                 className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
                             >
@@ -3755,6 +3774,7 @@ const DataCategorySearch = ({
                                             setNewTagName("");
                                             setModalSearchTerm("");
                                             setNdaCategorySearchTerm("");
+                                            setCategoryError(null);
                                             return;
                                         }
 
@@ -3901,6 +3921,7 @@ const DataCategorySearch = ({
                                         setNewTagName("");
                                         setModalSearchTerm("");
                                         setNdaCategorySearchTerm("");
+                                        setCategoryError(null);
                                     } catch (err) {
                                         console.error(
                                             "Error saving category tags:",
@@ -3931,6 +3952,8 @@ const DataCategorySearch = ({
                     onClick={() => {
                         setIsDataTypesModalOpen(false);
                         setShowCreateDataTypeInput(false);
+                        setModalSearchTerm("");
+                        setDataTypeError(null);
                     }}
                 >
                     <div
@@ -3952,6 +3975,8 @@ const DataCategorySearch = ({
                                 onClick={() => {
                                     setIsDataTypesModalOpen(false);
                                     setShowCreateDataTypeInput(false);
+                                    setModalSearchTerm("");
+                                    setDataTypeError(null);
                                 }}
                                 className="text-gray-400 hover:text-gray-600"
                             >
@@ -4694,6 +4719,8 @@ const DataCategorySearch = ({
                                 onClick={() => {
                                     setIsDataTypesModalOpen(false);
                                     setShowCreateDataTypeInput(false);
+                                    setModalSearchTerm("");
+                                    setDataTypeError(null);
                                 }}
                                 className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
                             >
@@ -4748,6 +4775,7 @@ const DataCategorySearch = ({
                                             setSelectedDataTypeTags(new Set());
                                             setNewDataTypeTagName("");
                                             setModalSearchTerm("");
+                                            setDataTypeError(null);
                                             return;
                                         }
 
@@ -4860,6 +4888,7 @@ const DataCategorySearch = ({
                                         setSelectedDataTypeTags(new Set());
                                         setNewDataTypeTagName("");
                                         setModalSearchTerm("");
+                                        setDataTypeError(null);
                                     } catch (err) {
                                         console.error(
                                             "Error saving data type tags:",
