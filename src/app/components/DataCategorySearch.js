@@ -313,7 +313,7 @@ const DataCategorySearch = ({
         return () => clearTimeout(timer);
     }, []);
 
-    // Apply filtering when search term, filters, or database filter changes
+    // Apply filtering when search term, filters, database filter, or structure tags change
     useEffect(() => {
         applyFilters();
     }, [
@@ -322,6 +322,8 @@ const DataCategorySearch = ({
         selectedFilters,
         databaseFilterEnabled,
         databaseStructures,
+        structureTags,
+        structureDataTypeTags,
     ]);
 
     const [ndaCategories, setNdaCategories] = useState([]);

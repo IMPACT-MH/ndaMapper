@@ -3,11 +3,11 @@
  */
 
 // IMPACT-MH Data Portal (use proxy route to handle SSL certificates)
-export const DATA_PORTAL = "/api/spinup/dataStructures";
+// export const DATA_PORTAL = "/api/spinup/dataStructures";
 
 // Direct URLs (commented out - have SSL certificate issues):
 // export const DATA_PORTAL = "https://spinup-002b0f.spinup.yale.edu/api/dataStructures/database/";
-// export const DATA_PORTAL = "https://api.impact-mh.org/impact/data-portal";
+export const DATA_PORTAL = "https://api.impact-mh.org/impact/data-portal";
 
 // NDA API endpoints
 export const NDA_API_BASE = "https://nda.nih.gov/api";
