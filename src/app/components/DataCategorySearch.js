@@ -1119,14 +1119,15 @@ const DataCategorySearch = ({
             }
 
             const updatedTag = await response.json();
+            const newName = updatedTag.name;
 
-            // Update in available tags lists
+            // Find old tag name before updating
+            let oldName;
             if (isDataType) {
-                // Find old tag name before updating
                 const oldTag = availableDataTypeTags.find(
                     (t) => t.id === tagId
                 );
-                const oldName = oldTag?.name;
+                oldName = oldTag?.name;
 
                 setAvailableDataTypeTags((prev) =>
                     prev.map((t) => (t.id === tagId ? updatedTag : t))
@@ -1138,9 +1139,8 @@ const DataCategorySearch = ({
 
                 setEditingDataTypeTagId(null);
             } else {
-                // Find old tag name before updating
                 const oldTag = availableTags.find((t) => t.id === tagId);
-                const oldName = oldTag?.name;
+                oldName = oldTag?.name;
 
                 setAvailableTags((prev) =>
                     prev.map((t) => (t.id === tagId ? updatedTag : t))
@@ -1173,6 +1173,32 @@ const DataCategorySearch = ({
                 });
                 return updated;
             });
+
+            // Update selectedFilters if the old tag name was selected
+            // Filters use tag names, so we need to update them when a tag is renamed
+            if (oldName && newName && oldName !== newName) {
+                setSelectedFilters((prev) => {
+                    const updated = { ...prev };
+
+                    if (isDataType) {
+                        // Update data type filters
+                        if (updated.dataTypes.has(oldName)) {
+                            updated.dataTypes = new Set(updated.dataTypes);
+                            updated.dataTypes.delete(oldName);
+                            updated.dataTypes.add(newName);
+                        }
+                    } else {
+                        // Update category filters
+                        if (updated.categories.has(oldName)) {
+                            updated.categories = new Set(updated.categories);
+                            updated.categories.delete(oldName);
+                            updated.categories.add(newName);
+                        }
+                    }
+
+                    return updated;
+                });
+            }
         } catch (err) {
             console.error("Error updating tag:", err);
             alert(`Failed to update tag: ${err.message}`);
