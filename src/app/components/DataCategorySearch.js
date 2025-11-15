@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import Image from "next/image";
 import {
     Search,
@@ -94,6 +94,8 @@ const DataCategorySearch = ({
     const [modalStructure, setModalStructure] = useState(null);
     const [modalSearchTerm, setModalSearchTerm] = useState("");
     const [modalError, setModalError] = useState(null);
+    const [categoryError, setCategoryError] = useState(null);
+    const [dataTypeError, setDataTypeError] = useState(null);
     const [modalLoading, setModalLoading] = useState(false);
 
     // Delete confirmation modal state
@@ -136,59 +138,199 @@ const DataCategorySearch = ({
         new Set()
     );
 
-    const filteredAvailableTags = availableTags.filter(
-        (tag) =>
-            !modalSearchTerm ||
-            tag.name.toLowerCase().includes(modalSearchTerm.toLowerCase())
-    );
+    // Helper function to check for plural/singular variations
+    const getPluralSingularVariations = useCallback((word) => {
+        const lower = word.toLowerCase().trim();
+        const variations = new Set([lower]);
 
-    // Filter available NDA categories based on search (use modalSearchTerm for unified search)
-    const filteredNdaCategories = Array.from(availableCategories).filter(
-        (category) =>
-            !modalSearchTerm ||
-            category.toLowerCase().includes(modalSearchTerm.toLowerCase())
-    );
-
-    // Combine custom tags and existing NDA categories into one unified list
-    // Create a unified list where NDA categories are represented as pseudo-tag objects
-    // Use a Map to ensure uniqueness by name to prevent duplicates
-    // MEMOIZED: This is an expensive computation that shouldn't run on every render
-    const combinedAvailableCategories = useMemo(() => {
-        const combinedMap = new Map();
-
-        // Add custom tags first
-        filteredAvailableTags.forEach((tag) => {
-            if (tag && tag.id) {
-                combinedMap.set(tag.id, {
-                    ...tag,
-                    isNdaCategory: false,
-                });
+        // Common pluralization rules
+        if (lower.endsWith("y") && lower.length > 1) {
+            // category -> categories, story -> stories
+            variations.add(lower.slice(0, -1) + "ies");
+            variations.add(lower + "s");
+        } else if (lower.endsWith("s")) {
+            // categories -> category, paranoias -> paranoia
+            if (lower.endsWith("ies")) {
+                variations.add(lower.slice(0, -3) + "y");
+            } else if (lower.endsWith("es") && lower.length > 2) {
+                // Remove 'es' (e.g., boxes -> box, but keep 's' for words like 'yes')
+                variations.add(lower.slice(0, -2));
+                variations.add(lower.slice(0, -1)); // Also try removing just 's'
+            } else {
+                variations.add(lower.slice(0, -1)); // Remove 's' (e.g., paranoias -> paranoia)
             }
-        });
+        } else if (lower.endsWith("ies")) {
+            // categories -> category
+            variations.add(lower.slice(0, -3) + "y");
+        } else {
+            // Add 's' and 'es' variations (e.g., paranoia -> paranoias)
+            variations.add(lower + "s");
+            if (!lower.endsWith("e")) {
+                variations.add(lower + "es");
+            }
+        }
 
-        // Add NDA categories that aren't already in availableTags (by name)
-        filteredNdaCategories
-            .filter(
-                (category) =>
-                    category &&
-                    // Only include NDA categories that aren't already in availableTags
-                    !availableTags.some((tag) => tag && tag.name === category)
-            )
-            .forEach((category) => {
-                const ndaId = `nda-category-${category}`;
-                // Only add if not already in map (by ID)
-                if (!combinedMap.has(ndaId)) {
-                    combinedMap.set(ndaId, {
-                        id: ndaId,
-                        name: category,
-                        isNdaCategory: true,
-                        tagType: "Category",
-                    });
-                }
+        return Array.from(variations);
+    }, []);
+
+    // Helper function to check if a name matches (including plural/singular variations)
+    const hasNameMatch = useCallback(
+        (searchName, items) => {
+            const searchLower = searchName.toLowerCase().trim();
+            const searchVariations = getPluralSingularVariations(searchName);
+
+            return items.some((item) => {
+                const itemLower = item.name.toLowerCase().trim();
+                // Check exact match
+                if (itemLower === searchLower) return true;
+
+                // Check if search variations match the item
+                if (
+                    searchVariations.some(
+                        (variation) => variation === itemLower
+                    )
+                )
+                    return true;
+
+                // Also check if item variations match the search term (bidirectional)
+                const itemVariations = getPluralSingularVariations(item.name);
+                return itemVariations.some(
+                    (variation) => variation === searchLower
+                );
             });
+        },
+        [getPluralSingularVariations]
+    );
 
-        return Array.from(combinedMap.values());
-    }, [filteredAvailableTags, filteredNdaCategories, availableTags]);
+    // Helper function to find the existing item name that matches (including plural/singular variations)
+    const findExistingItemName = useCallback(
+        (searchName, items) => {
+            const searchLower = searchName.toLowerCase().trim();
+            const searchVariations = getPluralSingularVariations(searchName);
+
+            return items.find((item) => {
+                const itemLower = item.name.toLowerCase().trim();
+                // Check exact match
+                if (itemLower === searchLower) return true;
+
+                // Check if search variations match the item
+                if (
+                    searchVariations.some(
+                        (variation) => variation === itemLower
+                    )
+                )
+                    return true;
+
+                // Also check if item variations match the search term (bidirectional)
+                const itemVariations = getPluralSingularVariations(item.name);
+                return itemVariations.some(
+                    (variation) => variation === searchLower
+                );
+            });
+        },
+        [getPluralSingularVariations]
+    );
+
+    // Helper function to compute filtered and combined categories for modal search
+    // IMPORTANT: This must work EXACTLY like computeFilteredCombinedDataTypes
+    const computeFilteredCombinedCategories = useCallback(
+        (searchTerm) => {
+            // Build from unfiltered sources, exactly like data types
+            const filteredAvailableTags = availableTags.filter(
+                (tag) =>
+                    !searchTerm ||
+                    tag.name.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+            const filteredNdaCategories = Array.from(
+                availableCategories
+            ).filter(
+                (category) =>
+                    !searchTerm ||
+                    category.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+            const combinedMap = new Map();
+            // Only include category tags (exclude data type tags)
+            filteredAvailableTags
+                .filter(
+                    (tag) =>
+                        tag &&
+                        tag.id &&
+                        (!tag.tagType || tag.tagType !== "Data Type")
+                )
+                .forEach((tag) => {
+                    combinedMap.set(tag.id, {
+                        ...tag,
+                        isNdaCategory: false,
+                    });
+                });
+            filteredNdaCategories
+                .filter(
+                    (category) =>
+                        category &&
+                        !availableTags.some(
+                            (tag) => tag && tag.name === category
+                        )
+                )
+                .forEach((category) => {
+                    const ndaId = `nda-category-${category}`;
+                    if (!combinedMap.has(ndaId)) {
+                        combinedMap.set(ndaId, {
+                            id: ndaId,
+                            name: category,
+                            isNdaCategory: true,
+                            tagType: "Category",
+                        });
+                    }
+                });
+            return Array.from(combinedMap.values());
+        },
+        [availableTags, availableCategories]
+    );
+
+    // Use the same function for both display and duplicate checking
+    // This ensures consistency and eliminates the redundant memoized value
+    const combinedAvailableCategories = useMemo(() => {
+        return computeFilteredCombinedCategories(modalSearchTerm);
+    }, [computeFilteredCombinedCategories, modalSearchTerm]);
+
+    // Helper function to compute filtered and combined data types for modal search
+    const computeFilteredCombinedDataTypes = useCallback(
+        (searchTerm) => {
+            const filteredAvailableDataTypeTags = availableDataTypeTags.filter(
+                (tag) =>
+                    !searchTerm ||
+                    tag.name.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+            const filteredNdaDataTypes = Array.from(availableDataTypes).filter(
+                (dataType) =>
+                    !searchTerm ||
+                    dataType.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+            const combinedMap = new Map();
+            filteredAvailableDataTypeTags.forEach((tag) => {
+                combinedMap.set(tag.id, tag);
+            });
+            filteredNdaDataTypes
+                .filter(
+                    (dataType) =>
+                        !availableDataTypeTags.some(
+                            (tag) => tag.name === dataType
+                        )
+                )
+                .forEach((dataType) => {
+                    const ndaId = `nda-datatype-${dataType}`;
+                    if (!combinedMap.has(ndaId)) {
+                        combinedMap.set(ndaId, {
+                            id: ndaId,
+                            name: dataType,
+                            isNdaDataType: true,
+                        });
+                    }
+                });
+            return Array.from(combinedMap.values());
+        },
+        [availableDataTypeTags, availableDataTypes]
+    );
 
     // Add this useEffect to fetch once
     useEffect(() => {
@@ -1273,15 +1415,39 @@ const DataCategorySearch = ({
         }
     };
 
-    const createTag = async () => {
+    const createTag = async (tagNameOverride = null) => {
+        // Use override if provided, otherwise use newTagName state
+        const nameToUse =
+            tagNameOverride !== null ? tagNameOverride : newTagName;
         // Allow spaces, only check that it's not empty after trimming whitespace
-        const trimmedName = newTagName.trim();
+        const trimmedName = nameToUse.trim();
         if (!trimmedName) return;
 
         try {
+            // Check for duplicate (including plural/singular variations) before creating
+            const allAvailableCategories =
+                computeFilteredCombinedCategories("");
+            const hasMatch = hasNameMatch(trimmedName, allAvailableCategories);
+
+            if (hasMatch) {
+                const existingItem = findExistingItemName(
+                    trimmedName,
+                    allAvailableCategories
+                );
+                const existingName = existingItem?.name || trimmedName;
+                const errorMessage = `"${trimmedName}" already exists as "${existingName}". Please select it from the list below:`;
+                setCategoryError(errorMessage);
+                // Clear error after 4 seconds
+                setTimeout(() => {
+                    setCategoryError(null);
+                }, 4000);
+                // Return early instead of throwing to gracefully handle the error
+                return null;
+            }
+
             // Preserve the name as-is (spaces allowed, only trimmed for validation)
             const newTag = await apiCreateTag(
-                newTagName, // Keep original with spaces
+                nameToUse, // Keep original with spaces
                 "Category",
                 apiBaseUrl
             );
@@ -1294,24 +1460,55 @@ const DataCategorySearch = ({
             // Custom tags are tracked separately in availableTags
 
             setNewTagName("");
+            setCategoryError(null); // Clear any previous errors
 
             return newTag;
         } catch (err) {
             console.error("Error creating tag:", err);
-            setModalError(err.message);
-            throw err;
+            // Set error message below search bar
+            const errorMessage = err.message || "Failed to create category tag";
+            setCategoryError(errorMessage);
+            // Clear error after 4 seconds
+            setTimeout(() => {
+                setCategoryError(null);
+            }, 4000);
+            // Don't throw - gracefully handle the error
+            return null;
         }
     };
 
-    const createDataTypeTag = async () => {
+    const createDataTypeTag = async (tagNameOverride = null) => {
+        // Use override if provided, otherwise use newDataTypeTagName state
+        const nameToUse =
+            tagNameOverride !== null ? tagNameOverride : newDataTypeTagName;
         // Allow spaces, only check that it's not empty after trimming whitespace
-        const trimmedName = newDataTypeTagName.trim();
+        const trimmedName = nameToUse.trim();
         if (!trimmedName) return;
 
         try {
+            // Check for duplicate (including plural/singular variations) before creating
+            const allAvailableDataTypes = computeFilteredCombinedDataTypes("");
+            const hasMatch = hasNameMatch(trimmedName, allAvailableDataTypes);
+
+            if (hasMatch) {
+                const existingItem = findExistingItemName(
+                    trimmedName,
+                    allAvailableDataTypes
+                );
+                const existingName = existingItem?.name || trimmedName;
+                const errorMessage = `"${trimmedName}" already exists as "${existingName}". Please select it from the list below:`;
+                setDataTypeError(errorMessage);
+                // Clear error after 4 seconds
+                setTimeout(() => {
+                    setDataTypeError(null);
+                }, 4000);
+                // Return early instead of throwing to gracefully handle the error
+                return null;
+            }
+
             // Preserve the name as-is (spaces allowed, only trimmed for validation)
             const newTag = await apiCreateTag(
-                newDataTypeTagName, // Keep original with spaces
+                nameToUse, // Keep original with spaces
                 "Data Type",
                 apiBaseUrl
             );
@@ -1320,7 +1517,7 @@ const DataCategorySearch = ({
             setAvailableDataTypeTags((prev) => [...prev, newTag]);
 
             // Add to selected
-            setSelectedDataTypeTags((prev) => new Set([...prev, newTag.id]));
+            setSelectedDataTypeTags((prev) => new Set([newTag.id])); // Only one data type can be selected
 
             // Note: Do NOT add custom tags to availableDataTypes
             // availableDataTypes should only contain NDA data types from the API
@@ -1328,12 +1525,21 @@ const DataCategorySearch = ({
 
             // Clear input
             setNewDataTypeTagName("");
+            setDataTypeError(null); // Clear any previous errors
 
             return newTag;
         } catch (err) {
             console.error("Error creating data type tag:", err);
-            setModalError(err.message);
-            throw err;
+            // Set error message below search bar
+            const errorMessage =
+                err.message || "Failed to create data type tag";
+            setDataTypeError(errorMessage);
+            // Clear error after 4 seconds
+            setTimeout(() => {
+                setDataTypeError(null);
+            }, 4000);
+            // Don't throw - gracefully handle the error
+            return null;
         }
     };
 
@@ -2943,14 +3149,11 @@ const DataCategorySearch = ({
                                                             e.key === "Enter" &&
                                                             tagName
                                                         ) {
-                                                            setNewTagName(
-                                                                tagName
-                                                            );
-                                                            setShowCreateCategoryInput(
-                                                                true
-                                                            );
                                                             try {
-                                                                await createTag();
+                                                                // Pass tagName directly to createTag to avoid async state issues
+                                                                await createTag(
+                                                                    tagName
+                                                                );
                                                                 setShowCreateCategoryInput(
                                                                     false
                                                                 );
@@ -2978,23 +3181,21 @@ const DataCategorySearch = ({
                                                         const tagName =
                                                             modalSearchTerm.trim();
                                                         if (tagName) {
-                                                            setNewTagName(
-                                                                tagName
-                                                            );
-                                                            setShowCreateCategoryInput(
-                                                                true
-                                                            );
-                                                            try {
-                                                                await createTag();
+                                                            // Pass tagName directly to createTag to avoid async state issues
+                                                            const result =
+                                                                await createTag(
+                                                                    tagName
+                                                                );
+                                                            // Only close input and clear search if tag was created successfully
+                                                            if (result) {
                                                                 setShowCreateCategoryInput(
                                                                     false
                                                                 );
                                                                 setModalSearchTerm(
                                                                     ""
                                                                 );
-                                                            } catch (err) {
-                                                                // Error already handled in createTag
                                                             }
+                                                            // Error is already displayed below search bar by createTag
                                                         }
                                                     }}
                                                     disabled={
@@ -3011,21 +3212,31 @@ const DataCategorySearch = ({
                                     )}
 
                                 {/* Unified Search with + button on right - Hide when input is shown */}
-                                {!(
-                                    showCreateCategoryInput ||
-                                    (combinedAvailableCategories.length === 0 &&
-                                        modalSearchTerm.trim())
-                                ) && (
+                                {(() => {
+                                    const filteredCategories =
+                                        computeFilteredCombinedCategories(
+                                            modalSearchTerm
+                                        );
+                                    return !(
+                                        showCreateCategoryInput ||
+                                        (filteredCategories.length === 0 &&
+                                            modalSearchTerm.trim())
+                                    );
+                                })() && (
                                     <div className="relative">
                                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                                         <input
                                             type="text"
                                             value={modalSearchTerm}
-                                            onChange={(e) =>
+                                            onChange={(e) => {
                                                 setModalSearchTerm(
                                                     e.target.value
-                                                )
-                                            }
+                                                );
+                                                // Clear error when user starts typing
+                                                if (categoryError) {
+                                                    setCategoryError(null);
+                                                }
+                                            }}
                                             placeholder="Search all categories..."
                                             className="w-full pl-10 pr-12 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
                                         />
@@ -3033,23 +3244,49 @@ const DataCategorySearch = ({
                                         {modalSearchTerm.trim() && (
                                             <button
                                                 onClick={() => {
-                                                    // Check if there's an exact match
-                                                    const exactMatch =
-                                                        combinedAvailableCategories.some(
-                                                            (item) =>
-                                                                item.name.toLowerCase() ===
-                                                                modalSearchTerm
-                                                                    .trim()
-                                                                    .toLowerCase()
+                                                    // Compute all available categories (not filtered) for duplicate checking
+                                                    // Use empty string to get all categories, exactly like data types modal
+                                                    const allAvailableCategories =
+                                                        computeFilteredCombinedCategories(
+                                                            ""
                                                         );
-                                                    if (!exactMatch) {
-                                                        // No exact match, show input to create
+                                                    // Check against ALL categories, not just filtered ones
+                                                    // This ensures we catch plural/singular matches even if they don't match the search filter
+                                                    const hasMatch =
+                                                        hasNameMatch(
+                                                            modalSearchTerm,
+                                                            allAvailableCategories
+                                                        );
+
+                                                    if (!hasMatch) {
+                                                        // No match, show input to create
                                                         setNewTagName(
                                                             modalSearchTerm.trim()
                                                         );
                                                         setShowCreateCategoryInput(
                                                             true
                                                         );
+                                                        setCategoryError(null);
+                                                    } else {
+                                                        // Match exists (exact or plural/singular), find the existing name
+                                                        const existingItem =
+                                                            findExistingItemName(
+                                                                modalSearchTerm,
+                                                                allAvailableCategories
+                                                            );
+
+                                                        const existingName =
+                                                            existingItem?.name ||
+                                                            modalSearchTerm.trim();
+                                                        setCategoryError(
+                                                            `"${modalSearchTerm.trim()}" already exists as "${existingName}". Please select it from the list below:`
+                                                        );
+                                                        // Clear error after 4 seconds
+                                                        setTimeout(() => {
+                                                            setCategoryError(
+                                                                null
+                                                            );
+                                                        }, 4000);
                                                     }
                                                 }}
                                                 className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center justify-center w-6 h-6 bg-green-500 text-white rounded-full hover:bg-green-600 transition-all hover:scale-110 active:scale-95"
@@ -3057,6 +3294,12 @@ const DataCategorySearch = ({
                                             >
                                                 <Plus className="w-4 h-4" />
                                             </button>
+                                        )}
+                                        {/* Error message for existing category */}
+                                        {categoryError && (
+                                            <div className="mt-2 px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 animate-[fadeIn_0.2s_ease-out]">
+                                                {categoryError}
+                                            </div>
                                         )}
                                     </div>
                                 )}
@@ -3438,11 +3681,14 @@ const DataCategorySearch = ({
 
                                         // Combine custom tag IDs with NDA category tag IDs
                                         // Remove duplicates by using a Set
+                                        // Ensure selectedSocialTags is converted to array (it's a Set)
+                                        const selectedSocialTagsArray =
+                                            selectedSocialTags instanceof Set
+                                                ? Array.from(selectedSocialTags)
+                                                : selectedSocialTags;
                                         const selectedTagIds = Array.from(
                                             new Set([
-                                                ...Array.from(
-                                                    selectedSocialTags
-                                                ),
+                                                ...selectedSocialTagsArray,
                                                 ...ndaCategoryTagIds,
                                             ])
                                         );
@@ -3958,353 +4204,194 @@ const DataCategorySearch = ({
                                 </div>
                             )}
 
-                            {/* Data Types Header with Create Button */}
+                            {/* Data Types Header */}
                             <div className="mb-4">
                                 <div className="flex items-center justify-between mb-3">
                                     <h3 className="text-sm font-semibold text-gray-700">
                                         Data Types
                                     </h3>
-                                    {/* Show + button when there's a search term but no exact match */}
-                                    {modalSearchTerm.trim() && (
-                                        <button
-                                            onClick={() => {
-                                                // Compute combined list to check for exact match
-                                                const filteredAvailableDataTypeTags =
-                                                    availableDataTypeTags.filter(
-                                                        (tag) =>
-                                                            !modalSearchTerm ||
-                                                            tag.name
-                                                                .toLowerCase()
-                                                                .includes(
-                                                                    modalSearchTerm.toLowerCase()
-                                                                )
-                                                    );
-                                                const filteredNdaDataTypes =
-                                                    Array.from(
-                                                        availableDataTypes
-                                                    ).filter(
-                                                        (dataType) =>
-                                                            !modalSearchTerm ||
-                                                            dataType
-                                                                .toLowerCase()
-                                                                .includes(
-                                                                    modalSearchTerm.toLowerCase()
-                                                                )
-                                                    );
-                                                const combinedMap = new Map();
-                                                filteredAvailableDataTypeTags.forEach(
-                                                    (tag) => {
-                                                        combinedMap.set(
-                                                            tag.id,
-                                                            tag
-                                                        );
-                                                    }
-                                                );
-                                                filteredNdaDataTypes
-                                                    .filter(
-                                                        (dataType) =>
-                                                            !availableDataTypeTags.some(
-                                                                (tag) =>
-                                                                    tag.name ===
-                                                                    dataType
-                                                            )
-                                                    )
-                                                    .forEach((dataType) => {
-                                                        const ndaId = `nda-datatype-${dataType}`;
-                                                        if (
-                                                            !combinedMap.has(
-                                                                ndaId
-                                                            )
-                                                        ) {
-                                                            combinedMap.set(
-                                                                ndaId,
-                                                                {
-                                                                    id: ndaId,
-                                                                    name: dataType,
-                                                                    isNdaDataType: true,
-                                                                }
-                                                            );
-                                                        }
-                                                    });
-                                                const combinedAvailableDataTypes =
-                                                    Array.from(
-                                                        combinedMap.values()
-                                                    );
-
-                                                const exactMatch =
-                                                    combinedAvailableDataTypes.some(
-                                                        (item) =>
-                                                            item.name.toLowerCase() ===
-                                                            modalSearchTerm
-                                                                .trim()
-                                                                .toLowerCase()
-                                                    );
-                                                if (!exactMatch) {
-                                                    // No exact match, show input to create
-                                                    setNewDataTypeTagName(
-                                                        modalSearchTerm.trim()
-                                                    );
-                                                    setShowCreateDataTypeInput(
-                                                        true
-                                                    );
-                                                }
-                                            }}
-                                            className="flex items-center justify-center w-6 h-6 bg-green-500 text-white rounded-full hover:bg-green-600 transition-all hover:scale-110 active:scale-95"
-                                            title="Create new data type tag"
-                                        >
-                                            <Plus className="w-4 h-4" />
-                                        </button>
-                                    )}
                                 </div>
 
                                 {/* Create New Tag Input (shown when + is clicked or search has no results) */}
                                 {(() => {
-                                    // Compute combined list to check if we have results
-                                    const filteredAvailableDataTypeTags =
-                                        availableDataTypeTags.filter(
-                                            (tag) =>
-                                                !modalSearchTerm ||
-                                                tag.name
-                                                    .toLowerCase()
-                                                    .includes(
-                                                        modalSearchTerm.toLowerCase()
-                                                    )
+                                    const filteredDataTypes =
+                                        computeFilteredCombinedDataTypes(
+                                            modalSearchTerm
                                         );
-                                    const filteredNdaDataTypes = Array.from(
-                                        availableDataTypes
-                                    ).filter(
-                                        (dataType) =>
-                                            !modalSearchTerm ||
-                                            dataType
-                                                .toLowerCase()
-                                                .includes(
-                                                    modalSearchTerm.toLowerCase()
-                                                )
-                                    );
-                                    const combinedMap = new Map();
-                                    filteredAvailableDataTypeTags.forEach(
-                                        (tag) => {
-                                            combinedMap.set(tag.id, tag);
-                                        }
-                                    );
-                                    filteredNdaDataTypes
-                                        .filter(
-                                            (dataType) =>
-                                                !availableDataTypeTags.some(
-                                                    (tag) =>
-                                                        tag.name === dataType
-                                                )
-                                        )
-                                        .forEach((dataType) => {
-                                            const ndaId = `nda-datatype-${dataType}`;
-                                            if (!combinedMap.has(ndaId)) {
-                                                combinedMap.set(ndaId, {
-                                                    id: ndaId,
-                                                    name: dataType,
-                                                    isNdaDataType: true,
-                                                });
-                                            }
-                                        });
-                                    const combinedAvailableDataTypes =
-                                        Array.from(combinedMap.values());
-
                                     return (
                                         (showCreateDataTypeInput ||
-                                            combinedAvailableDataTypes.length ===
-                                                0) &&
-                                        modalSearchTerm.trim() && (
-                                            <div className="mb-3 animate-[fadeIn_0.2s_ease-out]">
-                                                <div className="flex items-center gap-2">
-                                                    <input
-                                                        type="text"
-                                                        value={modalSearchTerm}
-                                                        onChange={(e) => {
-                                                            setModalSearchTerm(
-                                                                e.target.value
-                                                            );
-                                                        }}
-                                                        placeholder="Data type tag name..."
-                                                        className="flex-1 px-3 py-2 border rounded-l-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 focus:outline-none text-sm transition-all"
-                                                        onKeyPress={async (
-                                                            e
-                                                        ) => {
-                                                            const tagName =
-                                                                modalSearchTerm.trim();
-                                                            if (
-                                                                e.key ===
-                                                                    "Enter" &&
+                                            filteredDataTypes.length === 0) &&
+                                        modalSearchTerm.trim()
+                                    );
+                                })() && (
+                                    <div className="mb-3 animate-[fadeIn_0.2s_ease-out]">
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                type="text"
+                                                value={modalSearchTerm}
+                                                onChange={(e) => {
+                                                    setModalSearchTerm(
+                                                        e.target.value
+                                                    );
+                                                }}
+                                                placeholder="Data type tag name..."
+                                                className="flex-1 px-3 py-2 border rounded-l-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 focus:outline-none text-sm transition-all"
+                                                onKeyPress={async (e) => {
+                                                    const tagName =
+                                                        modalSearchTerm.trim();
+                                                    if (
+                                                        e.key === "Enter" &&
+                                                        tagName
+                                                    ) {
+                                                        // Pass tagName directly to createDataTypeTag to avoid async state issues
+                                                        const result =
+                                                            await createDataTypeTag(
                                                                 tagName
-                                                            ) {
-                                                                setNewDataTypeTagName(
-                                                                    tagName
-                                                                );
-                                                                setShowCreateDataTypeInput(
-                                                                    true
-                                                                );
-                                                                try {
-                                                                    await createDataTypeTag();
-                                                                    setShowCreateDataTypeInput(
-                                                                        false
-                                                                    );
-                                                                    setModalSearchTerm(
-                                                                        ""
-                                                                    );
-                                                                } catch (err) {
-                                                                    // Error already handled in createDataTypeTag
-                                                                }
-                                                            } else if (
-                                                                e.key ===
-                                                                "Escape"
-                                                            ) {
-                                                                setModalSearchTerm(
-                                                                    ""
-                                                                );
-                                                            }
-                                                        }}
-                                                        autoFocus
-                                                    />
-                                                    <button
-                                                        onClick={async () => {
-                                                            const tagName =
-                                                                modalSearchTerm.trim();
-                                                            if (tagName) {
-                                                                setNewDataTypeTagName(
-                                                                    tagName
-                                                                );
-                                                                setShowCreateDataTypeInput(
-                                                                    true
-                                                                );
-                                                                try {
-                                                                    await createDataTypeTag();
-                                                                    setShowCreateDataTypeInput(
-                                                                        false
-                                                                    );
-                                                                    setModalSearchTerm(
-                                                                        ""
-                                                                    );
-                                                                } catch (err) {
-                                                                    // Error already handled in createDataTypeTag
-                                                                }
-                                                            }
-                                                        }}
-                                                        disabled={
-                                                            !modalSearchTerm.trim() ||
-                                                            tagLoading
+                                                            );
+                                                        // Only close input and clear search if tag was created successfully
+                                                        if (result) {
+                                                            setShowCreateDataTypeInput(
+                                                                false
+                                                            );
+                                                            setModalSearchTerm(
+                                                                ""
+                                                            );
                                                         }
-                                                        className="px-4 py-2 bg-green-500 text-white rounded-r-lg hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all font-medium text-sm flex items-center gap-2"
-                                                    >
-                                                        <Plus className="w-4 h-4" />
-                                                        Add
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        )
-                                    );
-                                })()}
-
-                                {/* Unified Search - Hide when no results and search term exists */}
-                                {(() => {
-                                    // Compute combined list to check if we have results
-                                    const filteredAvailableDataTypeTags =
-                                        availableDataTypeTags.filter(
-                                            (tag) =>
-                                                !modalSearchTerm ||
-                                                tag.name
-                                                    .toLowerCase()
-                                                    .includes(
-                                                        modalSearchTerm.toLowerCase()
-                                                    )
-                                        );
-                                    const filteredNdaDataTypes = Array.from(
-                                        availableDataTypes
-                                    ).filter(
-                                        (dataType) =>
-                                            !modalSearchTerm ||
-                                            dataType
-                                                .toLowerCase()
-                                                .includes(
-                                                    modalSearchTerm.toLowerCase()
-                                                )
-                                    );
-                                    const combinedMap = new Map();
-                                    filteredAvailableDataTypeTags.forEach(
-                                        (tag) => {
-                                            combinedMap.set(tag.id, tag);
-                                        }
-                                    );
-                                    filteredNdaDataTypes
-                                        .filter(
-                                            (dataType) =>
-                                                !availableDataTypeTags.some(
-                                                    (tag) =>
-                                                        tag.name === dataType
-                                                )
-                                        )
-                                        .forEach((dataType) => {
-                                            const ndaId = `nda-datatype-${dataType}`;
-                                            if (!combinedMap.has(ndaId)) {
-                                                combinedMap.set(ndaId, {
-                                                    id: ndaId,
-                                                    name: dataType,
-                                                    isNdaDataType: true,
-                                                });
-                                            }
-                                        });
-                                    const combinedAvailableDataTypes =
-                                        Array.from(combinedMap.values());
-
-                                    return (
-                                        !(
-                                            showCreateDataTypeInput ||
-                                            (combinedAvailableDataTypes.length ===
-                                                0 &&
-                                                modalSearchTerm.trim())
-                                        ) && (
-                                            <div className="relative">
-                                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                                                <input
-                                                    type="text"
-                                                    value={modalSearchTerm}
-                                                    onChange={(e) =>
-                                                        setModalSearchTerm(
-                                                            e.target.value
-                                                        )
+                                                        // Error is already displayed below search bar by createDataTypeTag
+                                                    } else if (
+                                                        e.key === "Escape"
+                                                    ) {
+                                                        setModalSearchTerm("");
                                                     }
-                                                    placeholder="Search all data types..."
-                                                    className="w-full pl-10 pr-12 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
-                                                />
-                                                {/* + button on the right side of search box */}
-                                                {modalSearchTerm.trim() && (
-                                                    <button
-                                                        onClick={() => {
-                                                            const exactMatch =
-                                                                combinedAvailableDataTypes.some(
-                                                                    (item) =>
-                                                                        item.name.toLowerCase() ===
-                                                                        modalSearchTerm
-                                                                            .trim()
-                                                                            .toLowerCase()
-                                                                );
-                                                            if (!exactMatch) {
-                                                                // No exact match, show input to create
-                                                                setNewDataTypeTagName(
-                                                                    modalSearchTerm.trim()
-                                                                );
-                                                                setShowCreateDataTypeInput(
-                                                                    true
-                                                                );
-                                                            }
-                                                        }}
-                                                        className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center justify-center w-6 h-6 bg-green-500 text-white rounded-full hover:bg-green-600 transition-all hover:scale-110 active:scale-95"
-                                                        title="Create new data type tag"
-                                                    >
-                                                        <Plus className="w-4 h-4" />
-                                                    </button>
-                                                )}
-                                            </div>
-                                        )
+                                                }}
+                                                autoFocus
+                                            />
+                                            <button
+                                                onClick={async () => {
+                                                    const tagName =
+                                                        modalSearchTerm.trim();
+                                                    if (tagName) {
+                                                        // Pass tagName directly to createDataTypeTag to avoid async state issues
+                                                        const result =
+                                                            await createDataTypeTag(
+                                                                tagName
+                                                            );
+                                                        // Only close input and clear search if tag was created successfully
+                                                        if (result) {
+                                                            setShowCreateDataTypeInput(
+                                                                false
+                                                            );
+                                                            setModalSearchTerm(
+                                                                ""
+                                                            );
+                                                        }
+                                                        // Error is already displayed below search bar by createDataTypeTag
+                                                    }
+                                                }}
+                                                disabled={
+                                                    !modalSearchTerm.trim() ||
+                                                    tagLoading
+                                                }
+                                                className="px-4 py-2 bg-green-500 text-white rounded-r-lg hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all font-medium text-sm flex items-center gap-2"
+                                            >
+                                                <Plus className="w-4 h-4" />
+                                                Add
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Unified Search with + button on right - Hide when input is shown */}
+                                {(() => {
+                                    const filteredDataTypes =
+                                        computeFilteredCombinedDataTypes(
+                                            modalSearchTerm
+                                        );
+                                    return !(
+                                        showCreateDataTypeInput ||
+                                        (filteredDataTypes.length === 0 &&
+                                            modalSearchTerm.trim())
                                     );
-                                })()}
+                                })() && (
+                                    <div className="relative">
+                                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                                        <input
+                                            type="text"
+                                            value={modalSearchTerm}
+                                            onChange={(e) => {
+                                                setModalSearchTerm(
+                                                    e.target.value
+                                                );
+                                                // Clear error when user starts typing
+                                                if (dataTypeError) {
+                                                    setDataTypeError(null);
+                                                }
+                                            }}
+                                            placeholder="Search all data types..."
+                                            className="w-full pl-10 pr-12 py-2 border rounded-lg focus:border-blue-500 focus:outline-none"
+                                        />
+                                        {/* + button on the right side of search box */}
+                                        {modalSearchTerm.trim() && (
+                                            <button
+                                                onClick={() => {
+                                                    // Compute all available data types (not filtered) for duplicate checking
+                                                    const allAvailableDataTypes =
+                                                        computeFilteredCombinedDataTypes(
+                                                            ""
+                                                        );
+                                                    // Check against ALL data types, not just filtered ones
+                                                    // This ensures we catch plural/singular matches even if they don't match the search filter
+                                                    const hasMatch =
+                                                        hasNameMatch(
+                                                            modalSearchTerm,
+                                                            allAvailableDataTypes
+                                                        );
+
+                                                    if (!hasMatch) {
+                                                        // No match, show input to create
+                                                        setNewDataTypeTagName(
+                                                            modalSearchTerm.trim()
+                                                        );
+                                                        setShowCreateDataTypeInput(
+                                                            true
+                                                        );
+                                                        setDataTypeError(null);
+                                                    } else {
+                                                        // Match exists (exact or plural/singular), find the existing name
+                                                        const existingItem =
+                                                            findExistingItemName(
+                                                                modalSearchTerm,
+                                                                allAvailableDataTypes
+                                                            );
+
+                                                        const existingName =
+                                                            existingItem?.name ||
+                                                            modalSearchTerm.trim();
+                                                        setDataTypeError(
+                                                            `"${modalSearchTerm.trim()}" already exists as "${existingName}". Please select it from the list below:`
+                                                        );
+                                                        // Clear error after 4 seconds
+                                                        setTimeout(() => {
+                                                            setDataTypeError(
+                                                                null
+                                                            );
+                                                        }, 4000);
+                                                    }
+                                                }}
+                                                className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center justify-center w-6 h-6 bg-green-500 text-white rounded-full hover:bg-green-600 transition-all hover:scale-110 active:scale-95"
+                                                title="Create new data type tag"
+                                            >
+                                                <Plus className="w-4 h-4" />
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
+                                {/* Error message for existing data type */}
+                                {dataTypeError && (
+                                    <div className="mt-2 px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 animate-[fadeIn_0.2s_ease-out]">
+                                        {dataTypeError}
+                                    </div>
+                                )}
                             </div>
 
                             {/* Combined Word Bank */}
