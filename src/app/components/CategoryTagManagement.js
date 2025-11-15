@@ -278,6 +278,7 @@ const CategoryTagManagement = ({
                         className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs"
                     >
                         {tag.name}
+                        <span className="ml-1 text-xs text-orange-500">★</span>
                         <button
                             onClick={(e) => {
                                 e.stopPropagation();
