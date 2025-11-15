@@ -88,6 +88,17 @@ const DataCategorySearch = ({
     const [modalError, setModalError] = useState(null);
     const [modalLoading, setModalLoading] = useState(false);
 
+    // Delete confirmation modal state
+    const [deleteConfirmModal, setDeleteConfirmModal] = useState({
+        isOpen: false,
+        type: null, // 'tag', 'category', 'dataType'
+        itemName: null,
+        itemId: null,
+        structureShortName: null,
+        structureCount: 0, // Number of structures this item is attached to
+        onConfirm: null,
+    });
+
     // state variables for categories tags
     const [availableTags, setAvailableTags] = useState([]);
     const [selectedSocialTags, setSelectedSocialTags] = useState(new Set());
@@ -737,59 +748,104 @@ const DataCategorySearch = ({
     };
 
     const removeOriginalCategory = async (structureShortName, categoryName) => {
-        // Update local state immediately
-        setRemovedOriginalCategories((prev) => {
-            const updated = { ...prev };
-            if (!updated[structureShortName]) {
-                updated[structureShortName] = new Set();
+        // Count how many structures have this category
+        let structureCount = 0;
+        (Array.isArray(allStructures)
+            ? allStructures
+            : Object.values(allStructures)
+        ).forEach((structure) => {
+            if (
+                structure.categories &&
+                structure.categories.includes(categoryName)
+            ) {
+                structureCount++;
             }
-            updated[structureShortName].add(categoryName);
-            return updated;
         });
 
-        // Save to backend using tags API
-        try {
-            const tagName = `REMOVED_CATEGORY:${structureShortName}:${categoryName}`;
-
-            // Check if tag already exists
-            const tagsResponse = await fetch(`${apiBaseUrl}/tags`);
-            if (tagsResponse.ok) {
-                const allTags = await tagsResponse.json();
-                const existingTag = allTags.find(
-                    (tag) =>
-                        tag.name === tagName &&
-                        tag.tagType === "Removed Category"
-                );
-
-                if (!existingTag) {
-                    // Create the tag
-                    const createResponse = await fetch(`${apiBaseUrl}/tags`, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            name: tagName,
-                            tagType: "Removed Category",
-                            description: `Removed category ${categoryName} from structure ${structureShortName}`,
-                        }),
+        // Show confirmation modal
+        setDeleteConfirmModal({
+            isOpen: true,
+            type: "category",
+            itemName: categoryName,
+            itemId: null,
+            structureShortName: structureShortName,
+            structureCount: structureCount,
+            onConfirm: async () => {
+                try {
+                    // Update local state immediately
+                    setRemovedOriginalCategories((prev) => {
+                        const updated = { ...prev };
+                        if (!updated[structureShortName]) {
+                            updated[structureShortName] = new Set();
+                        }
+                        updated[structureShortName].add(categoryName);
+                        return updated;
                     });
 
-                    if (createResponse.ok) {
-                        const newTag = await createResponse.json();
-                        // Assign tag to the structure
-                        await fetch(`${apiBaseUrl}/tags/assign`, {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({
-                                tagId: newTag.id,
-                                dataStructureShortName: structureShortName,
-                            }),
-                        });
+                    // Save to backend using tags API
+                    const tagName = `REMOVED_CATEGORY:${structureShortName}:${categoryName}`;
+
+                    // Check if tag already exists
+                    const tagsResponse = await fetch(`${apiBaseUrl}/tags`);
+                    if (tagsResponse.ok) {
+                        const allTags = await tagsResponse.json();
+                        const existingTag = allTags.find(
+                            (tag) =>
+                                tag.name === tagName &&
+                                tag.tagType === "Removed Category"
+                        );
+
+                        if (!existingTag) {
+                            // Create the tag
+                            const createResponse = await fetch(
+                                `${apiBaseUrl}/tags`,
+                                {
+                                    method: "POST",
+                                    headers: {
+                                        "Content-Type": "application/json",
+                                    },
+                                    body: JSON.stringify({
+                                        name: tagName,
+                                        tagType: "Removed Category",
+                                        description: `Removed category ${categoryName} from structure ${structureShortName}`,
+                                    }),
+                                }
+                            );
+
+                            if (createResponse.ok) {
+                                const newTag = await createResponse.json();
+                                // Assign tag to the structure
+                                await fetch(`${apiBaseUrl}/tags/assign`, {
+                                    method: "POST",
+                                    headers: {
+                                        "Content-Type": "application/json",
+                                    },
+                                    body: JSON.stringify({
+                                        tagId: newTag.id,
+                                        dataStructureShortName:
+                                            structureShortName,
+                                    }),
+                                });
+                            }
+                        }
                     }
+
+                    // Close modal on success
+                    setDeleteConfirmModal({
+                        isOpen: false,
+                        type: null,
+                        itemName: null,
+                        itemId: null,
+                        structureShortName: null,
+                        structureCount: 0,
+                        onConfirm: null,
+                    });
+                } catch (err) {
+                    console.error("Error removing category:", err);
+                    setModalError(`Failed to remove category: ${err.message}`);
                 }
-            }
-        } catch (err) {
-            console.error("Error saving removed category to backend:", err);
-        }
+            },
+        });
     };
 
     const isCategoryRemoved = (structureShortName, categoryName) => {
@@ -800,56 +856,102 @@ const DataCategorySearch = ({
     };
 
     const removeOriginalDataType = async (structureShortName) => {
-        // Update local state immediately
-        setRemovedOriginalDataTypes((prev) => {
-            const updated = { ...prev };
-            updated[structureShortName] = true;
-            return updated;
+        // Get the data type name from the structure
+        const dataTypeName =
+            dataStructuresMap[structureShortName]?.dataType || "this data type";
+
+        // Count how many structures have this data type
+        let structureCount = 0;
+        (Array.isArray(allStructures)
+            ? allStructures
+            : Object.values(allStructures)
+        ).forEach((structure) => {
+            if (structure.dataType === dataTypeName) {
+                structureCount++;
+            }
         });
 
-        // Save to backend using tags API
-        try {
-            const tagName = `REMOVED_DATATYPE:${structureShortName}`;
-
-            // Check if tag already exists
-            const tagsResponse = await fetch(`${apiBaseUrl}/tags`);
-            if (tagsResponse.ok) {
-                const allTags = await tagsResponse.json();
-                const existingTag = allTags.find(
-                    (tag) =>
-                        tag.name === tagName &&
-                        tag.tagType === "Removed Data Type"
-                );
-
-                if (!existingTag) {
-                    // Create the tag
-                    const createResponse = await fetch(`${apiBaseUrl}/tags`, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            name: tagName,
-                            tagType: "Removed Data Type",
-                            description: `Removed data type from structure ${structureShortName}`,
-                        }),
+        // Show confirmation modal
+        setDeleteConfirmModal({
+            isOpen: true,
+            type: "dataType",
+            itemName: dataTypeName,
+            itemId: null,
+            structureShortName: structureShortName,
+            structureCount: structureCount,
+            onConfirm: async () => {
+                try {
+                    // Update local state immediately
+                    setRemovedOriginalDataTypes((prev) => {
+                        const updated = { ...prev };
+                        updated[structureShortName] = true;
+                        return updated;
                     });
 
-                    if (createResponse.ok) {
-                        const newTag = await createResponse.json();
-                        // Assign tag to the structure
-                        await fetch(`${apiBaseUrl}/tags/assign`, {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({
-                                tagId: newTag.id,
-                                dataStructureShortName: structureShortName,
-                            }),
-                        });
+                    // Save to backend using tags API
+                    const tagName = `REMOVED_DATATYPE:${structureShortName}`;
+
+                    // Check if tag already exists
+                    const tagsResponse = await fetch(`${apiBaseUrl}/tags`);
+                    if (tagsResponse.ok) {
+                        const allTags = await tagsResponse.json();
+                        const existingTag = allTags.find(
+                            (tag) =>
+                                tag.name === tagName &&
+                                tag.tagType === "Removed Data Type"
+                        );
+
+                        if (!existingTag) {
+                            // Create the tag
+                            const createResponse = await fetch(
+                                `${apiBaseUrl}/tags`,
+                                {
+                                    method: "POST",
+                                    headers: {
+                                        "Content-Type": "application/json",
+                                    },
+                                    body: JSON.stringify({
+                                        name: tagName,
+                                        tagType: "Removed Data Type",
+                                        description: `Removed data type from structure ${structureShortName}`,
+                                    }),
+                                }
+                            );
+
+                            if (createResponse.ok) {
+                                const newTag = await createResponse.json();
+                                // Assign tag to the structure
+                                await fetch(`${apiBaseUrl}/tags/assign`, {
+                                    method: "POST",
+                                    headers: {
+                                        "Content-Type": "application/json",
+                                    },
+                                    body: JSON.stringify({
+                                        tagId: newTag.id,
+                                        dataStructureShortName:
+                                            structureShortName,
+                                    }),
+                                });
+                            }
+                        }
                     }
+
+                    // Close modal on success
+                    setDeleteConfirmModal({
+                        isOpen: false,
+                        type: null,
+                        itemName: null,
+                        itemId: null,
+                        structureShortName: null,
+                        structureCount: 0,
+                        onConfirm: null,
+                    });
+                } catch (err) {
+                    console.error("Error removing data type:", err);
+                    setModalError(`Failed to remove data type: ${err.message}`);
                 }
-            }
-        } catch (err) {
-            console.error("Error saving removed data type to backend:", err);
-        }
+            },
+        });
     };
 
     const isDataTypeRemoved = (structureShortName) => {
@@ -1215,79 +1317,133 @@ const DataCategorySearch = ({
     };
 
     const deleteTag = async (tagId) => {
-        if (
-            !confirm(
-                "Are you sure you want to permanently delete this tag? This will remove it from all data structures."
-            )
-        ) {
-            return;
+        // Find the tag to get its name
+        const categoryTag = availableTags.find((t) => t.id === tagId);
+        const dataTypeTag = availableDataTypeTags.find((t) => t.id === tagId);
+        const tagToDelete = categoryTag || dataTypeTag;
+        const tagName = tagToDelete?.name || "this tag";
+
+        // Count how many structures have this tag
+        let structureCount = 0;
+        if (categoryTag) {
+            // Count in structureTags
+            Object.values(structureTags).forEach((tags) => {
+                if (tags.some((t) => t.id === tagId)) {
+                    structureCount++;
+                }
+            });
+        } else if (dataTypeTag) {
+            // Count in structureDataTypeTags
+            Object.values(structureDataTypeTags).forEach((tags) => {
+                if (tags.some((t) => t.id === tagId)) {
+                    structureCount++;
+                }
+            });
         }
 
-        try {
-            const response = await fetch(`${apiBaseUrl}/tags/${tagId}`, {
-                method: "DELETE",
-                headers: { "Content-Type": "application/json" },
-            });
+        // Show confirmation modal
+        setDeleteConfirmModal({
+            isOpen: true,
+            type: "tag",
+            itemName: tagName,
+            itemId: tagId,
+            structureShortName: null,
+            structureCount: structureCount,
+            onConfirm: async () => {
+                try {
+                    const response = await fetch(
+                        `${apiBaseUrl}/tags/${tagId}`,
+                        {
+                            method: "DELETE",
+                            headers: { "Content-Type": "application/json" },
+                        }
+                    );
 
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.error || "Failed to delete tag");
-            }
+                    if (!response.ok) {
+                        const errorData = await response
+                            .json()
+                            .catch(() => ({}));
+                        throw new Error(
+                            errorData.error || "Failed to delete tag"
+                        );
+                    }
 
-            // Find the tag to determine its type and name before removing
-            const categoryTag = availableTags.find((t) => t.id === tagId);
-            const dataTypeTag = availableDataTypeTags.find(
-                (t) => t.id === tagId
-            );
-            const tagToDelete = categoryTag || dataTypeTag;
-            const isDataType = !!dataTypeTag;
+                    // Find the tag to determine its type and name before removing
+                    const categoryTag = availableTags.find(
+                        (t) => t.id === tagId
+                    );
+                    const dataTypeTag = availableDataTypeTags.find(
+                        (t) => t.id === tagId
+                    );
+                    const tagToDelete = categoryTag || dataTypeTag;
+                    const isDataType = !!dataTypeTag;
 
-            // Remove from available tags lists
-            setAvailableTags((prev) => prev.filter((t) => t.id !== tagId));
-            setAvailableDataTypeTags((prev) =>
-                prev.filter((t) => t.id !== tagId)
-            );
+                    // Remove from available tags lists
+                    setAvailableTags((prev) =>
+                        prev.filter((t) => t.id !== tagId)
+                    );
+                    setAvailableDataTypeTags((prev) =>
+                        prev.filter((t) => t.id !== tagId)
+                    );
 
-            // Remove from filter sets
-            if (tagToDelete) {
-                // Note: Do NOT remove from availableCategories or availableDataTypes
-                // These should only contain NDA categories/data types from the API
-                // Custom tags are tracked separately in availableTags and availableDataTypeTags
-            }
+                    // Remove from filter sets
+                    if (tagToDelete) {
+                        // Note: Do NOT remove from availableCategories or availableDataTypes
+                        // These should only contain NDA categories/data types from the API
+                        // Custom tags are tracked separately in availableTags and availableDataTypeTags
+                    }
 
-            // Remove from selected tags Sets
-            setSelectedSocialTags((prev) => {
-                const newSet = new Set(prev);
-                newSet.delete(tagId);
-                return newSet;
-            });
+                    // Remove from selected tags Sets
+                    setSelectedSocialTags((prev) => {
+                        const newSet = new Set(prev);
+                        newSet.delete(tagId);
+                        return newSet;
+                    });
 
-            setSelectedDataTypeTags((prev) => {
-                const newSet = new Set(prev);
-                newSet.delete(tagId);
-                return newSet;
-            });
+                    setSelectedDataTypeTags((prev) => {
+                        const newSet = new Set(prev);
+                        newSet.delete(tagId);
+                        return newSet;
+                    });
 
-            // Remove from structure tags
-            setStructureTags((prev) => {
-                const updated = {};
-                Object.keys(prev).forEach((key) => {
-                    updated[key] = prev[key].filter((t) => t.id !== tagId);
-                });
-                return updated;
-            });
+                    // Remove from structure tags
+                    setStructureTags((prev) => {
+                        const updated = {};
+                        Object.keys(prev).forEach((key) => {
+                            updated[key] = prev[key].filter(
+                                (t) => t.id !== tagId
+                            );
+                        });
+                        return updated;
+                    });
 
-            setStructureDataTypeTags((prev) => {
-                const updated = {};
-                Object.keys(prev).forEach((key) => {
-                    updated[key] = prev[key].filter((t) => t.id !== tagId);
-                });
-                return updated;
-            });
-        } catch (err) {
-            console.error("Error deleting tag:", err);
-            alert(`Failed to delete tag: ${err.message}`);
-        }
+                    setStructureDataTypeTags((prev) => {
+                        const updated = {};
+                        Object.keys(prev).forEach((key) => {
+                            updated[key] = prev[key].filter(
+                                (t) => t.id !== tagId
+                            );
+                        });
+                        return updated;
+                    });
+
+                    // Close modal on success
+                    setDeleteConfirmModal({
+                        isOpen: false,
+                        type: null,
+                        itemName: null,
+                        itemId: null,
+                        structureShortName: null,
+                        structureCount: 0,
+                        onConfirm: null,
+                    });
+                } catch (err) {
+                    console.error("Error deleting tag:", err);
+                    setModalError(`Failed to delete tag: ${err.message}`);
+                    // Keep modal open on error so user can see the error
+                }
+            },
+        });
     };
 
     const fetchClinicalAssessments = async () => {
@@ -3970,7 +4126,11 @@ const DataCategorySearch = ({
                                                                                         }
                                                                                     }
                                                                                 }}
-                                                                                className={`px-3 py-1.5 rounded-full text-sm transition-all inline-flex items-center ${
+                                                                                className={`px-3 py-1.5 ${
+                                                                                    isCustomTag
+                                                                                        ? "rounded-l-full"
+                                                                                        : "rounded-full"
+                                                                                } text-sm transition-all inline-flex items-center ${
                                                                                     isSelected
                                                                                         ? "bg-blue-500 text-white hover:bg-blue-600"
                                                                                         : "bg-white text-gray-700 border border-gray-300 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-400"
@@ -3997,6 +4157,49 @@ const DataCategorySearch = ({
                                                                                     </span>
                                                                                 )}
                                                                             </button>
+                                                                            {isCustomTag && (
+                                                                                <>
+                                                                                    <button
+                                                                                        onClick={(
+                                                                                            e
+                                                                                        ) => {
+                                                                                            e.stopPropagation();
+                                                                                            setEditingDataTypeTagId(
+                                                                                                item.id
+                                                                                            );
+                                                                                            setEditingDataTypeTagName(
+                                                                                                item.name
+                                                                                            );
+                                                                                        }}
+                                                                                        className={`px-2 py-1.5 text-sm transition-all border-l-0 inline-flex items-center justify-center ${
+                                                                                            isSelected
+                                                                                                ? "bg-blue-500 text-white hover:bg-blue-600"
+                                                                                                : "bg-white text-gray-700 border border-gray-300 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-400"
+                                                                                        }`}
+                                                                                        title="Edit tag name"
+                                                                                    >
+                                                                                        <Pencil className="w-4 h-5" />
+                                                                                    </button>
+                                                                                    <button
+                                                                                        onClick={(
+                                                                                            e
+                                                                                        ) => {
+                                                                                            e.stopPropagation();
+                                                                                            deleteTag(
+                                                                                                item.id
+                                                                                            );
+                                                                                        }}
+                                                                                        className={`px-2 py-1.5 rounded-r-full text-sm transition-all border-l-0 inline-flex items-center justify-center ${
+                                                                                            isSelected
+                                                                                                ? "bg-blue-500 text-white hover:bg-red-600"
+                                                                                                : "bg-white text-gray-700 border border-gray-300 hover:bg-red-50 hover:text-red-600 hover:border-red-400"
+                                                                                        }`}
+                                                                                        title="Delete tag permanently"
+                                                                                    >
+                                                                                        ×
+                                                                                    </button>
+                                                                                </>
+                                                                            )}
                                                                         </>
                                                                     )}
                                                                 </div>
@@ -4200,6 +4403,121 @@ const DataCategorySearch = ({
                                 className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-400"
                             >
                                 {modalLoading ? "Saving..." : "Save Changes"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Confirmation Modal */}
+            {deleteConfirmModal.isOpen && (
+                <div
+                    className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+                    onClick={(e) => {
+                        if (e.target === e.currentTarget) {
+                            setDeleteConfirmModal({
+                                isOpen: false,
+                                type: null,
+                                itemName: null,
+                                itemId: null,
+                                structureShortName: null,
+                                structureCount: 0,
+                                onConfirm: null,
+                            });
+                        }
+                    }}
+                >
+                    <div
+                        className="bg-white rounded-lg shadow-xl w-full max-w-md p-6"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <h2 className="text-xl font-bold text-gray-900 mb-4">
+                            Are you really sure?
+                        </h2>
+                        <p className="text-gray-700 mb-6">
+                            {deleteConfirmModal.type === "tag" && (
+                                <>
+                                    Are you sure you want to permanently delete
+                                    the tag{" "}
+                                    <span className="font-semibold">
+                                        &quot;{deleteConfirmModal.itemName}
+                                        &quot;
+                                    </span>
+                                    ? This tag is currently attached to{" "}
+                                    <span className="font-semibold text-red-600">
+                                        {deleteConfirmModal.structureCount}{" "}
+                                        {deleteConfirmModal.structureCount === 1
+                                            ? "structure"
+                                            : "structures"}
+                                    </span>
+                                    . This will remove it from all data
+                                    structures and cannot be undone.
+                                </>
+                            )}
+                            {deleteConfirmModal.type === "category" && (
+                                <>
+                                    Are you sure you want to remove the category{" "}
+                                    <span className="font-semibold">
+                                        &quot;{deleteConfirmModal.itemName}
+                                        &quot;
+                                    </span>{" "}
+                                    from this structure? This category is used
+                                    by{" "}
+                                    <span className="font-semibold text-red-600">
+                                        {deleteConfirmModal.structureCount}{" "}
+                                        {deleteConfirmModal.structureCount === 1
+                                            ? "structure"
+                                            : "structures"}
+                                    </span>
+                                    . This action cannot be undone.
+                                </>
+                            )}
+                            {deleteConfirmModal.type === "dataType" && (
+                                <>
+                                    Are you sure you want to remove the data
+                                    type{" "}
+                                    <span className="font-semibold">
+                                        &quot;{deleteConfirmModal.itemName}
+                                        &quot;
+                                    </span>{" "}
+                                    from this structure? This data type is used
+                                    by{" "}
+                                    <span className="font-semibold text-red-600">
+                                        {deleteConfirmModal.structureCount}{" "}
+                                        {deleteConfirmModal.structureCount === 1
+                                            ? "structure"
+                                            : "structures"}
+                                    </span>
+                                    . This action cannot be undone.
+                                </>
+                            )}
+                        </p>
+                        <div className="flex justify-end gap-3">
+                            <button
+                                onClick={() => {
+                                    setDeleteConfirmModal({
+                                        isOpen: false,
+                                        type: null,
+                                        itemName: null,
+                                        itemId: null,
+                                        structureShortName: null,
+                                        structureCount: 0,
+                                        onConfirm: null,
+                                    });
+                                }}
+                                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    if (deleteConfirmModal.onConfirm) {
+                                        await deleteConfirmModal.onConfirm();
+                                    }
+                                }}
+                                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                            >
+                                Yes, Delete
                             </button>
                         </div>
                     </div>
