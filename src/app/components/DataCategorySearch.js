@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Image from "next/image";
 import {
     Search,
@@ -13,6 +13,14 @@ import {
 } from "lucide-react";
 import { DATA_PORTAL } from "@/const.js";
 import CategoryTagManagement from "./CategoryTagManagement";
+import {
+    fetchTags as apiFetchTags,
+    createTag as apiCreateTag,
+    updateTag as apiUpdateTag,
+    deleteTag as apiDeleteTag,
+    assignTag as apiAssignTag,
+    fetchTagDataStructures,
+} from "@/utils/api";
 
 const DataCategorySearch = ({
     onStructureSelect,
@@ -144,37 +152,43 @@ const DataCategorySearch = ({
     // Combine custom tags and existing NDA categories into one unified list
     // Create a unified list where NDA categories are represented as pseudo-tag objects
     // Use a Map to ensure uniqueness by name to prevent duplicates
-    const combinedMap = new Map();
+    // MEMOIZED: This is an expensive computation that shouldn't run on every render
+    const combinedAvailableCategories = useMemo(() => {
+        const combinedMap = new Map();
 
-    // Add custom tags first
-    filteredAvailableTags.forEach((tag) => {
-        combinedMap.set(tag.id, {
-            ...tag,
-            isNdaCategory: false,
-        });
-    });
-
-    // Add NDA categories that aren't already in availableTags (by name)
-    filteredNdaCategories
-        .filter(
-            (category) =>
-                // Only include NDA categories that aren't already in availableTags
-                !availableTags.some((tag) => tag.name === category)
-        )
-        .forEach((category) => {
-            const ndaId = `nda-category-${category}`;
-            // Only add if not already in map (by ID)
-            if (!combinedMap.has(ndaId)) {
-                combinedMap.set(ndaId, {
-                    id: ndaId,
-                    name: category,
-                    isNdaCategory: true,
-                    tagType: "Category",
+        // Add custom tags first
+        filteredAvailableTags.forEach((tag) => {
+            if (tag && tag.id) {
+                combinedMap.set(tag.id, {
+                    ...tag,
+                    isNdaCategory: false,
                 });
             }
         });
 
-    const combinedAvailableCategories = Array.from(combinedMap.values());
+        // Add NDA categories that aren't already in availableTags (by name)
+        filteredNdaCategories
+            .filter(
+                (category) =>
+                    category &&
+                    // Only include NDA categories that aren't already in availableTags
+                    !availableTags.some((tag) => tag && tag.name === category)
+            )
+            .forEach((category) => {
+                const ndaId = `nda-category-${category}`;
+                // Only add if not already in map (by ID)
+                if (!combinedMap.has(ndaId)) {
+                    combinedMap.set(ndaId, {
+                        id: ndaId,
+                        name: category,
+                        isNdaCategory: true,
+                        tagType: "Category",
+                    });
+                }
+            });
+
+        return Array.from(combinedMap.values());
+    }, [filteredAvailableTags, filteredNdaCategories, availableTags]);
 
     // Add this useEffect to fetch once
     useEffect(() => {
@@ -229,9 +243,28 @@ const DataCategorySearch = ({
         const fetchRemovedItems = async () => {
             try {
                 const response = await fetch(`${apiBaseUrl}/tags`);
-                if (!response.ok) return;
+                if (!response.ok) {
+                    console.error(
+                        `Failed to fetch removed items: ${response.status} ${response.statusText}`
+                    );
+                    return;
+                }
 
-                const allTags = await response.json();
+                let allTags;
+                try {
+                    allTags = await response.json();
+                } catch (err) {
+                    console.error("Failed to parse removed items JSON:", err);
+                    return;
+                }
+
+                if (!Array.isArray(allTags)) {
+                    console.warn(
+                        "Expected array for tags, got:",
+                        typeof allTags
+                    );
+                    return;
+                }
                 const removedCategoriesMap = {};
                 const removedDataTypesMap = {};
 
@@ -293,8 +326,25 @@ const DataCategorySearch = ({
         const fetchAllTags = async () => {
             try {
                 const response = await fetch(`${apiBaseUrl}/tags`);
-                if (!response.ok) return;
-                const data = await response.json();
+                if (!response.ok) {
+                    console.error(
+                        `Failed to fetch tags: ${response.status} ${response.statusText}`
+                    );
+                    return;
+                }
+
+                let data;
+                try {
+                    data = await response.json();
+                } catch (err) {
+                    console.error("Failed to parse tags JSON:", err);
+                    return;
+                }
+
+                if (!Array.isArray(data)) {
+                    console.warn("Expected array for tags, got:", typeof data);
+                    return;
+                }
 
                 // Set category tags
                 const categoryTags = data.filter(
@@ -392,12 +442,7 @@ const DataCategorySearch = ({
 
     const fetchStructureTags = async () => {
         try {
-            const response = await fetch(`${apiBaseUrl}/tags`);
-            if (!response.ok) {
-                console.warn("Failed to fetch tags, status:", response.status);
-                return; // Don't throw, just return
-            }
-            const allTags = await response.json();
+            const allTags = await apiFetchTags(apiBaseUrl);
 
             if (!Array.isArray(allTags) || allTags.length === 0) {
                 return;
@@ -413,17 +458,14 @@ const DataCategorySearch = ({
                 const batchResults = await Promise.all(
                     batch.map(async (tag) => {
                         try {
-                            const dsResponse = await fetch(
-                                `${apiBaseUrl}/tags/${tag.id}/dataStructures`
+                            const dataStructures = await fetchTagDataStructures(
+                                tag.id,
+                                apiBaseUrl
                             );
-                            if (dsResponse.ok) {
-                                const dsData = await dsResponse.json();
-                                return {
-                                    ...tag,
-                                    dataStructures: dsData.dataStructures || [],
-                                };
-                            }
-                            return { ...tag, dataStructures: [] };
+                            return {
+                                ...tag,
+                                dataStructures: dataStructures,
+                            };
                         } catch (err) {
                             console.warn(
                                 `Failed to fetch data structures for tag ${tag.name}:`,
@@ -821,17 +863,11 @@ const DataCategorySearch = ({
                                 if (createResponse.ok) {
                                     const newTag = await createResponse.json();
                                     // Assign tag to the structure
-                                    await fetch(`${apiBaseUrl}/tags/assign`, {
-                                        method: "POST",
-                                        headers: {
-                                            "Content-Type": "application/json",
-                                        },
-                                        body: JSON.stringify({
-                                            tagId: newTag.id,
-                                            dataStructureShortName:
-                                                structureShortName,
-                                        }),
-                                    });
+                                    await apiAssignTag(
+                                        newTag.id,
+                                        structureShortName,
+                                        apiBaseUrl
+                                    );
                                 }
                             }
                         }
@@ -899,16 +935,11 @@ const DataCategorySearch = ({
                     if (createResponse.ok) {
                         const newTag = await createResponse.json();
                         // Assign tag to the structure
-                        await fetch(`${apiBaseUrl}/tags/assign`, {
-                            method: "POST",
-                            headers: {
-                                "Content-Type": "application/json",
-                            },
-                            body: JSON.stringify({
-                                tagId: newTag.id,
-                                dataStructureShortName: structureShortName,
-                            }),
-                        });
+                        await apiAssignTag(
+                            newTag.id,
+                            structureShortName,
+                            apiBaseUrl
+                        );
                     }
                 }
             }
@@ -997,17 +1028,11 @@ const DataCategorySearch = ({
                                 if (createResponse.ok) {
                                     const newTag = await createResponse.json();
                                     // Assign tag to the structure
-                                    await fetch(`${apiBaseUrl}/tags/assign`, {
-                                        method: "POST",
-                                        headers: {
-                                            "Content-Type": "application/json",
-                                        },
-                                        body: JSON.stringify({
-                                            tagId: newTag.id,
-                                            dataStructureShortName:
-                                                structureShortName,
-                                        }),
-                                    });
+                                    await apiAssignTag(
+                                        newTag.id,
+                                        structureShortName,
+                                        apiBaseUrl
+                                    );
                                 }
                             }
                         }
@@ -1072,16 +1097,11 @@ const DataCategorySearch = ({
                     if (createResponse.ok) {
                         const newTag = await createResponse.json();
                         // Assign tag to the structure
-                        await fetch(`${apiBaseUrl}/tags/assign`, {
-                            method: "POST",
-                            headers: {
-                                "Content-Type": "application/json",
-                            },
-                            body: JSON.stringify({
-                                tagId: newTag.id,
-                                dataStructureShortName: structureShortName,
-                            }),
-                        });
+                        await apiAssignTag(
+                            newTag.id,
+                            structureShortName,
+                            apiBaseUrl
+                        );
                     }
                 }
             }
@@ -1212,10 +1232,8 @@ const DataCategorySearch = ({
     const fetchTags = async () => {
         setTagLoading(true);
         try {
-            const response = await fetch(`${apiBaseUrl}/tags`);
-            if (!response.ok) throw new Error("Failed to fetch tags");
-            const data = await response.json();
-            const categoryTags = data.filter(
+            const allTags = await apiFetchTags(apiBaseUrl);
+            const categoryTags = allTags.filter(
                 (tag) =>
                     // Exclude data type tags and removed tags
                     (!tag.tagType || tag.tagType !== "Data Type") &&
@@ -1227,7 +1245,7 @@ const DataCategorySearch = ({
             setAvailableTags(categoryTags);
         } catch (err) {
             console.error("Error fetching tags:", err);
-            setModalError("Failed to load tags");
+            setModalError(err.message || "Failed to load tags");
         } finally {
             setTagLoading(false);
         }
@@ -1236,10 +1254,8 @@ const DataCategorySearch = ({
     const fetchDataTypeTags = async () => {
         setTagLoading(true);
         try {
-            const response = await fetch(`/api/spinup/tags`);
-            if (!response.ok) throw new Error("Failed to fetch data type tags");
-            const data = await response.json();
-            const dataTypeTags = data.filter(
+            const allTags = await apiFetchTags(apiBaseUrl);
+            const dataTypeTags = allTags.filter(
                 (tag) =>
                     // Only include data type tags, exclude removed tags
                     tag.tagType === "Data Type" &&
@@ -1251,7 +1267,7 @@ const DataCategorySearch = ({
             setAvailableDataTypeTags(dataTypeTags);
         } catch (err) {
             console.error("Error fetching data type tags:", err);
-            setModalError("Failed to load data type tags");
+            setModalError(err.message || "Failed to load data type tags");
         } finally {
             setTagLoading(false);
         }
@@ -1261,24 +1277,13 @@ const DataCategorySearch = ({
         if (!newTagName.trim()) return;
 
         try {
-            const response = await fetch(`${apiBaseUrl}/tags`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    name: newTagName.trim(),
-                    tagType: "Category",
-                }),
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || "Failed to create tag");
-            }
-
-            const newTag = await response.json();
+            const newTag = await apiCreateTag(
+                newTagName.trim(),
+                "Category",
+                apiBaseUrl
+            );
 
             setAvailableTags((prev) => [...prev, newTag]);
-
             setSelectedSocialTags((prev) => new Set([...prev, newTag.id]));
 
             // Note: Do NOT add custom tags to availableCategories
@@ -1286,15 +1291,6 @@ const DataCategorySearch = ({
             // Custom tags are tracked separately in availableTags
 
             setNewTagName("");
-
-            // // Add to appropriate selected set
-            // if (isCategoriesModalOpen) {
-            //     setSelectedSocialTags(prev => new Set([...prev, newTag.id]));
-            // } else if (isDataTypesModalOpen) {
-            //     setSelectedClinicalTags(prev => new Set([...prev, newTag.id]));
-            // }
-
-            // setNewTagName("");
 
             return newTag;
         } catch (err) {
@@ -1308,23 +1304,11 @@ const DataCategorySearch = ({
         if (!newDataTypeTagName.trim()) return;
 
         try {
-            const response = await fetch(`/api/spinup/tags`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    name: newDataTypeTagName.trim(),
-                    tagType: "Data Type", // Mark this as a data type tag
-                }),
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(
-                    errorData.error || "Failed to create data type tag"
-                );
-            }
-
-            const newTag = await response.json();
+            const newTag = await apiCreateTag(
+                newDataTypeTagName.trim(),
+                "Data Type",
+                apiBaseUrl
+            );
 
             // Update available tags
             setAvailableDataTypeTags((prev) => [...prev, newTag]);
@@ -1355,18 +1339,7 @@ const DataCategorySearch = ({
         }
 
         try {
-            const response = await fetch(`${apiBaseUrl}/tags/${tagId}`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name: newName.trim() }),
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.error || "Failed to update tag");
-            }
-
-            const updatedTag = await response.json();
+            const updatedTag = await apiUpdateTag(tagId, newName, apiBaseUrl);
             const updatedName = updatedTag.name;
 
             // Find old tag name before updating
@@ -1488,22 +1461,7 @@ const DataCategorySearch = ({
             structureCount: structureCount,
             onConfirm: async () => {
                 try {
-                    const response = await fetch(
-                        `${apiBaseUrl}/tags/${tagId}`,
-                        {
-                            method: "DELETE",
-                            headers: { "Content-Type": "application/json" },
-                        }
-                    );
-
-                    if (!response.ok) {
-                        const errorData = await response
-                            .json()
-                            .catch(() => ({}));
-                        throw new Error(
-                            errorData.error || "Failed to delete tag"
-                        );
-                    }
+                    await apiDeleteTag(tagId, apiBaseUrl);
 
                     // Find the tag to determine its type and name before removing
                     const categoryTag = availableTags.find(
