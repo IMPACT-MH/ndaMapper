@@ -2265,20 +2265,36 @@ const DataCategorySearch = ({
                                                                         selectedSocialTags.size;
                                                                     const selectedNdaCategoryCount =
                                                                         selectedNdaCategories.size;
+                                                                    const isThisCategorySelected =
+                                                                        selectedNdaCategories.has(
+                                                                            cat
+                                                                        );
+                                                                    // Count other selected NDA categories (excluding this one)
+                                                                    const otherSelectedNdaCategoryCount =
+                                                                        isThisCategorySelected
+                                                                            ? selectedNdaCategoryCount -
+                                                                              1
+                                                                            : selectedNdaCategoryCount;
                                                                     const totalCategoriesAfterRemoval =
                                                                         otherVisibleOriginalCategories.length +
                                                                         selectedCustomTagCount +
-                                                                        selectedNdaCategoryCount;
+                                                                        otherSelectedNdaCategoryCount;
 
-                                                                    // Auto-select and disable if no alternatives are selected
+                                                                    // Allow deselection if:
+                                                                    // 1. There are multiple NDA categories selected (user can deselect one)
+                                                                    // 2. OR there are custom tags selected
+                                                                    // 3. OR there are other visible original categories
+                                                                    // Only disable if removing this would leave zero categories total
                                                                     if (
                                                                         !isRemoved &&
                                                                         selectedCustomTagCount ===
                                                                             0 &&
-                                                                        selectedNdaCategoryCount ===
+                                                                        otherSelectedNdaCategoryCount ===
+                                                                            0 &&
+                                                                        otherVisibleOriginalCategories.length ===
                                                                             0
                                                                     ) {
-                                                                        return true; // Disable and auto-select
+                                                                        return true; // Disable - would leave no categories
                                                                     }
 
                                                                     return (
@@ -2420,10 +2436,20 @@ const DataCategorySearch = ({
                                                                             selectedSocialTags.size;
                                                                         const selectedNdaCategoryCount =
                                                                             selectedNdaCategories.size;
+                                                                        const isThisCategorySelected =
+                                                                            selectedNdaCategories.has(
+                                                                                cat
+                                                                            );
+                                                                        // Count other selected NDA categories (excluding this one)
+                                                                        const otherSelectedNdaCategoryCount =
+                                                                            isThisCategorySelected
+                                                                                ? selectedNdaCategoryCount -
+                                                                                  1
+                                                                                : selectedNdaCategoryCount;
                                                                         const totalCategoriesAfterRemoval =
                                                                             otherVisibleOriginalCategories.length +
                                                                             selectedCustomTagCount +
-                                                                            selectedNdaCategoryCount;
+                                                                            otherSelectedNdaCategoryCount;
 
                                                                         if (
                                                                             totalCategoriesAfterRemoval <
