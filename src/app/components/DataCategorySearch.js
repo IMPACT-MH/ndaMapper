@@ -96,6 +96,8 @@ const DataCategorySearch = ({
     const [modalError, setModalError] = useState(null);
     const [categoryError, setCategoryError] = useState(null);
     const [dataTypeError, setDataTypeError] = useState(null);
+    const [matchedCategoryItem, setMatchedCategoryItem] = useState(null);
+    const [matchedDataTypeItem, setMatchedDataTypeItem] = useState(null);
     const [modalLoading, setModalLoading] = useState(false);
 
     // Delete confirmation modal state
@@ -297,9 +299,26 @@ const DataCategorySearch = ({
 
     // Use the same function for both display and duplicate checking
     // This ensures consistency and eliminates the redundant memoized value
+    // Also include matched item if there's a plural/singular match
     const combinedAvailableCategories = useMemo(() => {
-        return computeFilteredCombinedCategories(modalSearchTerm);
-    }, [computeFilteredCombinedCategories, modalSearchTerm]);
+        const filtered = computeFilteredCombinedCategories(modalSearchTerm);
+        // If there's a matched item (from plural/singular detection) and it's not already in the list, add it
+        if (matchedCategoryItem) {
+            const alreadyInList = filtered.some(
+                (item) =>
+                    item.id === matchedCategoryItem.id ||
+                    item.name === matchedCategoryItem.name
+            );
+            if (!alreadyInList) {
+                return [matchedCategoryItem, ...filtered];
+            }
+        }
+        return filtered;
+    }, [
+        computeFilteredCombinedCategories,
+        modalSearchTerm,
+        matchedCategoryItem,
+    ]);
 
     // Helper function to compute filtered and combined data types for modal search
     const computeFilteredCombinedDataTypes = useCallback(
@@ -339,6 +358,28 @@ const DataCategorySearch = ({
         },
         [availableDataTypeTags, availableDataTypes]
     );
+
+    // Use the same function for both display and duplicate checking
+    // Also include matched item if there's a plural/singular match
+    const combinedAvailableDataTypes = useMemo(() => {
+        const filtered = computeFilteredCombinedDataTypes(modalSearchTerm);
+        // If there's a matched item (from plural/singular detection) and it's not already in the list, add it
+        if (matchedDataTypeItem) {
+            const alreadyInList = filtered.some(
+                (item) =>
+                    item.id === matchedDataTypeItem.id ||
+                    item.name === matchedDataTypeItem.name
+            );
+            if (!alreadyInList) {
+                return [matchedDataTypeItem, ...filtered];
+            }
+        }
+        return filtered;
+    }, [
+        computeFilteredCombinedDataTypes,
+        modalSearchTerm,
+        matchedDataTypeItem,
+    ]);
 
     // Add this useEffect to fetch once
     useEffect(() => {
@@ -1445,10 +1486,8 @@ const DataCategorySearch = ({
                 const existingName = existingItem?.name || trimmedName;
                 const errorMessage = `"${trimmedName}" already exists as "${existingName}". Please select it from the list below:`;
                 setCategoryError(errorMessage);
-                // Clear error after 4 seconds
-                setTimeout(() => {
-                    setCategoryError(null);
-                }, 4000);
+                // Store the matched item so it appears in the list even if it doesn't match the search term
+                setMatchedCategoryItem(existingItem);
                 // Return early instead of throwing to gracefully handle the error
                 return null;
             }
@@ -1476,10 +1515,6 @@ const DataCategorySearch = ({
             // Set error message below search bar
             const errorMessage = err.message || "Failed to create category tag";
             setCategoryError(errorMessage);
-            // Clear error after 4 seconds
-            setTimeout(() => {
-                setCategoryError(null);
-            }, 4000);
             // Don't throw - gracefully handle the error
             return null;
         }
@@ -1506,10 +1541,8 @@ const DataCategorySearch = ({
                 const existingName = existingItem?.name || trimmedName;
                 const errorMessage = `"${trimmedName}" already exists as "${existingName}". Please select it from the list below:`;
                 setDataTypeError(errorMessage);
-                // Clear error after 4 seconds
-                setTimeout(() => {
-                    setDataTypeError(null);
-                }, 4000);
+                // Store the matched item so it appears in the list even if it doesn't match the search term
+                setMatchedDataTypeItem(existingItem);
                 // Return early instead of throwing to gracefully handle the error
                 return null;
             }
@@ -1542,10 +1575,6 @@ const DataCategorySearch = ({
             const errorMessage =
                 err.message || "Failed to create data type tag";
             setDataTypeError(errorMessage);
-            // Clear error after 4 seconds
-            setTimeout(() => {
-                setDataTypeError(null);
-            }, 4000);
             // Don't throw - gracefully handle the error
             return null;
         }
@@ -2695,6 +2724,7 @@ const DataCategorySearch = ({
                                     setIsCategoriesModalOpen(false);
                                     setModalSearchTerm("");
                                     setCategoryError(null);
+                                    setMatchedCategoryItem(null);
                                 }}
                                 className="text-gray-400 hover:text-gray-600"
                             >
@@ -3284,6 +3314,9 @@ const DataCategorySearch = ({
                                                             true
                                                         );
                                                         setCategoryError(null);
+                                                        setMatchedCategoryItem(
+                                                            null
+                                                        );
                                                     } else {
                                                         // Match exists (exact or plural/singular), find the existing name
                                                         const existingItem =
@@ -3298,12 +3331,10 @@ const DataCategorySearch = ({
                                                         setCategoryError(
                                                             `"${modalSearchTerm.trim()}" already exists as "${existingName}". Please select it from the list below:`
                                                         );
-                                                        // Clear error after 4 seconds
-                                                        setTimeout(() => {
-                                                            setCategoryError(
-                                                                null
-                                                            );
-                                                        }, 4000);
+                                                        // Store the matched item so it appears in the list even if it doesn't match the search term
+                                                        setMatchedCategoryItem(
+                                                            existingItem
+                                                        );
                                                     }
                                                 }}
                                                 className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center justify-center w-6 h-6 bg-green-500 text-white rounded-full hover:bg-green-600 transition-all hover:scale-110 active:scale-95"
@@ -3587,6 +3618,7 @@ const DataCategorySearch = ({
                                     setNdaCategorySearchTerm("");
                                     setShowCreateCategoryInput(false);
                                     setCategoryError(null);
+                                    setMatchedCategoryItem(null);
                                 }}
                                 className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
                             >
@@ -3775,6 +3807,7 @@ const DataCategorySearch = ({
                                             setModalSearchTerm("");
                                             setNdaCategorySearchTerm("");
                                             setCategoryError(null);
+                                            setMatchedCategoryItem(null);
                                             return;
                                         }
 
@@ -3922,6 +3955,7 @@ const DataCategorySearch = ({
                                         setModalSearchTerm("");
                                         setNdaCategorySearchTerm("");
                                         setCategoryError(null);
+                                        setMatchedCategoryItem(null);
                                     } catch (err) {
                                         console.error(
                                             "Error saving category tags:",
@@ -3954,6 +3988,7 @@ const DataCategorySearch = ({
                         setShowCreateDataTypeInput(false);
                         setModalSearchTerm("");
                         setDataTypeError(null);
+                        setMatchedDataTypeItem(null);
                     }}
                 >
                     <div
@@ -4328,13 +4363,10 @@ const DataCategorySearch = ({
 
                                 {/* Unified Search with + button on right - Hide when input is shown */}
                                 {(() => {
-                                    const filteredDataTypes =
-                                        computeFilteredCombinedDataTypes(
-                                            modalSearchTerm
-                                        );
                                     return !(
                                         showCreateDataTypeInput ||
-                                        (filteredDataTypes.length === 0 &&
+                                        (combinedAvailableDataTypes.length ===
+                                            0 &&
                                             modalSearchTerm.trim())
                                     );
                                 })() && (
@@ -4350,6 +4382,9 @@ const DataCategorySearch = ({
                                                 // Clear error when user starts typing
                                                 if (dataTypeError) {
                                                     setDataTypeError(null);
+                                                    setMatchedDataTypeItem(
+                                                        null
+                                                    );
                                                 }
                                             }}
                                             placeholder="Search all data types..."
@@ -4381,6 +4416,9 @@ const DataCategorySearch = ({
                                                             true
                                                         );
                                                         setDataTypeError(null);
+                                                        setMatchedDataTypeItem(
+                                                            null
+                                                        );
                                                     } else {
                                                         // Match exists (exact or plural/singular), find the existing name
                                                         const existingItem =
@@ -4395,12 +4433,10 @@ const DataCategorySearch = ({
                                                         setDataTypeError(
                                                             `"${modalSearchTerm.trim()}" already exists as "${existingName}". Please select it from the list below:`
                                                         );
-                                                        // Clear error after 4 seconds
-                                                        setTimeout(() => {
-                                                            setDataTypeError(
-                                                                null
-                                                            );
-                                                        }, 4000);
+                                                        // Store the matched item so it appears in the list even if it doesn't match the search term
+                                                        setMatchedDataTypeItem(
+                                                            existingItem
+                                                        );
                                                     }
                                                 }}
                                                 className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center justify-center w-6 h-6 bg-green-500 text-white rounded-full hover:bg-green-600 transition-all hover:scale-110 active:scale-95"
@@ -4430,284 +4466,205 @@ const DataCategorySearch = ({
                                     </p>
                                     <div className="bg-gray-50 rounded-lg p-3 max-h-64 overflow-y-auto">
                                         <div className="flex flex-wrap gap-2">
-                                            {(() => {
-                                                // Filter available data type tags
-                                                const filteredAvailableDataTypeTags =
-                                                    availableDataTypeTags.filter(
-                                                        (tag) =>
-                                                            !modalSearchTerm ||
-                                                            tag.name
-                                                                .toLowerCase()
-                                                                .includes(
-                                                                    modalSearchTerm.toLowerCase()
-                                                                )
-                                                    );
+                                            {combinedAvailableDataTypes.length >
+                                            0
+                                                ? combinedAvailableDataTypes.map(
+                                                      (item, index) => {
+                                                          // Check if this is a custom tag
+                                                          const hasRealId =
+                                                              item.id &&
+                                                              !item.id.startsWith(
+                                                                  "nda-datatype-"
+                                                              );
 
-                                                // Filter available NDA data types
-                                                const filteredNdaDataTypes =
-                                                    Array.from(
-                                                        availableDataTypes
-                                                    ).filter(
-                                                        (dataType) =>
-                                                            !modalSearchTerm ||
-                                                            dataType
-                                                                .toLowerCase()
-                                                                .includes(
-                                                                    modalSearchTerm.toLowerCase()
-                                                                )
-                                                    );
+                                                          // Check if the name exists in NDA data types
+                                                          const isNdaDataTypeName =
+                                                              availableDataTypes.has(
+                                                                  item.name
+                                                              );
 
-                                                // Combine custom tags and existing NDA data types into one unified list
-                                                const combinedMap = new Map();
+                                                          // Custom tag = has real ID AND NOT an NDA data type name
+                                                          const isCustomTag =
+                                                              hasRealId &&
+                                                              !isNdaDataTypeName;
+                                                          const isNdaDataType =
+                                                              !isCustomTag;
 
-                                                // Add custom tags first
-                                                filteredAvailableDataTypeTags.forEach(
-                                                    (tag) => {
-                                                        combinedMap.set(
-                                                            tag.id,
-                                                            {
-                                                                ...tag,
-                                                                isNdaDataType: false,
-                                                            }
-                                                        );
-                                                    }
-                                                );
+                                                          const isSelected =
+                                                              isNdaDataType
+                                                                  ? false // NDA data types can't be selected (they're just for display)
+                                                                  : selectedDataTypeTags.has(
+                                                                        item.id
+                                                                    );
 
-                                                // Add NDA data types that aren't already in availableDataTypeTags (by name)
-                                                filteredNdaDataTypes
-                                                    .filter(
-                                                        (dataType) =>
-                                                            !availableDataTypeTags.some(
-                                                                (tag) =>
-                                                                    tag.name ===
-                                                                    dataType
-                                                            )
-                                                    )
-                                                    .forEach((dataType) => {
-                                                        const ndaId = `nda-datatype-${dataType}`;
-                                                        if (
-                                                            !combinedMap.has(
-                                                                ndaId
-                                                            )
-                                                        ) {
-                                                            combinedMap.set(
-                                                                ndaId,
-                                                                {
-                                                                    id: ndaId,
-                                                                    name: dataType,
-                                                                    isNdaDataType: true,
-                                                                    tagType:
-                                                                        "Data Type",
-                                                                }
-                                                            );
-                                                        }
-                                                    });
-
-                                                const combinedAvailableDataTypes =
-                                                    Array.from(
-                                                        combinedMap.values()
-                                                    );
-
-                                                return combinedAvailableDataTypes.length >
-                                                    0
-                                                    ? combinedAvailableDataTypes.map(
-                                                          (item, index) => {
-                                                              // Check if this is a custom tag
-                                                              const hasRealId =
-                                                                  item.id &&
-                                                                  !item.id.startsWith(
-                                                                      "nda-datatype-"
-                                                                  );
-
-                                                              // Check if the name exists in NDA data types
-                                                              const isNdaDataTypeName =
-                                                                  availableDataTypes.has(
-                                                                      item.name
-                                                                  );
-
-                                                              // Custom tag = has real ID AND NOT an NDA data type name
-                                                              const isCustomTag =
-                                                                  hasRealId &&
-                                                                  !isNdaDataTypeName;
-                                                              const isNdaDataType =
-                                                                  !isCustomTag;
-
-                                                              const isSelected =
-                                                                  isNdaDataType
-                                                                      ? false // NDA data types can't be selected (they're just for display)
-                                                                      : selectedDataTypeTags.has(
-                                                                            item.id
-                                                                        );
-
-                                                              return (
-                                                                  <div
-                                                                      key={`${item.id}-${index}`}
-                                                                      className="inline-flex items-center group relative"
-                                                                  >
-                                                                      {isCustomTag &&
-                                                                      editingDataTypeTagId ===
-                                                                          item.id ? (
-                                                                          <input
-                                                                              type="text"
-                                                                              value={
-                                                                                  editingDataTypeTagName
-                                                                              }
-                                                                              onChange={(
+                                                          return (
+                                                              <div
+                                                                  key={`${item.id}-${index}`}
+                                                                  className="inline-flex items-center group relative"
+                                                              >
+                                                                  {isCustomTag &&
+                                                                  editingDataTypeTagId ===
+                                                                      item.id ? (
+                                                                      <input
+                                                                          type="text"
+                                                                          value={
+                                                                              editingDataTypeTagName
+                                                                          }
+                                                                          onChange={(
+                                                                              e
+                                                                          ) =>
+                                                                              setEditingDataTypeTagName(
                                                                                   e
-                                                                              ) =>
-                                                                                  setEditingDataTypeTagName(
-                                                                                      e
-                                                                                          .target
-                                                                                          .value
-                                                                                  )
-                                                                              }
-                                                                              onBlur={() => {
+                                                                                      .target
+                                                                                      .value
+                                                                              )
+                                                                          }
+                                                                          onBlur={() => {
+                                                                              updateTag(
+                                                                                  item.id,
+                                                                                  editingDataTypeTagName,
+                                                                                  true
+                                                                              );
+                                                                          }}
+                                                                          onKeyDown={(
+                                                                              e
+                                                                          ) => {
+                                                                              if (
+                                                                                  e.key ===
+                                                                                  "Enter"
+                                                                              ) {
                                                                                   updateTag(
                                                                                       item.id,
                                                                                       editingDataTypeTagName,
                                                                                       true
                                                                                   );
-                                                                              }}
-                                                                              onKeyDown={(
-                                                                                  e
-                                                                              ) => {
-                                                                                  if (
-                                                                                      e.key ===
-                                                                                      "Enter"
-                                                                                  ) {
-                                                                                      updateTag(
-                                                                                          item.id,
-                                                                                          editingDataTypeTagName,
-                                                                                          true
-                                                                                      );
-                                                                                  } else if (
-                                                                                      e.key ===
-                                                                                      "Escape"
-                                                                                  ) {
-                                                                                      setEditingDataTypeTagId(
-                                                                                          null
-                                                                                      );
-                                                                                  }
-                                                                              }}
-                                                                              autoFocus
-                                                                              className="px-3 py-1.5 rounded-l-full text-sm border border-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-500"
-                                                                              onClick={(
-                                                                                  e
-                                                                              ) =>
-                                                                                  e.stopPropagation()
+                                                                              } else if (
+                                                                                  e.key ===
+                                                                                  "Escape"
+                                                                              ) {
+                                                                                  setEditingDataTypeTagId(
+                                                                                      null
+                                                                                  );
                                                                               }
-                                                                          />
-                                                                      ) : (
-                                                                          <>
-                                                                              <button
-                                                                                  onClick={() => {
+                                                                          }}
+                                                                          autoFocus
+                                                                          className="px-3 py-1.5 rounded-l-full text-sm border border-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                                                                          onClick={(
+                                                                              e
+                                                                          ) =>
+                                                                              e.stopPropagation()
+                                                                          }
+                                                                      />
+                                                                  ) : (
+                                                                      <>
+                                                                          <button
+                                                                              onClick={() => {
+                                                                                  if (
+                                                                                      !isNdaDataType
+                                                                                  ) {
+                                                                                      // Only allow one data type to be selected at a time
                                                                                       if (
-                                                                                          !isNdaDataType
-                                                                                      ) {
-                                                                                          // Only allow one data type to be selected at a time
-                                                                                          if (
-                                                                                              selectedDataTypeTags.has(
-                                                                                                  item.id
-                                                                                              )
-                                                                                          ) {
-                                                                                              // If already selected, deselect it
-                                                                                              setSelectedDataTypeTags(
-                                                                                                  new Set()
-                                                                                              );
-                                                                                          } else {
-                                                                                              // Select only this one (clear all others)
-                                                                                              setSelectedDataTypeTags(
-                                                                                                  new Set(
-                                                                                                      [
-                                                                                                          item.id,
-                                                                                                      ]
-                                                                                                  )
-                                                                                              );
-                                                                                          }
-                                                                                      }
-                                                                                  }}
-                                                                                  className={`px-3 py-1.5 ${
-                                                                                      isCustomTag
-                                                                                          ? "rounded-l-full"
-                                                                                          : "rounded-full"
-                                                                                  } text-sm transition-all inline-flex items-center ${
-                                                                                      isSelected
-                                                                                          ? "bg-blue-500 text-white hover:bg-blue-600"
-                                                                                          : "bg-white text-gray-700 border border-gray-300 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-400"
-                                                                                  }`}
-                                                                              >
-                                                                                  {isCustomTag && (
-                                                                                      <span className="mr-1 text-xs text-orange-500">
-                                                                                          ★
-                                                                                      </span>
-                                                                                  )}
-                                                                                  {
-                                                                                      item.name
-                                                                                  }
-                                                                                  {item.dataStructures && (
-                                                                                      <span className="ml-2 text-xs opacity-70">
-                                                                                          (
-                                                                                          {
-                                                                                              item
-                                                                                                  .dataStructures
-                                                                                                  .length
-                                                                                          }
-
+                                                                                          selectedDataTypeTags.has(
+                                                                                              item.id
                                                                                           )
-                                                                                      </span>
-                                                                                  )}
-                                                                              </button>
+                                                                                      ) {
+                                                                                          // If already selected, deselect it
+                                                                                          setSelectedDataTypeTags(
+                                                                                              new Set()
+                                                                                          );
+                                                                                      } else {
+                                                                                          // Select only this one (clear all others)
+                                                                                          setSelectedDataTypeTags(
+                                                                                              new Set(
+                                                                                                  [
+                                                                                                      item.id,
+                                                                                                  ]
+                                                                                              )
+                                                                                          );
+                                                                                      }
+                                                                                  }
+                                                                              }}
+                                                                              className={`px-3 py-1.5 ${
+                                                                                  isCustomTag
+                                                                                      ? "rounded-l-full"
+                                                                                      : "rounded-full"
+                                                                              } text-sm transition-all inline-flex items-center ${
+                                                                                  isSelected
+                                                                                      ? "bg-blue-500 text-white hover:bg-blue-600"
+                                                                                      : "bg-white text-gray-700 border border-gray-300 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-400"
+                                                                              }`}
+                                                                          >
                                                                               {isCustomTag && (
-                                                                                  <>
-                                                                                      <button
-                                                                                          onClick={(
-                                                                                              e
-                                                                                          ) => {
-                                                                                              e.stopPropagation();
-                                                                                              setEditingDataTypeTagId(
-                                                                                                  item.id
-                                                                                              );
-                                                                                              setEditingDataTypeTagName(
-                                                                                                  item.name
-                                                                                              );
-                                                                                          }}
-                                                                                          className={`px-2 py-1.5 text-sm transition-all border-l-0 inline-flex items-center justify-center ${
-                                                                                              isSelected
-                                                                                                  ? "bg-blue-500 text-white hover:bg-blue-600"
-                                                                                                  : "bg-white text-gray-700 border border-gray-300 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-400"
-                                                                                          }`}
-                                                                                          title="Edit tag name"
-                                                                                      >
-                                                                                          <Pencil className="w-4 h-5" />
-                                                                                      </button>
-                                                                                      <button
-                                                                                          onClick={(
-                                                                                              e
-                                                                                          ) => {
-                                                                                              e.stopPropagation();
-                                                                                              deleteTag(
-                                                                                                  item.id
-                                                                                              );
-                                                                                          }}
-                                                                                          className={`px-2 py-1.5 rounded-r-full text-sm transition-all border-l-0 inline-flex items-center justify-center ${
-                                                                                              isSelected
-                                                                                                  ? "bg-blue-500 text-white hover:bg-red-600"
-                                                                                                  : "bg-white text-gray-700 border border-gray-300 hover:bg-red-50 hover:text-red-600 hover:border-red-400"
-                                                                                          }`}
-                                                                                          title="Delete tag permanently"
-                                                                                      >
-                                                                                          ×
-                                                                                      </button>
-                                                                                  </>
+                                                                                  <span className="mr-1 text-xs text-orange-500">
+                                                                                      ★
+                                                                                  </span>
                                                                               )}
-                                                                          </>
-                                                                      )}
-                                                                  </div>
-                                                              );
-                                                          }
-                                                      )
-                                                    : null;
-                                            })()}
+                                                                              {
+                                                                                  item.name
+                                                                              }
+                                                                              {item.dataStructures && (
+                                                                                  <span className="ml-2 text-xs opacity-70">
+                                                                                      (
+                                                                                      {
+                                                                                          item
+                                                                                              .dataStructures
+                                                                                              .length
+                                                                                      }
+
+                                                                                      )
+                                                                                  </span>
+                                                                              )}
+                                                                          </button>
+                                                                          {isCustomTag && (
+                                                                              <>
+                                                                                  <button
+                                                                                      onClick={(
+                                                                                          e
+                                                                                      ) => {
+                                                                                          e.stopPropagation();
+                                                                                          setEditingDataTypeTagId(
+                                                                                              item.id
+                                                                                          );
+                                                                                          setEditingDataTypeTagName(
+                                                                                              item.name
+                                                                                          );
+                                                                                      }}
+                                                                                      className={`px-2 py-1.5 text-sm transition-all border-l-0 inline-flex items-center justify-center ${
+                                                                                          isSelected
+                                                                                              ? "bg-blue-500 text-white hover:bg-blue-600"
+                                                                                              : "bg-white text-gray-700 border border-gray-300 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-400"
+                                                                                      }`}
+                                                                                      title="Edit tag name"
+                                                                                  >
+                                                                                      <Pencil className="w-4 h-5" />
+                                                                                  </button>
+                                                                                  <button
+                                                                                      onClick={(
+                                                                                          e
+                                                                                      ) => {
+                                                                                          e.stopPropagation();
+                                                                                          deleteTag(
+                                                                                              item.id
+                                                                                          );
+                                                                                      }}
+                                                                                      className={`px-2 py-1.5 rounded-r-full text-sm transition-all border-l-0 inline-flex items-center justify-center ${
+                                                                                          isSelected
+                                                                                              ? "bg-blue-500 text-white hover:bg-red-600"
+                                                                                              : "bg-white text-gray-700 border border-gray-300 hover:bg-red-50 hover:text-red-600 hover:border-red-400"
+                                                                                      }`}
+                                                                                      title="Delete tag permanently"
+                                                                                  >
+                                                                                      ×
+                                                                                  </button>
+                                                                              </>
+                                                                          )}
+                                                                      </>
+                                                                  )}
+                                                              </div>
+                                                          );
+                                                      }
+                                                  )
+                                                : null}
                                         </div>
                                     </div>
                                 </div>
@@ -4721,6 +4678,7 @@ const DataCategorySearch = ({
                                     setShowCreateDataTypeInput(false);
                                     setModalSearchTerm("");
                                     setDataTypeError(null);
+                                    setMatchedDataTypeItem(null);
                                 }}
                                 className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
                             >
@@ -4776,6 +4734,7 @@ const DataCategorySearch = ({
                                             setNewDataTypeTagName("");
                                             setModalSearchTerm("");
                                             setDataTypeError(null);
+                                            setMatchedDataTypeItem(null);
                                             return;
                                         }
 
@@ -4889,6 +4848,7 @@ const DataCategorySearch = ({
                                         setNewDataTypeTagName("");
                                         setModalSearchTerm("");
                                         setDataTypeError(null);
+                                        setMatchedDataTypeItem(null);
                                     } catch (err) {
                                         console.error(
                                             "Error saving data type tags:",
