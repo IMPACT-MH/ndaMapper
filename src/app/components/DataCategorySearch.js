@@ -3137,10 +3137,15 @@ const DataCategorySearch = ({
                                         }
 
                                         // Combine custom tag IDs with NDA category tag IDs
-                                        const selectedTagIds = [
-                                            ...Array.from(selectedSocialTags),
-                                            ...ndaCategoryTagIds,
-                                        ];
+                                        // Remove duplicates by using a Set
+                                        const selectedTagIds = Array.from(
+                                            new Set([
+                                                ...Array.from(
+                                                    selectedSocialTags
+                                                ),
+                                                ...ndaCategoryTagIds,
+                                            ])
+                                        );
 
                                         // Validate that at least one category will remain after save
                                         const visibleOriginalCategoriesAfterSave =
@@ -3334,23 +3339,11 @@ const DataCategorySearch = ({
                                         }
 
                                         // Update local state - include both custom tags and NDA category tags
-                                        const customTags = availableTags.filter(
+                                        // Use selectedTagIds (which already has duplicates removed) to get unique tags
+                                        const newTags = availableTags.filter(
                                             (tag) =>
-                                                selectedSocialTags.has(tag.id)
+                                                selectedTagIds.includes(tag.id)
                                         );
-
-                                        // Get NDA category tags (they should now be in availableTags after creation)
-                                        const ndaCategoryTags =
-                                            availableTags.filter((tag) =>
-                                                ndaCategoryTagIds.includes(
-                                                    tag.id
-                                                )
-                                            );
-
-                                        const newTags = [
-                                            ...customTags,
-                                            ...ndaCategoryTags,
-                                        ];
                                         setStructureTags((prev) => ({
                                             ...prev,
                                             [modalStructure.shortName]: newTags,
