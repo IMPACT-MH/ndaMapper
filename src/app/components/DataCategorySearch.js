@@ -1530,8 +1530,17 @@ const DataCategorySearch = ({
             return newTag;
         } catch (err) {
             console.error("Error creating tag:", err);
-            // Set error message below search bar
-            const errorMessage = err.message || "Failed to create category tag";
+            // Set error message below search bar - extract user-friendly message
+            let errorMessage = "Failed to create category tag";
+            if (err.message) {
+                errorMessage = err.message;
+            } else if (err.details) {
+                errorMessage = typeof err.details === 'string' ? err.details : err.details.error || errorMessage;
+            }
+            // Handle 400 errors more gracefully
+            if (err.status === 400) {
+                errorMessage = errorMessage || "Invalid request. Please check your input and try again.";
+            }
             setCategoryError(errorMessage);
             // Don't throw - gracefully handle the error
             return null;
@@ -1601,9 +1610,17 @@ const DataCategorySearch = ({
             return newTag;
         } catch (err) {
             console.error("Error creating data type tag:", err);
-            // Set error message below search bar
-            const errorMessage =
-                err.message || "Failed to create data type tag";
+            // Set error message - extract user-friendly message
+            let errorMessage = "Failed to create data type tag";
+            if (err.message) {
+                errorMessage = err.message;
+            } else if (err.details) {
+                errorMessage = typeof err.details === 'string' ? err.details : err.details.error || errorMessage;
+            }
+            // Handle 400 errors more gracefully
+            if (err.status === 400) {
+                errorMessage = errorMessage || "Invalid request. Please check your input and try again.";
+            }
             setDataTypeError(errorMessage);
             // Don't throw - gracefully handle the error
             return null;
@@ -4217,10 +4234,20 @@ const DataCategorySearch = ({
                                                         "Error saving category tags:",
                                                         err
                                                     );
-                                                    setModalError(
-                                                        "Failed to save category tags: " +
-                                                            err.message
-                                                    );
+                                                    // Extract user-friendly error message
+                                                    let errorMessage = "Failed to save category tags";
+                                                    if (err.message) {
+                                                        errorMessage = err.message;
+                                                    } else if (err.details) {
+                                                        errorMessage = typeof err.details === 'string' ? err.details : err.details.error || errorMessage;
+                                                    }
+                                                    // Handle 400 errors more gracefully
+                                                    if (err.status === 400) {
+                                                        errorMessage = errorMessage || "Invalid request. Please check your input and try again.";
+                                                    } else {
+                                                        errorMessage = "Failed to save category tags: " + errorMessage;
+                                                    }
+                                                    setModalError(errorMessage);
                                                 } finally {
                                                     setModalLoading(false);
                                                 }

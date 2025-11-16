@@ -22,17 +22,42 @@ export const apiCall = async (
         if (!response.ok) {
             let errorData;
             try {
-                errorData = await response.json();
+                const text = await response.text();
+                if (text) {
+                    try {
+                        errorData = JSON.parse(text);
+                    } catch (parseErr) {
+                        // If it's not JSON, use the text as the error message
+                        errorData = { error: text, details: text };
+                    }
+                } else {
+                    errorData = {};
+                }
             } catch (err) {
-                // If response isn't JSON, use status text
-                throw new Error(
-                    `API error: ${response.status} ${response.statusText}`
-                );
+                // If we can't read the response, create a basic error object
+                errorData = {};
             }
-            throw new Error(
-                errorData.error ||
-                    `API error: ${response.status} ${response.statusText}`
-            );
+
+            // Build a user-friendly error message
+            const errorMessage = 
+                errorData.error || 
+                errorData.message || 
+                errorData.details ||
+                `API error: ${response.status} ${response.statusText}`;
+
+            // For 400 errors, provide more context
+            if (response.status === 400) {
+                const enhancedError = new Error(errorMessage);
+                enhancedError.status = 400;
+                enhancedError.details = errorData.details || errorData;
+                throw enhancedError;
+            }
+
+            // For other errors, throw with status
+            const enhancedError = new Error(errorMessage);
+            enhancedError.status = response.status;
+            enhancedError.details = errorData.details || errorData;
+            throw enhancedError;
         }
 
         // Handle empty responses
