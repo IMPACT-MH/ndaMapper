@@ -756,7 +756,7 @@ const DataCategorySearch = ({
                 // Check original categories (excluding removed ones)
                 const matchesOriginalCategory = originalCategories.some((cat) =>
                     selectedFilters.categories.has(cat)
-                );
+            );
 
                 // Match if either custom tag or original category matches
                 return matchesCustomTag || matchesOriginalCategory;
@@ -953,12 +953,36 @@ const DataCategorySearch = ({
     // Check if a filter item is a custom tag (only new tags, not original categories/dataTypes)
     const isCustomTag = (item, isCategory) => {
         if (isCategory) {
-            // Only return true if it's actually a new custom tag in availableTags
-            // availableTags already contains only category tags (filtered to exclude data type tags)
-            return availableTags.some((tag) => tag.name === item);
+            // Check if it appears in structureTags - if so, it's definitely a custom tag
+            // structureTags only contains custom tags, never original categories
+            const isInStructureTags = Object.values(structureTags).some(
+                (tags) =>
+                    Array.isArray(tags) && tags.some((tag) => tag.name === item)
+            );
+            if (isInStructureTags) {
+                return true; // Found in structureTags, definitely custom
+            }
+
+            // Check if it's in availableTags (custom tags from API)
+            const isInAvailableTags = availableTags.some(
+                (tag) => tag.name === item && (tag.tagType === "Category" || !tag.tagType)
+            );
+            if (isInAvailableTags) {
+                return true; // Found in availableTags, definitely custom
+            }
+
+            // Final check: if it's NOT in availableCategories (original NDA categories), it's custom
+            // This catches any edge cases where a custom tag might not be in structureTags or availableTags yet
+            const isInOriginalCategories = availableCategories.has(item);
+            return !isInOriginalCategories;
         } else {
-            // Only return true if it's actually a new custom tag in availableDataTypeTags
-            return availableDataTypeTags.some((tag) => tag.name === item);
+            // For data types: return true if it's in availableDataTypeTags AND not in original NDA data types
+            const isInCustomTags = availableDataTypeTags.some(
+                (tag) => tag.name === item
+            );
+            // availableDataTypes is a Set, so use .has() instead of .includes()
+            const isInOriginalDataTypes = availableDataTypes.has(item);
+            return isInCustomTags && !isInOriginalDataTypes;
         }
     };
 
@@ -1938,12 +1962,12 @@ const DataCategorySearch = ({
                                     height={128}
                                     className="object-contain"
                                 />
-                            </div>
+                        </div>
                             {databaseConnectionError && (
                                 <p className="text-sm text-red-600 ml-2">
                                     {databaseConnectionError}
-                                </p>
-                            )}
+                        </p>
+                    )}
                             {loadingDatabaseStructures && (
                                 <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-500"></div>
                             )}
@@ -2086,27 +2110,27 @@ const DataCategorySearch = ({
                                             combinedDataTypes.add(tag.name);
                                         });
                                         return Array.from(combinedDataTypes)
-                                            .sort()
-                                            .map((dataType) => (
-                                                <label
-                                                    key={dataType}
-                                                    className="flex items-center"
-                                                >
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={selectedFilters.dataTypes.has(
+                                        .sort()
+                                        .map((dataType) => (
+                                            <label
+                                                key={dataType}
+                                                className="flex items-center"
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedFilters.dataTypes.has(
+                                                        dataType
+                                                    )}
+                                                    onChange={() =>
+                                                        toggleFilter(
+                                                            "dataTypes",
                                                             dataType
-                                                        )}
-                                                        onChange={() =>
-                                                            toggleFilter(
-                                                                "dataTypes",
-                                                                dataType
-                                                            )
-                                                        }
-                                                        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-                                                    />
+                                                        )
+                                                    }
+                                                    className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                                                />
                                                     <span className="ml-2 text-sm text-gray-700 flex items-center">
-                                                        {dataType}
+                                                    {dataType}
                                                         {isCustomTag(
                                                             dataType,
                                                             false
@@ -2133,8 +2157,8 @@ const DataCategorySearch = ({
                                                                 </div>
                                                             </div>
                                                         )}
-                                                    </span>
-                                                </label>
+                                                </span>
+                                            </label>
                                             ));
                                     })()}
                                 </div>
@@ -2158,31 +2182,31 @@ const DataCategorySearch = ({
                                             combinedCategories.add(tag.name);
                                         });
                                         return Array.from(combinedCategories)
-                                            .sort()
-                                            .map((category) => (
-                                                <label
-                                                    key={category}
-                                                    className="flex items-center"
-                                                >
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={selectedFilters.categories.has(
+                                        .sort()
+                                        .map((category) => {
+                                            // Simple check: if it's NOT in availableCategories, it's custom (came from availableTags)
+                                            const isCustom = !availableCategories.has(category);
+                                            return (
+                                            <label
+                                                key={category}
+                                                className="flex items-center"
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedFilters.categories.has(
+                                                        category
+                                                    )}
+                                                    onChange={() =>
+                                                        toggleFilter(
+                                                            "categories",
                                                             category
-                                                        )}
-                                                        onChange={() =>
-                                                            toggleFilter(
-                                                                "categories",
-                                                                category
-                                                            )
-                                                        }
-                                                        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-                                                    />
+                                                        )
+                                                    }
+                                                    className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                                                />
                                                     <span className="ml-2 text-sm text-gray-700 flex items-center">
-                                                        {category}
-                                                        {isCustomTag(
-                                                            category,
-                                                            true
-                                                        ) && (
+                                                    {category}
+                                                        {isCustom && (
                                                             <span className="ml-1 text-orange-500 text-xs">
                                                                 ★
                                                             </span>
@@ -2205,9 +2229,10 @@ const DataCategorySearch = ({
                                                                 </div>
                                                             </div>
                                                         )}
-                                                    </span>
-                                                </label>
-                                            ));
+                                                </span>
+                                            </label>
+                                            );
+                                        });
                                     })()}
                                 </div>
                             </div>
@@ -2240,10 +2265,37 @@ const DataCategorySearch = ({
                                                 )}
                                                 <h3 className="font-medium text-gray-900 flex items-center">
                                                     {groupName}
-                                                    {isCustomTag(
-                                                        groupName,
-                                                        groupBy === "category"
-                                                    ) && (
+                                                    {(() => {
+                                                        if (groupBy !== "category") {
+                                                            return isCustomTag(groupName, false);
+                                                        }
+                                                        // For categories, check multiple sources
+                                                        const inStructureTags = Object.values(structureTags).some(
+                                                            (tags) =>
+                                                                Array.isArray(tags) && tags.some((tag) => tag.name === groupName)
+                                                        );
+                                                        const inAvailableTags = availableTags.some(
+                                                            (tag) => tag.name === groupName && (tag.tagType === "Category" || !tag.tagType)
+                                                        );
+                                                        const inOriginalCategories = availableCategories.has(groupName);
+                                                        const isCustom = inStructureTags || inAvailableTags || !inOriginalCategories;
+                                                        
+                                                        // Debug for "Positive Emotions"
+                                                        if (groupName === "Positive Emotions") {
+                                                            console.log("Category star check:", {
+                                                                groupName,
+                                                                inStructureTags,
+                                                                inAvailableTags,
+                                                                inOriginalCategories,
+                                                                isCustom,
+                                                                structureTagsCount: Object.keys(structureTags).length,
+                                                                availableTagsCount: availableTags.length,
+                                                                availableCategoriesSize: availableCategories.size
+                                                            });
+                                                        }
+                                                        
+                                                        return isCustom;
+                                                    })() && (
                                                         <span className="ml-1 text-orange-500 text-xs">
                                                             ★
                                                         </span>
@@ -2361,13 +2413,13 @@ const DataCategorySearch = ({
                                                                                                         )
                                                                                                 )
                                                                                                 .map(
-                                                                                                    (
-                                                                                                        category
-                                                                                                    ) => (
-                                                                                                        <span
-                                                                                                            key={
-                                                                                                                category
-                                                                                                            }
+                                                                            (
+                                                                                category
+                                                                            ) => (
+                                                                                <span
+                                                                                    key={
+                                                                                        category
+                                                                                    }
                                                                                                             className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-blue-100 text-blue-800 hover:bg-blue-200"
                                                                                                             title="Original NDA category (click to add custom tags)"
                                                                                                         >
@@ -2380,14 +2432,14 @@ const DataCategorySearch = ({
                                                                                                                         structure
                                                                                                                     );
                                                                                                                 }}
-                                                                                                            >
-                                                                                                                {
-                                                                                                                    category
-                                                                                                                }
+                                                                                >
+                                                                                    {
+                                                                                        category
+                                                                                    }
                                                                                                             </span>
-                                                                                                        </span>
-                                                                                                    )
-                                                                                                )}
+                                                                                </span>
+                                                                            )
+                                                                        )}
 
                                                                                             {/* Show custom category tags */}
                                                                                             {customCategoryTags.map(
@@ -2417,6 +2469,9 @@ const DataCategorySearch = ({
                                                                                                             {
                                                                                                                 tag.name
                                                                                                             }
+                                                                                                            <span className="ml-1 text-orange-500 text-xs">
+                                                                                                                ★
+                                                                                                            </span>
                                                                                                         </span>
                                                                                                     );
                                                                                                 }
@@ -2492,10 +2547,10 @@ const DataCategorySearch = ({
                                                                                                 }}
                                                                                                 title="Click to add custom data type tags"
                                                                                             >
-                                                                                                {
-                                                                                                    structure.dataType
-                                                                                                }
-                                                                                            </span>
+                                                                            {
+                                                                                structure.dataType
+                                                                            }
+                                                                        </span>
                                                                                         );
                                                                                     }
                                                                                 })()}
@@ -2753,7 +2808,7 @@ const DataCategorySearch = ({
                                         " - " +
                                         modalStructure.shortName}
                                 </p>
-                            </div>
+        </div>
                             <button
                                 onClick={() => {
                                     setIsCategoriesModalOpen(false);
