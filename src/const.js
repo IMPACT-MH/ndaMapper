@@ -2,12 +2,12 @@
  * API endpoints and configuration constants
  */
 
-// IMPACT-MH Data Portal (use proxy route to handle SSL certificates)
-// export const DATA_PORTAL = "/api/spinup/dataStructures";
+// IMPACT-MH Data Portal (use proxy route - points to spinup endpoint which has submittedByProjects)
+export const DATA_PORTAL = "/api/spinup/dataStructures";
 
-// Direct URLs (commented out - have SSL certificate issues):
+// Direct URLs (commented out - have CORS/SSL issues):
 // export const DATA_PORTAL = "https://spinup-002b0f.spinup.yale.edu/api/dataStructures/database/";
-export const DATA_PORTAL = "https://api.impact-mh.org/impact/data-portal";
+// export const DATA_PORTAL = "https://api.impact-mh.org/impact/data-portal"; // This endpoint does NOT have submittedByProjects
 
 // NDA API endpoints
 export const NDA_API_BASE = "https://nda.nih.gov/api";
