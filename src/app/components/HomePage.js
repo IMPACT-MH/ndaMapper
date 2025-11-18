@@ -16,7 +16,8 @@ const Tabs = {
 };
 
 const HomePage = () => {
-    const [searchTerm, setSearchTerm] = useState("");
+    const [searchTerm, setSearchTerm] = useState(""); // For structure search
+    const [elementSearchTerm, setElementSearchTerm] = useState(""); // For element search
     const [structures, setStructures] = useState([]);
     const [totalStructureCount, setTotalStructureCount] = useState(0); // Track total results for context
     const [loading, setLoading] = useState(false);
@@ -865,7 +866,7 @@ const HomePage = () => {
                     databaseElements={databaseElements}
                     databaseConnectionError={databaseConnectionError}
                     onSwitchToElementSearch={(elementName) => {
-                        setSearchTerm(elementName);
+                        setElementSearchTerm(elementName);
                         setActiveTab(Tabs.ELEMENT_SEARCH);
                     }}
                 />
@@ -951,7 +952,7 @@ const HomePage = () => {
                     setLoadingDatabaseElements={setLoadingDatabaseElements}
                     databaseName={databaseName}
                     databaseConnectionError={databaseConnectionError}
-                    initialSearchTerm={searchTerm}
+                    initialSearchTerm={elementSearchTerm}
                 />
             </div>
         </div>
