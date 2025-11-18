@@ -1422,7 +1422,10 @@ const DataCategorySearch = ({
     };
 
     const groupedStructures = groupStructures(filteredStructures);
-    const totalCount = allStructures.length;
+    // When database filter is enabled, use filteredStructures count, otherwise use allStructures
+    const totalCount = databaseFilterEnabled && databaseStructures.length > 0 
+        ? filteredStructures.length 
+        : allStructures.length;
     const activeFilterCount =
         selectedFilters.categories.size + selectedFilters.dataTypes.size;
 

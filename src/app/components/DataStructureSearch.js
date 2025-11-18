@@ -216,49 +216,61 @@ const DataStructureSearch = ({
 
                 if (!Array.isArray(allTags) || allTags.length === 0) return;
 
-                // Find tags assigned to this structure
-                const categoryTags = [];
-                const dataTypeTags = [];
+                // Filter out removed tags first
+                const validTags = allTags.filter(
+                    (tag) =>
+                        tag.tagType !== "Removed Category" &&
+                        tag.tagType !== "Removed Data Type" &&
+                        !tag.name.startsWith("REMOVED_CATEGORY:") &&
+                        !tag.name.startsWith("REMOVED_DATATYPE:")
+                );
 
-                for (const tag of allTags) {
-                    // Skip removed tags
-                    if (
-                        tag.tagType === "Removed Category" ||
-                        tag.tagType === "Removed Data Type" ||
-                        tag.name.startsWith("REMOVED_CATEGORY:") ||
-                        tag.name.startsWith("REMOVED_DATATYPE:")
-                    ) {
-                        continue;
-                    }
-
+                // Fetch all tag structures in parallel (much faster)
+                const tagStructurePromises = validTags.map(async (tag) => {
                     try {
                         const dsResponse = await fetch(
                             `${apiBaseUrl}/tags/${tag.id}/dataStructures`
                         );
                         if (dsResponse.ok) {
                             const dsData = await dsResponse.json();
-                            const dataStructures = dsData.dataStructures || [];
-                            const hasStructure = dataStructures.some(
-                                (ds) =>
-                                    ds.shortName?.toLowerCase() ===
-                                    selectedStructure.shortName.toLowerCase()
-                            );
-
-                            if (hasStructure) {
-                                if (tag.tagType === "Data Type") {
-                                    dataTypeTags.push(tag);
-                                } else {
-                                    categoryTags.push(tag);
-                                }
-                            }
+                            return {
+                                tag,
+                                dataStructures: dsData.dataStructures || [],
+                            };
                         }
+                        return { tag, dataStructures: [] };
                     } catch (err) {
                         console.warn(
                             `Failed to fetch data structures for tag ${tag.name}:`,
                             err
                         );
+                        return { tag, dataStructures: [] };
                     }
-                }
+                });
+
+                const tagStructures = await Promise.all(tagStructurePromises);
+
+                // Find tags assigned to this structure
+                const categoryTags = [];
+                const dataTypeTags = [];
+                const structureShortNameLower =
+                    selectedStructure.shortName.toLowerCase();
+
+                tagStructures.forEach(({ tag, dataStructures }) => {
+                    const hasStructure = dataStructures.some(
+                        (ds) =>
+                            ds.shortName?.toLowerCase() ===
+                            structureShortNameLower
+                    );
+
+                    if (hasStructure) {
+                        if (tag.tagType === "Data Type") {
+                            dataTypeTags.push(tag);
+                        } else {
+                            categoryTags.push(tag);
+                        }
+                    }
+                });
 
                 setStructureTags((prev) => ({
                     ...prev,
@@ -274,7 +286,7 @@ const DataStructureSearch = ({
         };
 
         fetchTagsForStructure();
-    }, [selectedStructure]);
+    }, [selectedStructure, apiBaseUrl]);
 
     const resultsRef = useRef(null);
     const detailsRef = useRef(null);

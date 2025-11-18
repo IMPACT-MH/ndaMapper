@@ -1387,7 +1387,12 @@ const DataElementSearch = ({
                             {matchingElements.length > 0 && (
                                 <button
                                     onClick={() => {
-                                        window.history.back();
+                                        setElement(null);
+                                        setIsPartialSearch(true);
+                                        pushHistoryState("results", {
+                                            results: matchingElements,
+                                            searchTerm: searchTerm,
+                                        });
                                     }}
                                     className="flex items-center gap-2 px-3 py-2 text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded transition-colors"
                                 >

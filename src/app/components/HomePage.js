@@ -493,9 +493,6 @@ const HomePage = () => {
             }
         }
 
-        // Store total count before filtering
-        setTotalStructureCount(allData.length);
-
         // Filter the NDA results to only include structures that exist in our database
         const filteredData = allData.filter((structure) => {
             const structureNameLower = structure.shortName.toLowerCase();
@@ -504,6 +501,11 @@ const HomePage = () => {
             );
             return databaseStructuresLower.includes(structureNameLower);
         });
+
+        // Store total count - when database filter is enabled, this is the filtered count
+        // When disabled, this would be allData.length, but we're in fetchDatabaseFilteredData
+        // so we want the filtered count as the "total" for display purposes
+        setTotalStructureCount(filteredData.length);
 
         // Sort the filtered results
         if (!isCategory && !isDataType) {
