@@ -1186,8 +1186,27 @@ const DataElementSearch = ({
                                                         </div>
                                                     </div>
                                                     {(() => {
-                                                        // Get projects from all structures that contain this element
+                                                        // Get projects from all database structures that contain this element
                                                         const allProjects = new Set();
+                                                        const elementName = match.name?.toLowerCase();
+                                                        
+                                                        if (elementName && Object.keys(dataStructuresMap).length > 0) {
+                                                            // Find all database structures that contain this element
+                                                            Object.values(dataStructuresMap).forEach((dbStructure) => {
+                                                                if (dbStructure.dataElements && Array.isArray(dbStructure.dataElements)) {
+                                                                    const hasElement = dbStructure.dataElements.some(
+                                                                        (el) => el.name?.toLowerCase() === elementName
+                                                                    );
+                                                                    if (hasElement && dbStructure.submittedByProjects) {
+                                                                        dbStructure.submittedByProjects.forEach((project) => {
+                                                                            allProjects.add(project);
+                                                                        });
+                                                                    }
+                                                                }
+                                                            });
+                                                        }
+                                                        
+                                                        // Also check NDA structures if available
                                                         if (match.dataStructures && match.dataStructures.length > 0) {
                                                             match.dataStructures.forEach((structure) => {
                                                                 const dbStructure = dataStructuresMap[structure.shortName] || dataStructuresMap[structure.shortName?.toLowerCase()];
@@ -1198,6 +1217,7 @@ const DataElementSearch = ({
                                                                 }
                                                             });
                                                         }
+                                                        
                                                         const projects = Array.from(allProjects);
                                                         if (projects.length > 0) {
                                                             return (
