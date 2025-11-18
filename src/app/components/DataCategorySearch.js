@@ -2373,18 +2373,39 @@ const DataCategorySearch = ({
                                                                         {isStructureInDatabase(
                                                                             structure.shortName
                                                                         ) && (
-                                                                            <div className="relative group">
-                                                                                <Database className="w-4 h-4 ml-2 text-blue-500 cursor-help" />
-                                                                                <div className="absolute bottom-full left-2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-10">
-                                                                                    This
-                                                                                    structure
-                                                                                    exists
-                                                                                    in
-                                                                                    the
-                                                                                    IMPACT-MH
-                                                                                    database
+                                                                            <>
+                                                                                <div className="relative group">
+                                                                                    <Database className="w-4 h-4 ml-2 text-blue-500 cursor-help" />
+                                                                                    <div className="absolute bottom-full left-2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-10">
+                                                                                        This
+                                                                                        structure
+                                                                                        exists
+                                                                                        in
+                                                                                        the
+                                                                                        IMPACT-MH
+                                                                                        database
+                                                                                    </div>
                                                                                 </div>
-                                                                            </div>
+                                                                                {(() => {
+                                                                                    const dbStructure = dataStructuresMap[structure.shortName] || dataStructuresMap[structure.shortName?.toLowerCase()];
+                                                                                    const projects = dbStructure?.submittedByProjects || [];
+                                                                                    if (projects.length > 0) {
+                                                                                        return (
+                                                                                            <div className="ml-2 flex flex-wrap gap-1">
+                                                                                                {projects.map((project, idx) => (
+                                                                                                    <span
+                                                                                                        key={idx}
+                                                                                                        className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded"
+                                                                                                    >
+                                                                                                        {project}
+                                                                                                    </span>
+                                                                                                ))}
+                                                                                            </div>
+                                                                                        );
+                                                                                    }
+                                                                                    return null;
+                                                                                })()}
+                                                                            </>
                                                                         )}
                                                                     </h4>
                                                                     <p className="text-gray-700 mt-1">

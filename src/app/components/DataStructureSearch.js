@@ -49,6 +49,7 @@ const DataStructureSearch = ({
         useState(false);
     const [removedCategories, setRemovedCategories] = useState({});
     const [availableCategories, setAvailableCategories] = useState(new Set());
+    const [dataStructuresMap, setDataStructuresMap] = useState({});
     const apiBaseUrl = "/api/spinup";
 
     // Clear headers when CSV file is removed
@@ -166,6 +167,42 @@ const DataStructureSearch = ({
         };
         fetchCategoryInfo();
     }, [apiBaseUrl]);
+
+    // Fetch database structures map for projects info
+    useEffect(() => {
+        const fetchDataStructures = async () => {
+            try {
+                const response = await fetch("/api/spinup/dataStructures");
+                const data = await response.json();
+
+                if (data && data.dataStructures) {
+                    // Convert object/array to map keyed by shortName (case-insensitive)
+                    const map = {};
+                    const structures = Array.isArray(data.dataStructures)
+                        ? data.dataStructures
+                        : Object.values(data.dataStructures);
+
+                    structures.forEach((structure) => {
+                        const key =
+                            structure.shortName?.toLowerCase() ||
+                            structure.name?.toLowerCase();
+                        if (key) {
+                            map[key] = structure;
+                            // Also store with original case for backwards compatibility
+                            if (structure.shortName) {
+                                map[structure.shortName] = structure;
+                            }
+                        }
+                    });
+                    setDataStructuresMap(map);
+                }
+            } catch (err) {
+                console.error("Error fetching data structures:", err);
+            }
+        };
+
+        fetchDataStructures();
+    }, []);
 
     // Fetch tags for selected structure
     useEffect(() => {
@@ -598,20 +635,41 @@ const DataStructureSearch = ({
                                         <div className="bg-white rounded-lg shadow">
                                             {/* Details content */}
                                             <div className="bg-white p-6 rounded-lg shadow">
-                                                <div className="flex items-center gap-3 mb-8">
-                                                    <h1 className="text-2xl font-semibold">
-                                                        {
-                                                            selectedStructure.title
+                                                <div className="mb-8">
+                                                    <div className="flex items-center gap-3">
+                                                        <h1 className="text-2xl font-semibold">
+                                                            {
+                                                                selectedStructure.title
+                                                            }
+                                                        </h1>
+                                                        {databaseFilterEnabled &&
+                                                            databaseStructures
+                                                                .map((name) =>
+                                                                    name.toLowerCase()
+                                                                )
+                                                                .includes(
+                                                                    selectedStructure.shortName.toLowerCase()
+                                                                )}
+                                                    </div>
+                                                    {(() => {
+                                                        const dbStructure = dataStructuresMap[selectedStructure.shortName] || dataStructuresMap[selectedStructure.shortName?.toLowerCase()];
+                                                        const projects = dbStructure?.submittedByProjects || [];
+                                                        if (projects.length > 0) {
+                                                            return (
+                                                                <div className="mt-2 flex flex-wrap gap-2">
+                                                                    {projects.map((project, idx) => (
+                                                                        <span
+                                                                            key={idx}
+                                                                            className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded"
+                                                                        >
+                                                                            {project}
+                                                                        </span>
+                                                                    ))}
+                                                                </div>
+                                                            );
                                                         }
-                                                    </h1>
-                                                    {databaseFilterEnabled &&
-                                                        databaseStructures
-                                                            .map((name) =>
-                                                                name.toLowerCase()
-                                                            )
-                                                            .includes(
-                                                                selectedStructure.shortName.toLowerCase()
-                                                            )}
+                                                        return null;
+                                                    })()}
                                                 </div>
 
                                                 {selectedStructure ? (
