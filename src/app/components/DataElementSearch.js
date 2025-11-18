@@ -229,7 +229,7 @@ const DataElementSearch = ({
         setIsPartialSearch(false);
 
         try {
-            // If database filter is enabled, first try searching within database elements
+            // If database filter is enabled, only search within database elements (skip NDA API)
             if (effectiveFilterEnabled && databaseElements.size > 0) {
                 const databaseMatches = searchDatabaseElements(
                     searchTerm.trim(),
@@ -240,7 +240,7 @@ const DataElementSearch = ({
                     // Found matches in database, show those
                     setMatchingElements(databaseMatches);
                     setIsPartialSearch(true);
-                    setTotalElementCount(databaseMatches.length); // In this case, we only searched database
+                    setTotalElementCount(databaseMatches.length);
                     updateRecentSearches(searchTerm.trim());
 
                     // Push to browser history
@@ -251,10 +251,17 @@ const DataElementSearch = ({
 
                     setLoading(false);
                     return;
+                } else {
+                    // No matches in database when filter is enabled
+                    setError(
+                        `No data elements found containing "${searchTerm}" in your database. Try disabling the database filter to search all NDA elements.`
+                    );
+                    setLoading(false);
+                    return;
                 }
             }
 
-            // Use the NDA Elasticsearch API
+            // Use the NDA Elasticsearch API (only when filter is disabled)
             const searchQuery = searchTerm.trim();
 
             // Add validation for very broad searches that might overwhelm the API
@@ -580,7 +587,7 @@ const DataElementSearch = ({
         setIsPartialSearch(false);
 
         try {
-            // If database filter is enabled, first try searching within database elements
+            // If database filter is enabled, only search within database elements (skip NDA API)
             if (databaseFilterEnabled && databaseElements.size > 0) {
                 const databaseMatches = searchDatabaseElementsWithTerm(
                     term.trim()
@@ -601,10 +608,17 @@ const DataElementSearch = ({
 
                     setLoading(false);
                     return;
+                } else {
+                    // No matches in database when filter is enabled
+                    setError(
+                        `No data elements found containing "${term}" in your database. Try disabling the database filter to search all NDA elements.`
+                    );
+                    setLoading(false);
+                    return;
                 }
             }
 
-            // Use the NDA Elasticsearch API
+            // Use the NDA Elasticsearch API (only when filter is disabled)
             const searchQuery = term.trim();
 
             // Elasticsearch typically requires at least 3 characters for reliable results
@@ -1127,6 +1141,39 @@ const DataElementSearch = ({
                                     setElement({ ...match, loading: true });
                                     setIsPartialSearch(false);
 
+                                    // If database filter is enabled, use database data directly (skip NDA API)
+                                    if (databaseFilterEnabled && match.inDatabase) {
+                                        // Find which database structures contain this element
+                                        const elementName = match.name?.toLowerCase();
+                                        const structuresContainingElement = [];
+                                        
+                                        if (elementName && Object.keys(dataStructuresMap).length > 0) {
+                                            Object.values(dataStructuresMap).forEach((dbStructure) => {
+                                                if (dbStructure.dataElements && Array.isArray(dbStructure.dataElements)) {
+                                                    const hasElement = dbStructure.dataElements.some(
+                                                        (el) => el.name?.toLowerCase() === elementName
+                                                    );
+                                                    if (hasElement && dbStructure.shortName) {
+                                                        structuresContainingElement.push(dbStructure.shortName);
+                                                    }
+                                                }
+                                            });
+                                        }
+                                        
+                                        // Use match data and add structures from database
+                                        const elementData = {
+                                            ...match,
+                                            dataStructures: structuresContainingElement,
+                                            loading: false,
+                                        };
+                                        setElement(elementData);
+                                        pushHistoryState("element", {
+                                            element: elementData,
+                                        });
+                                        return;
+                                    }
+
+                                    // Fetch from NDA API when filter is disabled
                                     try {
                                         const response = await fetch(
                                             `https://nda.nih.gov/api/datadictionary/dataelement/${match.name}`
@@ -1427,31 +1474,47 @@ const DataElementSearch = ({
                                         Loading data structures...
                                     </span>
                                 </div>
-                            ) : element.dataStructures?.length > 0 ? (
-                                <div className="bg-gray-50 p-3 rounded max-h-64 overflow-y-auto">
-                                    <ul className="space-y-1">
-                                        {element.dataStructures.map(
-                                            (structure, index) => (
-                                                <li
-                                                    key={index}
-                                                    className="font-mono text-sm hover:bg-blue-50 p-1 rounded cursor-pointer text-blue-600 hover:text-blue-800 transition-colors"
-                                                    onClick={() =>
-                                                        onElementDetailStructureSelect(
-                                                            structure
-                                                        )
-                                                    }
-                                                >
-                                                    {structure}
-                                                </li>
-                                            )
-                                        )}
-                                    </ul>
-                                </div>
-                            ) : (
-                                <p className="text-gray-500 italic">
-                                    Not found in any data structures
-                                </p>
-                            )}
+                            ) : (() => {
+                                // Filter structures based on database filter
+                                let structuresToShow = element.dataStructures || [];
+                                if (databaseFilterEnabled && structuresToShow.length > 0) {
+                                    structuresToShow = structuresToShow.filter((structure) => {
+                                        const structureName = typeof structure === 'string' ? structure : structure.shortName;
+                                        return dataStructuresMap[structureName] || dataStructuresMap[structureName?.toLowerCase()];
+                                    });
+                                }
+                                
+                                return structuresToShow.length > 0 ? (
+                                    <div className="bg-gray-50 p-3 rounded max-h-64 overflow-y-auto">
+                                        <ul className="space-y-1">
+                                            {structuresToShow.map(
+                                                (structure, index) => {
+                                                    const structureName = typeof structure === 'string' ? structure : structure.shortName;
+                                                    return (
+                                                        <li
+                                                            key={index}
+                                                            className="font-mono text-sm hover:bg-blue-50 p-1 rounded cursor-pointer text-blue-600 hover:text-blue-800 transition-colors"
+                                                            onClick={() =>
+                                                                onElementDetailStructureSelect(
+                                                                    structureName
+                                                                )
+                                                            }
+                                                        >
+                                                            {structureName}
+                                                        </li>
+                                                    );
+                                                }
+                                            )}
+                                        </ul>
+                                    </div>
+                                ) : (
+                                    <p className="text-gray-500 italic">
+                                        {databaseFilterEnabled 
+                                            ? "Not found in any database structures"
+                                            : "Not found in any data structures"}
+                                    </p>
+                                );
+                            })()}
                         </div>
                     </div>
                 </div>
