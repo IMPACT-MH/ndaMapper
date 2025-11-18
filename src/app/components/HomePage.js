@@ -194,9 +194,7 @@ const HomePage = () => {
                     setDatabaseStructures([]);
                     setDatabaseElements(new Map());
                     setDatabaseFilterEnabled(false);
-                    setDatabaseConnectionError(
-                        "Unable to connect to database."
-                    );
+                    setDatabaseConnectionError("Unable to connect to database");
                 }
             } else {
                 console.error(
@@ -206,15 +204,15 @@ const HomePage = () => {
                 setDatabaseStructures([]);
                 setDatabaseElements(new Map());
                 setDatabaseFilterEnabled(false);
-                setDatabaseConnectionError("Unable to connect to API.");
+                setDatabaseConnectionError("Unable to connect to API");
             }
         } catch (error) {
             if (error.name === "AbortError") {
                 console.error("Database data fetch timed out after 30 seconds");
-                setDatabaseConnectionError("Unable to connect to API.");
+                setDatabaseConnectionError("Unable to connect to API");
             } else {
                 console.error("Error fetching database data:", error);
-                setDatabaseConnectionError("Unable to connect to API.");
+                setDatabaseConnectionError("Unable to connect to API");
             }
             setDatabaseStructures([]);
             setDatabaseElements(new Map());
