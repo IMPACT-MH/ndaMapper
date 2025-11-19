@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import https from "https";
 
+// Simple in-memory cache to speed up repeated requests
+let cache = null;
+let cacheTimestamp = 0;
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
 // Helper function to make HTTPS request with proper SSL handling
 function makeHttpsRequest(url, options = {}) {
     return new Promise((resolve, reject) => {
@@ -56,6 +61,23 @@ function makeHttpsRequest(url, options = {}) {
 
 export async function GET() {
     try {
+        // Check cache first
+        const now = Date.now();
+        if (cache && now - cacheTimestamp < CACHE_DURATION) {
+            return NextResponse.json(cache, {
+                headers: {
+                    "Access-Control-Allow-Origin": "*",
+                    "Access-Control-Allow-Methods":
+                        "GET, POST, PUT, DELETE, OPTIONS",
+                    "Access-Control-Allow-Headers":
+                        "Content-Type, Authorization",
+                    "Cache-Control":
+                        "public, s-maxage=300, stale-while-revalidate=600",
+                    "X-Cache": "HIT",
+                },
+            });
+        }
+
         const response = await makeHttpsRequest(
             "https://spinup-002b0f.spinup.yale.edu/api/dataStructures/database",
             {
@@ -72,12 +94,19 @@ export async function GET() {
 
         const data = await response.json();
 
+        // Update cache
+        cache = data;
+        cacheTimestamp = now;
+
         return NextResponse.json(data, {
             headers: {
                 "Access-Control-Allow-Origin": "*",
                 "Access-Control-Allow-Methods":
                     "GET, POST, PUT, DELETE, OPTIONS",
                 "Access-Control-Allow-Headers": "Content-Type, Authorization",
+                "Cache-Control":
+                    "public, s-maxage=300, stale-while-revalidate=600",
+                "X-Cache": "MISS",
             },
         });
     } catch (error) {
