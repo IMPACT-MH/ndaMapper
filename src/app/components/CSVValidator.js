@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Upload, CheckCircle, XCircle, AlertCircle } from "lucide-react";
 import {
     standardizeHandedness,
@@ -50,7 +50,7 @@ const CSVValidator = ({
     } = validatorState;
 
     // Initial standardization before validation
-    const standardizeValues = (headers, rows) => {
+    const standardizeValues = useCallback((headers, rows) => {
         let handednessCount = 0;
         let binaryCount = 0;
 
@@ -95,14 +95,7 @@ const CSVValidator = ({
         });
 
         return standardizedRows;
-    };
-
-    useEffect(() => {
-        if (initialCsvFile && dataElements) {
-            validateCSV(initialCsvFile);
-            setCurrentFile(initialCsvFile);
-        }
-    }, [initialCsvFile, dataElements]);
+    }, [setTransformationCounts]);
 
     const calculateSimilarity = (str1, str2) => {
         const track = Array(str2.length + 1)
@@ -130,7 +123,7 @@ const CSVValidator = ({
         );
     };
 
-    const findSimilarFields = (field) => {
+    const findSimilarFields = useCallback((field) => {
         const allFields = dataElements.map((el) => ({
             name: el.name,
             aliases: el.aliases || [],
@@ -180,9 +173,9 @@ const CSVValidator = ({
             })
             .sort((a, b) => b.similarity - a.similarity)
             .slice(0, 3);
-    };
+    }, [dataElements]);
 
-    const validateValues = (headers, rows, mappings) => {
+    const validateValues = useCallback((headers, rows, mappings) => {
         const errors = [];
         const valueRanges = {};
 
@@ -238,7 +231,7 @@ const CSVValidator = ({
         });
 
         return errors;
-    };
+    }, [dataElements]);
 
     const handleMappingChange = (originalField, mappedField) => {
         setSelectedMappings((prev) => {
@@ -326,8 +319,7 @@ const CSVValidator = ({
         window.URL.revokeObjectURL(url);
     };
 
-
-    const validateCSV = async (file) => {
+    const validateCSV = useCallback(async (file) => {
         setCurrentFile(file);
         if (onFileChange) {
             onFileChange(file); // Propagate file change up
@@ -477,7 +469,14 @@ const CSVValidator = ({
         };
 
         reader.readAsText(file);
-    };
+    }, [dataElements, selectedMappings, ignoredFields, transformationCounts, structureShortName, onHeadersChange, onFileChange, standardizeValues, validateValues, findSimilarFields, setValidationResults, setValueErrors]);
+
+    useEffect(() => {
+        if (initialCsvFile && dataElements) {
+            validateCSV(initialCsvFile);
+            setCurrentFile(initialCsvFile);
+        }
+    }, [initialCsvFile, dataElements, validateCSV]);
 
     useEffect(() => {
         if (csvContent && dataElements) {
@@ -491,7 +490,7 @@ const CSVValidator = ({
                 prev ? { ...prev, valueErrors: valueValidationErrors } : null
             );
         }
-    }, [selectedMappings]);
+    }, [csvContent, dataElements, selectedMappings, validateValues, setValueErrors, setValidationResults]);
 
     const renderTransformationSummary = () => {
         const { handedness, binary } = validationResults.transformations;
@@ -544,8 +543,8 @@ const CSVValidator = ({
                                 key={`${field}_${value}`}
                                 className="text-orange-700"
                             >
-                                ⚠ Found {count} instances of invalid value "
-                                {value}" in {field}
+                                ⚠ Found {count} instances of invalid value &quot;
+                                {value}&quot; in {field}
                             </p>
                         )
                     )}

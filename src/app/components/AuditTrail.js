@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Clock, Tag, Database, User, X, Filter } from "lucide-react";
 import { fetchTags as apiFetchTags, fetchTagDataStructures } from "@/utils/api";
 
@@ -10,11 +10,7 @@ const AuditTrail = ({ tagId, structureShortName, tagTypeFilter, apiBaseUrl = "/a
     const [error, setError] = useState(null);
     const [filter, setFilter] = useState("all"); // all, create, update, delete, assign, remove
 
-    useEffect(() => {
-        loadLogs();
-    }, [tagId, structureShortName, filter, tagTypeFilter, apiBaseUrl]);
-
-    const loadLogs = async () => {
+    const loadLogs = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
@@ -232,7 +228,11 @@ const AuditTrail = ({ tagId, structureShortName, tagTypeFilter, apiBaseUrl = "/a
         } finally {
             setLoading(false);
         }
-    };
+    }, [tagId, structureShortName, filter, tagTypeFilter, apiBaseUrl]);
+
+    useEffect(() => {
+        loadLogs();
+    }, [loadLogs]);
 
     const formatTimestamp = (timestamp) => {
         const date = new Date(timestamp);

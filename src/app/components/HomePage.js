@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import DataStructureSearch from "./DataStructureSearch";
 import CSVHeaderAnalyzer from "./CSVHeaderAnalyzer";
@@ -315,35 +315,7 @@ const HomePage = () => {
         setSelectedStructure(null);
     };
 
-    useEffect(() => {
-        if (searchTerm) {
-            const debounceTimer = setTimeout(() => {
-                fetchData();
-            }, 300);
-            return () => clearTimeout(debounceTimer);
-        } else {
-            setStructures([]);
-        }
-    }, [searchTerm, databaseFilterEnabled, databaseStructures]);
-
-    const fetchData = async () => {
-        setLoading(true);
-        setError(null);
-        try {
-            // If database filter is enabled and we have database structures, search within those first
-            if (databaseFilterEnabled && databaseStructures.length > 0) {
-                await fetchDatabaseFilteredData();
-            } else {
-                await fetchAllData();
-            }
-        } catch (err) {
-            setError("Error fetching data: " + err.message);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const fetchDatabaseFilteredData = async () => {
+    const fetchDatabaseFilteredData = useCallback(async () => {
         // Filter database structures by search term
         const searchLower = searchTerm.toLowerCase();
         const normalizedSearch = searchLower.replace(/[_-]/g, "");
@@ -537,9 +509,9 @@ const HomePage = () => {
         } else {
             setStructures(filteredData);
         }
-    };
+    }, [searchTerm, databaseStructures, apiBaseUrl]);
 
-    const fetchAllData = async () => {
+    const fetchAllData = useCallback(async () => {
         // Determine if this is a category or data type search
         const isCategory = searchTerm.startsWith("category:");
         const isDataType = searchTerm.startsWith("datatype:");
@@ -689,7 +661,348 @@ const HomePage = () => {
         } else {
             setStructures(data);
         }
-    };
+    }, [searchTerm, apiBaseUrl]);
+
+    const fetchData = useCallback(async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            // If database filter is enabled and we have database structures, search within those first
+            if (databaseFilterEnabled && databaseStructures.length > 0) {
+                // Inline call to avoid circular dependency
+                const searchLower = searchTerm.toLowerCase();
+                const normalizedSearch = searchLower.replace(/[_-]/g, "");
+
+                // First, filter database structures that match the search term
+                const matchingDbStructures = databaseStructures.filter(
+                    (dbStructure) => {
+                        const dbStructureLower = dbStructure.toLowerCase();
+                        const normalizedDbStructure = dbStructureLower.replace(
+                            /[_-]/g,
+                            ""
+                        );
+
+                        return (
+                            dbStructureLower.includes(searchLower) ||
+                            normalizedDbStructure.includes(normalizedSearch) ||
+                            searchTerm.startsWith("category:") ||
+                            searchTerm.startsWith("datatype:")
+                        );
+                    }
+                );
+
+                if (
+                    matchingDbStructures.length === 0 &&
+                    !searchTerm.startsWith("category:") &&
+                    !searchTerm.startsWith("datatype:")
+                ) {
+                    setStructures([]);
+                    setTotalStructureCount(0);
+                    setLoading(false);
+                    return;
+                }
+
+                // Determine if this is a category or data type search
+                const isCategory = searchTerm.startsWith("category:");
+                const isDataType = searchTerm.startsWith("datatype:");
+                const searchValue = isCategory
+                    ? searchTerm.replace("category:", "")
+                    : isDataType
+                    ? searchTerm.replace("datatype:", "")
+                    : searchTerm;
+
+                // For category or data type searches, check if it's a custom tag first
+                let allData = [];
+                if (isCategory || isDataType) {
+                    // Fetch tags to check if this is a custom tag
+                    try {
+                        const tagsResponse = await fetch(`${apiBaseUrl}/tags`);
+                        if (tagsResponse.ok) {
+                            const allTags = await tagsResponse.json();
+                            const customTag = allTags.find((tag) => {
+                                if (isCategory) {
+                                    return (
+                                        (tag.tagType === "Category" ||
+                                            !tag.tagType ||
+                                            tag.tagType === "") &&
+                                        tag.name === searchValue
+                                    );
+                                } else {
+                                    return (
+                                        tag.tagType === "Data Type" &&
+                                        tag.name === searchValue
+                                    );
+                                }
+                            });
+
+                            if (customTag) {
+                                const dsResponse = await fetch(
+                                    `${apiBaseUrl}/tags/${customTag.id}/dataStructures`
+                                );
+                                if (dsResponse.ok) {
+                                    const dsData = await dsResponse.json();
+                                    const taggedStructures =
+                                        dsData.dataStructures || [];
+                                    const taggedShortNames = new Set(
+                                        taggedStructures.map((ds) =>
+                                            ds.shortName?.toLowerCase()
+                                        )
+                                    );
+                                    const allStructuresResponse = await fetch(
+                                        "https://nda.nih.gov/api/datadictionary/datastructure"
+                                    );
+                                    if (allStructuresResponse.ok) {
+                                        const allStructuresData =
+                                            await allStructuresResponse.json();
+                                        allData = allStructuresData.filter(
+                                            (structure) =>
+                                                taggedShortNames.has(
+                                                    structure.shortName?.toLowerCase()
+                                                )
+                                        );
+                                    }
+                                }
+                            }
+                        }
+                    } catch (err) {
+                        console.warn("Error checking custom tags:", err);
+                    }
+                }
+
+                // If we didn't get data from custom tags, use NDA API
+                if (allData.length === 0) {
+                    let endpoint;
+                    if (isCategory) {
+                        endpoint = `https://nda.nih.gov/api/datadictionary/datastructure?category=${encodeURIComponent(
+                            searchValue
+                        )}`;
+                    } else if (isDataType) {
+                        endpoint = `https://nda.nih.gov/api/datadictionary/datastructure?dataType=${encodeURIComponent(
+                            searchValue
+                        )}`;
+                    } else {
+                        endpoint = `https://nda.nih.gov/api/datadictionary/v2/datastructure?searchTerm=${searchValue}`;
+                    }
+
+                    const response = await fetch(endpoint);
+                    if (!response.ok) {
+                        if (isCategory || isDataType) {
+                            setStructures([]);
+                            setTotalStructureCount(0);
+                            setLoading(false);
+                            return;
+                        }
+                        throw new Error("Failed to fetch data");
+                    }
+                    allData = await response.json();
+
+                    if (
+                        (isCategory || isDataType) &&
+                        (!allData || allData.length === 0)
+                    ) {
+                        setStructures([]);
+                        setTotalStructureCount(0);
+                        setLoading(false);
+                        return;
+                    }
+                }
+
+                // Filter the NDA results to only include structures that exist in our database
+                const filteredData = allData.filter((structure) => {
+                    const structureNameLower = structure.shortName.toLowerCase();
+                    const databaseStructuresLower = databaseStructures.map((name) =>
+                        name.toLowerCase()
+                    );
+                    return databaseStructuresLower.includes(structureNameLower);
+                });
+
+                setTotalStructureCount(filteredData.length);
+
+                // Sort the filtered results
+                if (!isCategory && !isDataType) {
+                    const sortedData = filteredData.sort((a, b) => {
+                        const aTitle = a.title?.toLowerCase() || "";
+                        const bTitle = b.title?.toLowerCase() || "";
+                        const aShortName = a.shortName
+                            .toLowerCase()
+                            .replace(/[_-]/g, "");
+                        const bShortName = b.shortName
+                            .toLowerCase()
+                            .replace(/[_-]/g, "");
+
+                        if (aShortName === normalizedSearch) return -1;
+                        if (bShortName === normalizedSearch) return 1;
+
+                        const aContainsSearch = aShortName.includes(normalizedSearch);
+                        const bContainsSearch = bShortName.includes(normalizedSearch);
+                        const aContainsTitle = aTitle.includes(searchLower);
+                        const bContainsTitle = bTitle.includes(searchLower);
+
+                        if (aContainsSearch && !bContainsSearch) return -1;
+                        if (!aContainsSearch && bContainsSearch) return 1;
+                        if (aContainsTitle && !bContainsTitle) return -1;
+                        if (!aContainsTitle && bContainsTitle) return 1;
+
+                        return 0;
+                    });
+                    setStructures(sortedData);
+                } else {
+                    setStructures(filteredData);
+                }
+            } else {
+                // Inline call to fetchAllData to avoid circular dependency
+                const isCategory = searchTerm.startsWith("category:");
+                const isDataType = searchTerm.startsWith("datatype:");
+                const searchValue = isCategory
+                    ? searchTerm.replace("category:", "")
+                    : isDataType
+                    ? searchTerm.replace("datatype:", "")
+                    : searchTerm;
+
+                if (isCategory || isDataType) {
+                    try {
+                        const tagsResponse = await fetch(`${apiBaseUrl}/tags`);
+                        if (tagsResponse.ok) {
+                            const allTags = await tagsResponse.json();
+                            const customTag = allTags.find((tag) => {
+                                if (isCategory) {
+                                    return (
+                                        (tag.tagType === "Category" ||
+                                            !tag.tagType ||
+                                            tag.tagType === "") &&
+                                        tag.name === searchValue
+                                    );
+                                } else {
+                                    return (
+                                        tag.tagType === "Data Type" &&
+                                        tag.name === searchValue
+                                    );
+                                }
+                            });
+
+                            if (customTag) {
+                                const dsResponse = await fetch(
+                                    `${apiBaseUrl}/tags/${customTag.id}/dataStructures`
+                                );
+                                if (dsResponse.ok) {
+                                    const dsData = await dsResponse.json();
+                                    const taggedStructures =
+                                        dsData.dataStructures || [];
+                                    const taggedShortNames = new Set(
+                                        taggedStructures.map((ds) =>
+                                            ds.shortName?.toLowerCase()
+                                        )
+                                    );
+                                    const allStructuresResponse = await fetch(
+                                        "https://nda.nih.gov/api/datadictionary/datastructure"
+                                    );
+                                    if (allStructuresResponse.ok) {
+                                        const allStructuresData =
+                                            await allStructuresResponse.json();
+                                        const validStructures =
+                                            allStructuresData.filter((structure) =>
+                                                taggedShortNames.has(
+                                                    structure.shortName?.toLowerCase()
+                                                )
+                                            );
+                                        setStructures(validStructures);
+                                        setTotalStructureCount(validStructures.length);
+                                        setLoading(false);
+                                        return;
+                                    }
+                                }
+                            }
+                        }
+                    } catch (err) {
+                        console.warn("Error checking custom tags:", err);
+                    }
+                }
+
+                let endpoint;
+                if (isCategory) {
+                    endpoint = `https://nda.nih.gov/api/datadictionary/datastructure?category=${encodeURIComponent(
+                        searchValue
+                    )}`;
+                } else if (isDataType) {
+                    endpoint = `https://nda.nih.gov/api/datadictionary/datastructure?dataType=${encodeURIComponent(
+                        searchValue
+                    )}`;
+                } else {
+                    endpoint = `https://nda.nih.gov/api/datadictionary/v2/datastructure?searchTerm=${searchValue}`;
+                }
+
+                const response = await fetch(endpoint);
+                if (!response.ok) {
+                    if (isCategory || isDataType) {
+                        setStructures([]);
+                        setTotalStructureCount(0);
+                        setLoading(false);
+                        return;
+                    }
+                    throw new Error("Failed to fetch data");
+                }
+                const data = await response.json();
+
+                if ((isCategory || isDataType) && (!data || data.length === 0)) {
+                    setStructures([]);
+                    setTotalStructureCount(0);
+                    setLoading(false);
+                    return;
+                }
+
+                setTotalStructureCount(data.length);
+
+                if (!isCategory && !isDataType) {
+                    const searchLower = searchValue.toLowerCase();
+                    const normalizedSearch = searchLower.replace(/[_-]/g, "");
+
+                    const sortedData = data.sort((a, b) => {
+                        const aTitle = a.title?.toLowerCase() || "";
+                        const bTitle = b.title?.toLowerCase() || "";
+                        const aShortName = a.shortName
+                            .toLowerCase()
+                            .replace(/[_-]/g, "");
+                        const bShortName = b.shortName
+                            .toLowerCase()
+                            .replace(/[_-]/g, "");
+
+                        if (aShortName === normalizedSearch) return -1;
+                        if (bShortName === normalizedSearch) return 1;
+
+                        const aContainsSearch = aShortName.includes(normalizedSearch);
+                        const bContainsSearch = bShortName.includes(normalizedSearch);
+                        const aContainsTitle = aTitle.includes(searchLower);
+                        const bContainsTitle = bTitle.includes(searchLower);
+
+                        if (aContainsSearch && !bContainsSearch) return -1;
+                        if (!aContainsSearch && bContainsSearch) return 1;
+                        if (aContainsTitle && !bContainsTitle) return -1;
+                        if (!aContainsTitle && bContainsTitle) return 1;
+
+                        return 0;
+                    });
+                    setStructures(sortedData);
+                } else {
+                    setStructures(data);
+                }
+            }
+        } catch (err) {
+            setError("Error fetching data: " + err.message);
+        } finally {
+            setLoading(false);
+        }
+    }, [databaseFilterEnabled, databaseStructures, searchTerm, apiBaseUrl]);
+
+    useEffect(() => {
+        if (searchTerm) {
+            const debounceTimer = setTimeout(() => {
+                fetchData();
+            }, 300);
+            return () => clearTimeout(debounceTimer);
+        } else {
+            setStructures([]);
+        }
+    }, [searchTerm, fetchData]);
 
     const fetchDataElements = async (shortName) => {
         setLoadingElements(true);

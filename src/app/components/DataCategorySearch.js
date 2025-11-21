@@ -556,21 +556,19 @@ const DataCategorySearch = ({
         return () => clearTimeout(timer);
     }, []);
 
-    // Apply filtering when search term, filters, database filter, or structure tags change
-    useEffect(() => {
-        applyFilters();
-    }, [
-        allStructures,
-        searchTerm,
-        selectedFilters,
-        databaseFilterEnabled,
-        databaseStructures,
-        structureTags,
-        structureDataTypeTags,
-    ]);
-
     const [ndaCategories, setNdaCategories] = useState([]);
     const [ndaDataTypes, setNdaDataTypes] = useState([]);
+
+    const isCategoryRemoved = useCallback((structureShortName, categoryName) => {
+        return (
+            removedOriginalCategories[structureShortName]?.has(categoryName) ||
+            false
+        );
+    }, [removedOriginalCategories]);
+
+    const isDataTypeRemoved = useCallback((structureShortName) => {
+        return removedOriginalDataTypes[structureShortName] || false;
+    }, [removedOriginalDataTypes]);
 
     const fetchAllStructures = async () => {
         setLoading(true);
@@ -721,7 +719,7 @@ const DataCategorySearch = ({
         }
     };
 
-    const applyFilters = () => {
+    const applyFilters = useCallback(() => {
         let filtered = [...allStructures];
 
         // Apply search term filter
@@ -801,7 +799,21 @@ const DataCategorySearch = ({
         }
 
         setFilteredStructures(filtered);
-    };
+    }, [allStructures, searchTerm, selectedFilters, structureTags, structureDataTypeTags, databaseFilterEnabled, databaseStructures, isCategoryRemoved, isDataTypeRemoved]);
+
+    // Apply filtering when search term, filters, database filter, or structure tags change
+    useEffect(() => {
+        applyFilters();
+    }, [
+        allStructures,
+        searchTerm,
+        selectedFilters,
+        databaseFilterEnabled,
+        databaseStructures,
+        structureTags,
+        structureDataTypeTags,
+        applyFilters,
+    ]);
 
     const groupStructures = (structures) => {
         const grouped = {};
@@ -1146,13 +1158,6 @@ const DataCategorySearch = ({
         }
     };
 
-    const isCategoryRemoved = (structureShortName, categoryName) => {
-        return (
-            removedOriginalCategories[structureShortName]?.has(categoryName) ||
-            false
-        );
-    };
-
     const removeOriginalDataType = async (structureShortName) => {
         // Get the data type name from the structure
         const dataTypeName =
@@ -1306,10 +1311,6 @@ const DataCategorySearch = ({
             console.error("Error removing data type:", err);
             setModalError(`Failed to remove data type: ${err.message}`);
         }
-    };
-
-    const isDataTypeRemoved = (structureShortName) => {
-        return removedOriginalDataTypes[structureShortName] || false;
     };
 
     const downloadApiAsCsv = async () => {

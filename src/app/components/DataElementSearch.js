@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { Search, X, AlertCircle, Info, Database } from "lucide-react";
 import { NDA_SEARCH_FULL } from "@/const";
@@ -42,15 +42,6 @@ const DataElementSearch = ({
             JSON.stringify(recentSearches)
         );
     }, [recentSearches]);
-
-    // Handle initial search term from parent
-    useEffect(() => {
-        if (initialSearchTerm && initialSearchTerm !== searchTerm) {
-            setSearchTerm(initialSearchTerm);
-            // Trigger search automatically
-            handleSearchWithTerm(initialSearchTerm);
-        }
-    }, [initialSearchTerm]);
 
     // Fetch database structures map for projects info
     useEffect(() => {
@@ -113,20 +104,23 @@ const DataElementSearch = ({
     }, []);
 
     // Function to push state to browser history
-    const pushHistoryState = (view, data) => {
+    const pushHistoryState = useCallback((view, data) => {
         const state = { view, ...data };
         window.history.pushState(
             state,
             "",
             window.location.pathname + window.location.search
         );
-    };
+    }, []);
 
-    const updateRecentSearches = (newTerm) => {
-        if (!recentSearches.includes(newTerm)) {
-            setRecentSearches((prev) => [newTerm, ...prev].slice(0, 10));
-        }
-    };
+    const updateRecentSearches = useCallback((newTerm) => {
+        setRecentSearches((prev) => {
+            if (!prev.includes(newTerm)) {
+                return [newTerm, ...prev].slice(0, 10);
+            }
+            return prev;
+        });
+    }, []);
 
     const highlightSearchTerm = (text, searchTerms) => {
         if (!text || !searchTerms?.length) return text;
@@ -156,12 +150,12 @@ const DataElementSearch = ({
         }
     };
 
-    const isElementInDatabase = (elementName) => {
+    const isElementInDatabase = useCallback((elementName) => {
         return databaseElements.has(elementName.toLowerCase());
-    };
+    }, [databaseElements]);
 
     // Search within database elements for matching terms
-    const searchDatabaseElements = (searchTerm, exactMatch = false) => {
+    const searchDatabaseElements = useCallback((searchTerm, exactMatch = false) => {
         const searchLower = searchTerm.toLowerCase();
         const matches = [];
 
@@ -208,7 +202,12 @@ const DataElementSearch = ({
         }
 
         return matches.sort((a, b) => b._score - a._score);
-    };
+    }, [databaseElements]);
+
+    // Database search function that accepts a term directly
+    const searchDatabaseElementsWithTerm = useCallback((searchTerm) => {
+        return searchDatabaseElements(searchTerm, false);
+    }, [searchDatabaseElements]);
 
     // Original handleSearch function for backward compatibility
     const handleSearch = () => handleSearchWithFilter();
@@ -577,7 +576,7 @@ const DataElementSearch = ({
     };
 
     // Search function that accepts a term directly (for recent searches)
-    const handleSearchWithTerm = async (term) => {
+    const handleSearchWithTerm = useCallback(async (term) => {
         if (!term.trim()) return;
 
         setLoading(true);
@@ -905,12 +904,16 @@ const DataElementSearch = ({
         } finally {
             setLoading(false);
         }
-    };
+    }, [databaseFilterEnabled, databaseElements, searchDatabaseElements, updateRecentSearches, pushHistoryState, isElementInDatabase, searchDatabaseElementsWithTerm]);
 
-    // Database search function that accepts a term directly
-    const searchDatabaseElementsWithTerm = (searchTerm) => {
-        return searchDatabaseElements(searchTerm, false);
-    };
+    // Handle initial search term from parent
+    useEffect(() => {
+        if (initialSearchTerm && initialSearchTerm !== searchTerm) {
+            setSearchTerm(initialSearchTerm);
+            // Trigger search automatically
+            handleSearchWithTerm(initialSearchTerm);
+        }
+    }, [initialSearchTerm, searchTerm, handleSearchWithTerm]);
 
     const handleKeyDown = (e) => {
         if (e.key === "Enter") {
@@ -1112,7 +1115,7 @@ const DataElementSearch = ({
                     <div className="bg-green-50 p-4 border-b border-green-100">
                         <h2 className="text-lg font-medium text-green-800">
                             Found {matchingElements.length} elements containing
-                            "{searchTerm}"
+                            &quot;{searchTerm}&quot;
                             {databaseFilterEnabled &&
                                 totalElementCount > matchingElements.length &&
                                 ` (${totalElementCount} total in NDA)`}
@@ -1356,7 +1359,7 @@ const DataElementSearch = ({
                             </h4>
                             <p className="text-blue-700 mt-1">
                                 Found {totalElementCount} elements in NDA
-                                containing "{searchTerm}", but none are
+                                containing &quot;{searchTerm}&quot;, but none are
                                 available in your database.
                             </p>
                             <button

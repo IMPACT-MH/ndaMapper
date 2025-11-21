@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import {
     fetchTags,
     createTag as apiCreateTag,
@@ -20,7 +20,7 @@ export const useTagManagement = (tagType, apiBaseUrl = "/api/spinup") => {
     const [error, setError] = useState(null);
 
     // Filter tags by type
-    const filterTagsByType = (tags) => {
+    const filterTagsByType = useCallback((tags) => {
         if (tagType === "Data Type") {
             return tags.filter(
                 (tag) =>
@@ -41,7 +41,7 @@ export const useTagManagement = (tagType, apiBaseUrl = "/api/spinup") => {
                     !tag.name.startsWith("REMOVED_DATATYPE:")
             );
         }
-    };
+    }, [tagType]);
 
     // Fetch tags from API
     const fetch = useCallback(async () => {
@@ -57,7 +57,7 @@ export const useTagManagement = (tagType, apiBaseUrl = "/api/spinup") => {
         } finally {
             setLoading(false);
         }
-    }, [tagType, apiBaseUrl]);
+    }, [tagType, apiBaseUrl, filterTagsByType]);
 
     // Create a new tag
     const create = useCallback(

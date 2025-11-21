@@ -1,7 +1,7 @@
 // components/CategoryTagManagement.js
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { X, Plus, Search, Tags } from "lucide-react";
 
 const CategoryTagManagement = ({
@@ -28,16 +28,7 @@ const CategoryTagManagement = ({
         setStructureTags(initialTags);
     }, [initialTags]);
 
-    useEffect(() => {
-        if (isModalOpen) {
-            fetchTags();
-            // Initialize selected tags with current structure tags
-            setSelectedTags(new Set(structureTags.map((t) => t.id)));
-            setError(null);
-        }
-    }, [isModalOpen, structureTags]); // Added structureTags to dependencies
-
-    const fetchTags = async () => {
+    const fetchTags = useCallback(async () => {
         setLoading(true);
         try {
             const response = await fetch(`${apiBaseUrl}/tags`);
@@ -50,7 +41,16 @@ const CategoryTagManagement = ({
         } finally {
             setLoading(false);
         }
-    };
+    }, [apiBaseUrl]);
+
+    useEffect(() => {
+        if (isModalOpen) {
+            fetchTags();
+            // Initialize selected tags with current structure tags
+            setSelectedTags(new Set(structureTags.map((t) => t.id)));
+            setError(null);
+        }
+    }, [isModalOpen, structureTags, fetchTags]); // Added structureTags to dependencies
 
     const createTag = async () => {
         if (!newTagName.trim()) return;

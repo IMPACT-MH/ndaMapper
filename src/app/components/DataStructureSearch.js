@@ -64,7 +64,7 @@ const DataStructureSearch = ({
         if (searchTerm && isExpanded) {
             setIsExpanded(false);
         }
-    }, [searchTerm]);
+    }, [searchTerm, isExpanded]);
 
     // Check if current filter is a custom tag
     useEffect(() => {
