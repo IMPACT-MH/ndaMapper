@@ -10,7 +10,7 @@ import {
  * Custom hook for managing tags (categories or data types)
  * Eliminates code duplication between category and data type tag management
  */
-export const useTagManagement = (tagType, apiBaseUrl = "/api/spinup") => {
+export const useTagManagement = (tagType, apiBaseUrl = "/api/v1") => {
     const [available, setAvailable] = useState([]);
     const [selected, setSelected] = useState(new Set());
     const [newName, setNewName] = useState("");

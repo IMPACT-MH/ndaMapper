@@ -11,7 +11,7 @@ import {
     Plus,
     Pencil,
 } from "lucide-react";
-import { DATA_PORTAL } from "@/const.js";
+import { IMPACT_API_BASE, DATA_STRUCTURES } from "@/const.js";
 import CategoryTagManagement from "./CategoryTagManagement";
 import AuditTrail from "./AuditTrail";
 import {
@@ -1317,7 +1317,7 @@ const DataCategorySearch = ({
         try {
             // Fetch from both APIs
             const [impactResponse, ndaResponse] = await Promise.all([
-                fetch(DATA_PORTAL),
+                fetch(`${IMPACT_API_BASE}${DATA_STRUCTURES}`),
                 fetch("https://nda.nih.gov/api/datadictionary/datastructure"),
             ]);
 

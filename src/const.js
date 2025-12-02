@@ -2,13 +2,12 @@
  * API endpoints and configuration constants
  */
 
-// IMPACT-MH Data Portal (use proxy route - points to spinup endpoint which has submittedByProjects)
-//export const DATA_PORTAL = "/api/spinup/dataStructures";
+// IMPACT-MH API base URL
+export const IMPACT_API_BASE = "https://nda.impact-mh.org/api/v1";
 
-// Direct URLs (commented out - have CORS/SSL issues):
-// export const DATA_PORTAL = "https://spinup-002b0f.spinup.yale.edu/api/dataStructures/database/";
-export const DATA_PORTAL = "https://nda.impact-mh.org/api/v1/data-structures"
-//export const DATA_PORTAL = "https://api.impact-mh.org/impact/data-portal"; // This endpoint does NOT have submittedByProjects
+// IMPACT-MH API endpoints
+export const DATA_STRUCTURES = "/data-structures";
+export const DATA_TAGS = "/tags";
 
 // NDA API endpoints
 export const NDA_API_BASE = "https://nda.nih.gov/api";
@@ -41,8 +40,3 @@ export const NDA_SEARCH_AUTOCOMPLETE = (index, types, params = {}) => {
     const queryPart = queryString ? `?${queryString}` : "";
     return `${NDA_SEARCH_BASE}/${index}/${types}/autocomplete${queryPart}`;
 };
-
-// Spinup API endpoints
-//export const SPINUP_API_BASE = "https://spinup-002b0f.spinup.yale.edu/api";
-export const SPINUP_API_BASE = "https://nda.impact-mh.org/api"
-export const SPINUP_API_PROXY = "/api/v1";

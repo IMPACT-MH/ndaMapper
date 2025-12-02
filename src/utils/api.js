@@ -8,7 +8,7 @@
 export const apiCall = async (
     endpoint,
     options = {},
-    apiBaseUrl = "/api/spinup"
+    apiBaseUrl = "/api/v1"
 ) => {
     try {
         const response = await fetch(`${apiBaseUrl}${endpoint}`, {
@@ -91,7 +91,7 @@ export const apiCall = async (
  * @param {string} apiBaseUrl - Base URL for API
  * @returns {Promise<Array>} Array of tags
  */
-export const fetchTags = async (apiBaseUrl = "/api/spinup") => {
+export const fetchTags = async (apiBaseUrl = "/api/v1") => {
     const data = await apiCall("/tags", {}, apiBaseUrl);
     if (!Array.isArray(data)) {
         console.warn("Expected array for tags, got:", typeof data);
@@ -107,7 +107,7 @@ export const fetchTags = async (apiBaseUrl = "/api/spinup") => {
  * @param {string} apiBaseUrl - Base URL for API
  * @returns {Promise<object>} Created tag
  */
-export const createTag = async (name, tagType, apiBaseUrl = "/api/spinup") => {
+export const createTag = async (name, tagType, apiBaseUrl = "/api/v1") => {
     // Validate: only check that it's not empty after trimming whitespace
     const trimmedName = name ? name.trim() : "";
     if (!trimmedName) {
@@ -148,7 +148,7 @@ export const createTag = async (name, tagType, apiBaseUrl = "/api/spinup") => {
  * @param {string} apiBaseUrl - Base URL for API
  * @returns {Promise<object>} Updated tag
  */
-export const updateTag = async (tagId, newName, apiBaseUrl = "/api/spinup") => {
+export const updateTag = async (tagId, newName, apiBaseUrl = "/api/v1") => {
     if (!newName || !newName.trim()) {
         throw new Error("Tag name cannot be empty");
     }
@@ -182,7 +182,7 @@ export const updateTag = async (tagId, newName, apiBaseUrl = "/api/spinup") => {
  * @param {string} apiBaseUrl - Base URL for API
  * @returns {Promise<void>}
  */
-export const deleteTag = async (tagId, apiBaseUrl = "/api/spinup") => {
+export const deleteTag = async (tagId, apiBaseUrl = "/api/v1") => {
     await apiCall(`/tags/${tagId}`, { method: "DELETE" }, apiBaseUrl);
 };
 
@@ -196,7 +196,7 @@ export const deleteTag = async (tagId, apiBaseUrl = "/api/spinup") => {
 export const assignTag = async (
     tagId,
     structureShortName,
-    apiBaseUrl = "/api/spinup"
+    apiBaseUrl = "/api/v1"
 ) => {
     await apiCall(
         "/tags/assign",
@@ -228,7 +228,7 @@ export const assignTag = async (
  */
 export const logAuditEvent = async (
     auditData,
-    apiBaseUrl = "/api/spinup"
+    apiBaseUrl = "/api/v1"
 ) => {
     try {
         await apiCall(
@@ -257,7 +257,7 @@ export const logAuditEvent = async (
  */
 export const fetchAuditLogs = async (
     filters = {},
-    apiBaseUrl = "/api/spinup"
+    apiBaseUrl = "/api/v1"
 ) => {
     const params = new URLSearchParams();
     if (filters.tagId) params.append("tagId", filters.tagId);
@@ -280,7 +280,7 @@ export const fetchAuditLogs = async (
  */
 export const fetchTagDataStructures = async (
     tagId,
-    apiBaseUrl = "/api/spinup"
+    apiBaseUrl = "/api/v1"
 ) => {
     const data = await apiCall(`/tags/${tagId}/dataStructures`, {}, apiBaseUrl);
     return Array.isArray(data?.dataStructures) ? data.dataStructures : [];

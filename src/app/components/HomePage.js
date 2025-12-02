@@ -6,7 +6,7 @@ import DataStructureSearch from "./DataStructureSearch";
 import CSVHeaderAnalyzer from "./CSVHeaderAnalyzer";
 import DataElementSearch from "./DataElementSearch";
 import DataCategorySearch from "./DataCategorySearch";
-import { DATA_PORTAL } from "@/const";
+import { IMPACT_API_BASE, DATA_STRUCTURES } from "@/const";
 
 const Tabs = {
     STRUCTURE_SEARCH: "structure-search",
@@ -50,7 +50,7 @@ const HomePage = () => {
 
     // Tags state for custom tag searches
     const [structureDataTypeTags, setStructureDataTypeTags] = useState({});
-    const apiBaseUrl = "/api/spinup";
+    const apiBaseUrl = "/api/v1";
 
     // Browser history integration for tabs
     useEffect(() => {
@@ -149,9 +149,12 @@ const HomePage = () => {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
 
-            const response = await fetch(DATA_PORTAL, {
-                signal: controller.signal,
-            });
+            const response = await fetch(
+                `${IMPACT_API_BASE}${DATA_STRUCTURES}`,
+                {
+                    signal: controller.signal,
+                }
+            );
             clearTimeout(timeoutId);
 
             if (response.ok) {
@@ -809,9 +812,10 @@ const HomePage = () => {
 
                 // Filter the NDA results to only include structures that exist in our database
                 const filteredData = allData.filter((structure) => {
-                    const structureNameLower = structure.shortName.toLowerCase();
-                    const databaseStructuresLower = databaseStructures.map((name) =>
-                        name.toLowerCase()
+                    const structureNameLower =
+                        structure.shortName.toLowerCase();
+                    const databaseStructuresLower = databaseStructures.map(
+                        (name) => name.toLowerCase()
                     );
                     return databaseStructuresLower.includes(structureNameLower);
                 });
@@ -833,8 +837,10 @@ const HomePage = () => {
                         if (aShortName === normalizedSearch) return -1;
                         if (bShortName === normalizedSearch) return 1;
 
-                        const aContainsSearch = aShortName.includes(normalizedSearch);
-                        const bContainsSearch = bShortName.includes(normalizedSearch);
+                        const aContainsSearch =
+                            aShortName.includes(normalizedSearch);
+                        const bContainsSearch =
+                            bShortName.includes(normalizedSearch);
                         const aContainsTitle = aTitle.includes(searchLower);
                         const bContainsTitle = bTitle.includes(searchLower);
 
@@ -900,13 +906,16 @@ const HomePage = () => {
                                         const allStructuresData =
                                             await allStructuresResponse.json();
                                         const validStructures =
-                                            allStructuresData.filter((structure) =>
-                                                taggedShortNames.has(
-                                                    structure.shortName?.toLowerCase()
-                                                )
+                                            allStructuresData.filter(
+                                                (structure) =>
+                                                    taggedShortNames.has(
+                                                        structure.shortName?.toLowerCase()
+                                                    )
                                             );
                                         setStructures(validStructures);
-                                        setTotalStructureCount(validStructures.length);
+                                        setTotalStructureCount(
+                                            validStructures.length
+                                        );
                                         setLoading(false);
                                         return;
                                     }
@@ -943,7 +952,10 @@ const HomePage = () => {
                 }
                 const data = await response.json();
 
-                if ((isCategory || isDataType) && (!data || data.length === 0)) {
+                if (
+                    (isCategory || isDataType) &&
+                    (!data || data.length === 0)
+                ) {
                     setStructures([]);
                     setTotalStructureCount(0);
                     setLoading(false);
@@ -969,8 +981,10 @@ const HomePage = () => {
                         if (aShortName === normalizedSearch) return -1;
                         if (bShortName === normalizedSearch) return 1;
 
-                        const aContainsSearch = aShortName.includes(normalizedSearch);
-                        const bContainsSearch = bShortName.includes(normalizedSearch);
+                        const aContainsSearch =
+                            aShortName.includes(normalizedSearch);
+                        const bContainsSearch =
+                            bShortName.includes(normalizedSearch);
                         const aContainsTitle = aTitle.includes(searchLower);
                         const bContainsTitle = bTitle.includes(searchLower);
 

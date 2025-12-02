@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Clock, Tag, Database, User, X, Filter } from "lucide-react";
 import { fetchTags as apiFetchTags, fetchTagDataStructures } from "@/utils/api";
 
-const AuditTrail = ({ tagId, structureShortName, tagTypeFilter, apiBaseUrl = "/api/spinup" }) => {
+const AuditTrail = ({ tagId, structureShortName, tagTypeFilter, apiBaseUrl = "/api/v1" }) => {
     const [logs, setLogs] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);

@@ -9,7 +9,7 @@ import {
 export async function POST(request) {
     try {
         const body = await request.json();
-        const response = await makeHttpsRequest(buildApiUrl("/tags/remove"), {
+        const response = await makeHttpsRequest(buildApiUrl("/tags/assign"), {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -20,6 +20,11 @@ export async function POST(request) {
 
         if (!response.ok) {
             const errorText = await response.text();
+            console.error("API error:", {
+                status: response.status,
+                body: body,
+                errorText: errorText,
+            });
             return createErrorResponse(
                 `API returned ${response.status}`,
                 response.status,
@@ -30,9 +35,9 @@ export async function POST(request) {
         const data = await response.json().catch(() => ({}));
         return createSuccessResponse(data);
     } catch (error) {
-        console.error("Error removing tag:", error);
+        console.error("Error assigning tag:", error);
         return createErrorResponse(
-            "Failed to remove tag",
+            "Failed to assign tag",
             500,
             error.message || String(error)
         );
@@ -42,3 +47,4 @@ export async function POST(request) {
 export async function OPTIONS() {
     return createOptionsResponse();
 }
+

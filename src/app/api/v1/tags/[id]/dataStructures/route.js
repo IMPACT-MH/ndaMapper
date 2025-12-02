@@ -6,17 +6,18 @@ import {
     createOptionsResponse,
 } from "@/lib/api-client";
 
-export async function POST(request) {
+export async function GET(request, { params }) {
     try {
-        const body = await request.json();
-        const response = await makeHttpsRequest(buildApiUrl("/tags/remove"), {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify(body),
-            timeout: 15000, // 15 second timeout
-        });
+        const { id } = await params;
+        const response = await makeHttpsRequest(
+            buildApiUrl(`/tags/${id}/dataStructures`),
+            {
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                timeout: 30000, // 30 second timeout
+            }
+        );
 
         if (!response.ok) {
             const errorText = await response.text();
@@ -27,12 +28,12 @@ export async function POST(request) {
             );
         }
 
-        const data = await response.json().catch(() => ({}));
+        const data = await response.json();
         return createSuccessResponse(data);
     } catch (error) {
-        console.error("Error removing tag:", error);
+        console.error("Error fetching tag data structures:", error);
         return createErrorResponse(
-            "Failed to remove tag",
+            "Failed to fetch tag data structures",
             500,
             error.message || String(error)
         );
@@ -42,3 +43,4 @@ export async function POST(request) {
 export async function OPTIONS() {
     return createOptionsResponse();
 }
+
