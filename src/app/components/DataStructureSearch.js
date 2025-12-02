@@ -50,7 +50,7 @@ const DataStructureSearch = ({
     const [removedCategories, setRemovedCategories] = useState({});
     const [availableCategories, setAvailableCategories] = useState(new Set());
     const [dataStructuresMap, setDataStructuresMap] = useState({});
-    const apiBaseUrl = "/api/spinup";
+    const apiBaseUrl = "/api/v1";
 
     // Clear headers when CSV file is removed
     useEffect(() => {
@@ -172,7 +172,7 @@ const DataStructureSearch = ({
     useEffect(() => {
         const fetchDataStructures = async () => {
             try {
-                const response = await fetch("/api/spinup/dataStructures");
+                const response = await fetch("/api/v1/data-structures");
                 const data = await response.json();
 
                 if (data && data.dataStructures) {

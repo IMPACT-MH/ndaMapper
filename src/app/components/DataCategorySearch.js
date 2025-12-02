@@ -78,7 +78,7 @@ const DataCategorySearch = ({
     };
 
     const [dataStructuresMap, setDataStructuresMap] = useState({});
-    const apiBaseUrl = "/api/spinup";
+    const apiBaseUrl = "/api/v1";
 
     const [structureTags, setStructureTags] = useState({});
     const [structureDataTypeTags, setStructureDataTypeTags] = useState({});
@@ -368,7 +368,7 @@ const DataCategorySearch = ({
         const fetchDataStructures = async () => {
             setIsLoadingStructures(true);
             try {
-                const response = await fetch("/api/spinup/dataStructures");
+                const response = await fetch("/api/v1/data-structures");
                 const data = await response.json();
 
                 if (data && data.dataStructures) {
@@ -4077,7 +4077,7 @@ const DataCategorySearch = ({
                                                     for (const tagId of toRemove) {
                                                         const response =
                                                             await fetch(
-                                                                `/api/spinup/tags/remove`,
+                                                                `/api/v1/tags/remove`,
                                                                 {
                                                                     method: "POST",
                                                                     headers: {
@@ -4152,7 +4152,7 @@ const DataCategorySearch = ({
 
                                                         const response =
                                                             await fetch(
-                                                                `/api/spinup/tags/assign`,
+                                                                `/api/v1/tags/assign`,
                                                                 {
                                                                     method: "POST",
                                                                     headers: {
@@ -5142,7 +5142,7 @@ const DataCategorySearch = ({
                                                     for (const tagId of toRemove) {
                                                         const response =
                                                             await fetch(
-                                                                `/api/spinup/tags/remove`,
+                                                                `/api/v1/tags/remove`,
                                                                 {
                                                                     method: "POST",
                                                                     headers: {
@@ -5208,7 +5208,7 @@ const DataCategorySearch = ({
 
                                                         const response =
                                                             await fetch(
-                                                                `/api/spinup/tags/assign`,
+                                                                `/api/v1/tags/assign`,
                                                                 {
                                                                     method: "POST",
                                                                     headers: {

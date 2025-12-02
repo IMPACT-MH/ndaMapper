@@ -9,7 +9,7 @@ const CategoryTagManagement = ({
     structureId, // The actual ID for your database
     structureTags: initialTags = [],
     onTagsUpdate,
-    apiBaseUrl = "https://spinup-002b0f.spinup.yale.edu/api/",
+    apiBaseUrl = "https://nda.impact-mh.org/api/v1/",
     dataStructuresMap = {},
     isLoadingStructures = false,
 }) => {

@@ -47,7 +47,7 @@ const DataElementSearch = ({
     useEffect(() => {
         const fetchDataStructures = async () => {
             try {
-                const response = await fetch("/api/spinup/dataStructures");
+                const response = await fetch("/api/v1/data-structures");
                 const data = await response.json();
 
                 if (data && data.dataStructures) {

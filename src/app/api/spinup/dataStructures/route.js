@@ -79,7 +79,7 @@ export async function GET() {
         }
 
         const response = await makeHttpsRequest(
-            "https://spinup-002b0f.spinup.yale.edu/api/dataStructures/database",
+            "https://nda.impact-mh.org/api/v1/data-structures",
             {
                 headers: {
                     "Content-Type": "application/json",
