@@ -735,7 +735,11 @@ const DataStructureSearch = ({
                                                                 <h3 className="font-medium text-gray-600 mb-2">
                                                                     Status
                                                                 </h3>
-                                                                <span className="px-3 py-1 rounded-full text-sm bg-green-100 text-green-700">
+                                                                <span className={`px-3 py-1 rounded-full text-sm ${
+                                                                    selectedStructure.status === "Draft"
+                                                                        ? "bg-yellow-100 text-yellow-700"
+                                                                        : "bg-green-100 text-green-700"
+                                                                }`}>
                                                                     {
                                                                         selectedStructure.status
                                                                     }
