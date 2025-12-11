@@ -1137,7 +1137,13 @@ const HomePage = () => {
 
                             {/* NDA Logo */}
                             <div className="flex items-center transform -translate-y-2">
-                                <div className="w-12 h-12 relative">
+                                <a
+                                    href="https://nda.nih.gov/"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="w-12 h-12 relative block hover:opacity-80 transition-opacity"
+                                    aria-label="Visit NDA website"
+                                >
                                     <Image
                                         src="/nda.png"
                                         alt="NDA Logo"
@@ -1145,7 +1151,7 @@ const HomePage = () => {
                                         height={48}
                                         className="object-contain"
                                     />
-                                </div>
+                                </a>
                             </div>
                         </nav>
                     </div>
