@@ -71,32 +71,15 @@ const HomePage = () => {
 
     // Browser history integration for tabs
     useEffect(() => {
-        // Check if there's a tab in the URL hash or history state
-        const hash = window.location.hash.replace("#", "");
-        const urlTab = Object.values(Tabs).find((tab) => hash === tab);
+        // ALWAYS start on Data Dictionary on page load/refresh
+        // Ignore URL hash, history state, and localStorage completely
+        setActiveTab(Tabs.DICTIONARY);
 
-        // Check history state
-        const historyState = window.history.state;
-        const stateTab = historyState?.tab;
-
-        // Priority: history state > URL hash > localStorage > default
-        const storedTab = normalizeTab(localStorage.getItem("activeTab"));
-        const initialTab =
-            normalizeTab(stateTab) ||
-            normalizeTab(urlTab) ||
-            storedTab ||
-            Tabs.DICTIONARY;
-
-        if (initialTab && normalizeTab(initialTab)) {
-            setActiveTab(initialTab);
-            // Update URL hash if not already set
-            if (!urlTab && initialTab !== Tabs.DICTIONARY) {
-                window.history.replaceState(
-                    { tab: initialTab },
-                    "",
-                    `#${initialTab}`
-                );
-            }
+        // Clear URL hash and history state to prevent any persistence
+        if (window.location.hash) {
+            window.history.replaceState(null, "", window.location.pathname);
+        } else if (window.history.state?.tab) {
+            window.history.replaceState(null, "", window.location.pathname);
         }
 
         setIsLoading(false);
@@ -125,19 +108,24 @@ const HomePage = () => {
         return () => window.removeEventListener("popstate", handlePopState);
     }, []);
 
-    // Save tab to localStorage and update browser history when it changes
+    // Update browser history when tab changes (for back/forward navigation only)
     useEffect(() => {
         if (isLoading) return; // Don't update on initial load
 
-        localStorage.setItem("activeTab", activeTab);
+        // Only update history if not already on Data Dictionary (to avoid cluttering history)
+        // This allows back/forward navigation but doesn't persist state on refresh
+        if (activeTab !== Tabs.DICTIONARY) {
+            const newHash = `#${activeTab}`;
+            const newUrl = window.location.pathname + newHash;
 
-        // Update URL hash
-        const newHash = activeTab === Tabs.DICTIONARY ? "" : `#${activeTab}`;
-        const newUrl = window.location.pathname + (newHash || "");
-
-        // Push to history (but don't push on initial load)
-        if (window.history.state?.tab !== activeTab) {
-            window.history.pushState({ tab: activeTab }, "", newUrl);
+            // Use replaceState instead of pushState to avoid creating history entries
+            // This way refresh always goes back to DICTIONARY
+            window.history.replaceState({ tab: activeTab }, "", newUrl);
+        } else {
+            // Clear hash when on DICTIONARY
+            if (window.location.hash) {
+                window.history.replaceState(null, "", window.location.pathname);
+            }
         }
     }, [activeTab, isLoading]);
 
