@@ -251,6 +251,16 @@ const DataElementSearch = ({
         [dataStructuresMap]
     );
 
+    // Helper function to calculate boosted score for sorting
+    // Elements in the local IMPACT database get a significant boost
+    const getBoostedScore = useCallback((element) => {
+        const baseScore = element._score || 0;
+        // Boost IMPACT database elements by 1000 points
+        // This ensures they rank higher than non-database elements with similar Elasticsearch scores
+        const databaseBoost = element.inDatabase ? 1000 : 0;
+        return baseScore + databaseBoost;
+    }, []);
+
     // Helper function to try direct element fetch
     const tryDirectElementFetch = useCallback(async (elementName) => {
         try {
@@ -659,7 +669,7 @@ const DataElementSearch = ({
                 );
             }
 
-            // Sort by Elasticsearch's _score (already sorted by relevance)
+            // Sort by Elasticsearch's _score with IMPACT database boost
             validElements = validElements.sort((a, b) => {
                 // Prioritize exact matches first
                 const searchLower = searchQuery.toLowerCase();
@@ -669,8 +679,10 @@ const DataElementSearch = ({
                 if (aExact && !bExact) return -1;
                 if (!aExact && bExact) return 1;
 
-                // Then by Elasticsearch score (database matches get high score)
-                return (b._score || 0) - (a._score || 0);
+                // Then by boosted score (IMPACT database elements get +1000 boost)
+                const aBoosted = getBoostedScore(a);
+                const bBoosted = getBoostedScore(b);
+                return bBoosted - aBoosted;
             });
 
             setMatchingElements(validElements);
@@ -1058,7 +1070,7 @@ const DataElementSearch = ({
                     );
                 }
 
-                // Sort by API's _score, but prioritize exact matches
+                // Sort by API's _score with IMPACT database boost, prioritize exact matches
                 validElements = validElements.sort((a, b) => {
                     const aExact =
                         a.name.toLowerCase() === searchQuery.toLowerCase();
@@ -1069,8 +1081,10 @@ const DataElementSearch = ({
                     if (aExact && !bExact) return -1;
                     if (!aExact && bExact) return 1;
 
-                    // Then by score
-                    return (b._score || 0) - (a._score || 0);
+                    // Then by boosted score (IMPACT database elements get +1000 boost)
+                    const aBoosted = getBoostedScore(a);
+                    const bBoosted = getBoostedScore(b);
+                    return bBoosted - aBoosted;
                 });
 
                 setMatchingElements(validElements);
@@ -1115,6 +1129,7 @@ const DataElementSearch = ({
             dataStructuresMap,
             getStructuresContainingElement,
             tryDirectElementFetch,
+            getBoostedScore,
         ]
     );
 
