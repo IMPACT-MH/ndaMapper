@@ -150,64 +150,125 @@ const DataElementSearch = ({
         }
     };
 
-    const isElementInDatabase = useCallback((elementName) => {
-        return databaseElements.has(elementName.toLowerCase());
-    }, [databaseElements]);
+    const isElementInDatabase = useCallback(
+        (elementName) => {
+            return databaseElements.has(elementName.toLowerCase());
+        },
+        [databaseElements]
+    );
 
     // Search within database elements for matching terms
-    const searchDatabaseElements = useCallback((searchTerm, exactMatch = false) => {
-        const searchLower = searchTerm.toLowerCase();
-        const matches = [];
+    const searchDatabaseElements = useCallback(
+        (searchTerm, exactMatch = false) => {
+            const searchLower = searchTerm.toLowerCase();
+            const matches = [];
 
-        for (const [elementName, elementData] of databaseElements) {
-            let nameMatch = false;
-            let descriptionMatch = false;
-            let notesMatch = false;
+            for (const [elementName, elementData] of databaseElements) {
+                let nameMatch = false;
+                let descriptionMatch = false;
+                let notesMatch = false;
 
-            if (exactMatch) {
-                // Exact match: element name must exactly match (case-insensitive)
-                nameMatch = elementName.toLowerCase() === searchLower;
-            } else {
-                // Partial match: check if search term appears in name or description
-                nameMatch = elementName.includes(searchLower);
-                descriptionMatch = elementData.description
-                    ?.toLowerCase()
-                    .includes(searchLower);
-                notesMatch = elementData.notes
-                    ?.toLowerCase()
-                    .includes(searchLower);
+                if (exactMatch) {
+                    // Exact match: element name must exactly match (case-insensitive)
+                    nameMatch = elementName.toLowerCase() === searchLower;
+                } else {
+                    // Partial match: check if search term appears in name or description
+                    nameMatch = elementName.includes(searchLower);
+                    descriptionMatch = elementData.description
+                        ?.toLowerCase()
+                        .includes(searchLower);
+                    notesMatch = elementData.notes
+                        ?.toLowerCase()
+                        .includes(searchLower);
+                }
+
+                if (nameMatch || descriptionMatch || notesMatch) {
+                    matches.push({
+                        name: elementData.name,
+                        type: elementData.type || "String",
+                        description:
+                            elementData.description ||
+                            "No description available",
+                        notes: elementData.notes,
+                        valueRange: elementData.valueRange,
+                        _score: nameMatch ? 100 : descriptionMatch ? 50 : 25, // Prioritize name matches
+                        searchTerms: [searchTerm],
+                        matchType: nameMatch
+                            ? exactMatch
+                                ? "exact"
+                                : "name"
+                            : descriptionMatch
+                            ? "description"
+                            : "notes",
+                        inDatabase: true,
+                        dataStructures: [], // We could enhance this later to include which structures contain this element
+                    });
+                }
             }
 
-            if (nameMatch || descriptionMatch || notesMatch) {
-                matches.push({
-                    name: elementData.name,
-                    type: elementData.type || "String",
-                    description:
-                        elementData.description || "No description available",
-                    notes: elementData.notes,
-                    valueRange: elementData.valueRange,
-                    _score: nameMatch ? 100 : descriptionMatch ? 50 : 25, // Prioritize name matches
-                    searchTerms: [searchTerm],
-                    matchType: nameMatch
-                        ? exactMatch
-                            ? "exact"
-                            : "name"
-                        : descriptionMatch
-                        ? "description"
-                        : "notes",
-                    inDatabase: true,
-                    dataStructures: [], // We could enhance this later to include which structures contain this element
-                });
-            }
-        }
-
-        return matches.sort((a, b) => b._score - a._score);
-    }, [databaseElements]);
+            return matches.sort((a, b) => b._score - a._score);
+        },
+        [databaseElements]
+    );
 
     // Database search function that accepts a term directly
-    const searchDatabaseElementsWithTerm = useCallback((searchTerm) => {
-        return searchDatabaseElements(searchTerm, false);
-    }, [searchDatabaseElements]);
+    const searchDatabaseElementsWithTerm = useCallback(
+        (searchTerm) => {
+            return searchDatabaseElements(searchTerm, false);
+        },
+        [searchDatabaseElements]
+    );
+
+    // Helper function to get structures containing an element
+    const getStructuresContainingElement = useCallback(
+        (elementName) => {
+            if (!elementName || Object.keys(dataStructuresMap).length === 0) {
+                return [];
+            }
+
+            const elementNameLower = elementName.toLowerCase();
+            const structuresContainingElement = [];
+
+            Object.values(dataStructuresMap).forEach((dbStructure) => {
+                if (
+                    dbStructure.dataElements &&
+                    Array.isArray(dbStructure.dataElements)
+                ) {
+                    const hasElement = dbStructure.dataElements.some(
+                        (el) => el.name?.toLowerCase() === elementNameLower
+                    );
+                    if (hasElement && dbStructure.shortName) {
+                        structuresContainingElement.push(dbStructure.shortName);
+                    }
+                }
+            });
+
+            return structuresContainingElement;
+        },
+        [dataStructuresMap]
+    );
+
+    // Helper function to try direct element fetch
+    const tryDirectElementFetch = useCallback(async (elementName) => {
+        try {
+            const response = await fetch(
+                `https://nda.nih.gov/api/datadictionary/dataelement/${encodeURIComponent(
+                    elementName
+                )}`
+            );
+
+            if (response.ok) {
+                const elementData = await response.json();
+                if (elementData && elementData.name) {
+                    return elementData;
+                }
+            }
+        } catch (error) {
+            // Expected for partial searches or non-existent elements
+            console.log("Direct element fetch failed:", error);
+        }
+        return null;
+    }, []);
 
     // Original handleSearch function for backward compatibility
     const handleSearch = () => handleSearchWithFilter();
@@ -230,6 +291,34 @@ const DataElementSearch = ({
         try {
             // If database filter is enabled, only search within database elements (skip NDA API)
             if (effectiveFilterEnabled && databaseElements.size > 0) {
+                // First try exact match in database
+                const exactDatabaseMatch = searchDatabaseElements(
+                    searchTerm.trim(),
+                    true // exact match
+                );
+
+                if (exactDatabaseMatch.length > 0) {
+                    // Found exact match in database, show it directly
+                    const match = exactDatabaseMatch[0];
+                    const structuresContainingElement =
+                        getStructuresContainingElement(match.name);
+
+                    const elementData = {
+                        ...match,
+                        dataStructures: structuresContainingElement,
+                        loading: false,
+                    };
+                    setElement(elementData);
+                    setIsPartialSearch(false);
+                    updateRecentSearches(searchTerm.trim());
+                    pushHistoryState("element", {
+                        element: elementData,
+                    });
+                    setLoading(false);
+                    return;
+                }
+
+                // Try partial matches in database
                 const databaseMatches = searchDatabaseElements(
                     searchTerm.trim(),
                     false
@@ -252,9 +341,20 @@ const DataElementSearch = ({
                     return;
                 } else {
                     // No matches in database when filter is enabled
-                    setError(
-                        `No data elements found containing "${searchTerm}" in your database. Try disabling the database filter to search all NDA elements.`
+                    // Try direct fetch to see if element exists in NDA (for better error message)
+                    const directElement = await tryDirectElementFetch(
+                        searchTerm.trim()
                     );
+                    if (directElement) {
+                        // Element exists in NDA but not in database
+                        setError(
+                            `The element "${searchTerm}" exists in NDA but is not in your database. Try disabling the database filter to view it.`
+                        );
+                    } else {
+                        setError(
+                            `No data elements found containing "${searchTerm}" in your database. Try disabling the database filter to search all NDA elements.`
+                        );
+                    }
                     setLoading(false);
                     return;
                 }
@@ -262,6 +362,34 @@ const DataElementSearch = ({
 
             // Use the NDA Elasticsearch API (only when filter is disabled)
             const searchQuery = searchTerm.trim();
+
+            // First, try to fetch the element directly by name (for exact element name searches)
+            // This allows searching for elements even if the name is less than 3 characters
+            const directElement = await tryDirectElementFetch(searchQuery);
+            if (directElement) {
+                // Check if element is in database
+                const inDb = isElementInDatabase(directElement.name);
+
+                // Format the element data
+                const elementData = {
+                    ...directElement,
+                    inDatabase: inDb,
+                    searchTerms: [searchQuery],
+                    matchType: "exact",
+                };
+
+                setElement(elementData);
+                setIsPartialSearch(false);
+                updateRecentSearches(searchQuery);
+
+                // Push to browser history
+                pushHistoryState("element", {
+                    element: elementData,
+                });
+
+                setLoading(false);
+                return;
+            }
 
             // Add validation for very broad searches that might overwhelm the API
             // Elasticsearch typically requires at least 3 characters for reliable results
@@ -576,161 +704,49 @@ const DataElementSearch = ({
     };
 
     // Search function that accepts a term directly (for recent searches)
-    const handleSearchWithTerm = useCallback(async (term) => {
-        if (!term.trim()) return;
+    const handleSearchWithTerm = useCallback(
+        async (term) => {
+            if (!term.trim()) return;
 
-        setLoading(true);
-        setError(null);
-        setElement(null);
-        setMatchingElements([]);
-        setIsPartialSearch(false);
+            setLoading(true);
+            setError(null);
+            setElement(null);
+            setMatchingElements([]);
+            setIsPartialSearch(false);
 
-        try {
-            // If database filter is enabled, only search within database elements (skip NDA API)
-            if (databaseFilterEnabled && databaseElements.size > 0) {
-                const databaseMatches = searchDatabaseElementsWithTerm(
-                    term.trim()
-                );
-
-                if (databaseMatches.length > 0) {
-                    // Found matches in database, show those
-                    setMatchingElements(databaseMatches);
-                    setIsPartialSearch(true);
-                    setTotalElementCount(databaseMatches.length);
-                    updateRecentSearches(term.trim());
-
-                    // Push to browser history
-                    pushHistoryState("results", {
-                        results: databaseMatches,
-                        searchTerm: term.trim(),
-                    });
-
-                    setLoading(false);
-                    return;
-                } else {
-                    // No matches in database when filter is enabled
-                    setError(
-                        `No data elements found containing "${term}" in your database. Try disabling the database filter to search all NDA elements.`
+            try {
+                // If database filter is enabled, only search within database elements (skip NDA API)
+                if (databaseFilterEnabled && databaseElements.size > 0) {
+                    // First try exact match in database
+                    const exactDatabaseMatch = searchDatabaseElements(
+                        term.trim(),
+                        true // exact match
                     );
-                    setLoading(false);
-                    return;
-                }
-            }
 
-            // Use the NDA Elasticsearch API (only when filter is disabled)
-            const searchQuery = term.trim();
+                    if (exactDatabaseMatch.length > 0) {
+                        // Found exact match in database, show it directly
+                        const match = exactDatabaseMatch[0];
+                        const structuresContainingElement =
+                            getStructuresContainingElement(match.name);
 
-            // Elasticsearch typically requires at least 3 characters for reliable results
-            if (searchQuery.length < 3) {
-                setError(
-                    "Search term must be at least 3 characters long for Elasticsearch"
-                );
-                setLoading(false);
-                return;
-            }
-
-            // Build Elasticsearch query
-            // Use plain search term - we'll filter for exact matches client-side
-            // The Elasticsearch API doesn't reliably support phrase queries in simple text format
-            const esQuery = searchQuery;
-
-            const searchUrl = NDA_SEARCH_FULL("nda", "dataelement", {
-                size: 1000,
-                highlight: true,
-                ddsize: 100, // API limit: max 100 for ddsize
-            });
-
-            const partialResponse = await fetch(searchUrl, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "text/plain",
-                },
-                body: esQuery,
-            });
-
-            if (!partialResponse.ok) {
-                const statusText =
-                    partialResponse.statusText || "Unknown error";
-                const status = partialResponse.status;
-
-                // If we get a 400 error, try to get more details from the response
-                if (status === 400) {
-                    let errorMessage = "Bad Request";
-                    try {
-                        // Clone the response so we can read it without consuming the original
-                        const clonedResponse = partialResponse.clone();
-                        const errorText = await clonedResponse.text();
-                        if (errorText) {
-                            try {
-                                const errorData = JSON.parse(errorText);
-                                errorMessage =
-                                    errorData.message ||
-                                    errorData.error ||
-                                    errorText;
-                            } catch {
-                                errorMessage = errorText;
-                            }
-                        }
-                    } catch (e) {
-                        // If we can't read the error, use the status text
-                        errorMessage = statusText;
-                    }
-
-                    // For very short queries, Elasticsearch might have issues
-                    if (searchQuery.length < 3) {
-                        setError(
-                            `Search term "${searchQuery}" is too short. Elasticsearch requires at least 3 characters.`
-                        );
+                        const elementData = {
+                            ...match,
+                            dataStructures: structuresContainingElement,
+                            loading: false,
+                        };
+                        setElement(elementData);
+                        setIsPartialSearch(false);
+                        updateRecentSearches(term.trim());
+                        pushHistoryState("element", {
+                            element: elementData,
+                        });
                         setLoading(false);
                         return;
                     }
 
-                    setError(
-                        `Search failed (400): ${errorMessage}. The query "${searchQuery}" may not be supported by the Elasticsearch API. Try a different search term or check the query syntax.`
-                    );
-                    setLoading(false);
-                    return;
-                }
-
-                if (status === 500) {
-                    setError(
-                        `The search query "${term}" may be too broad or complex for the NDA API. Try using more specific search terms.`
-                    );
-                } else if (status === 429) {
-                    setError(
-                        "Too many requests. Please wait a moment and try again."
-                    );
-                } else if (status === 408 || status === 504) {
-                    setError(
-                        "Search request timed out. Try using more specific search terms."
-                    );
-                } else {
-                    setError(
-                        `Search failed (${status}: ${statusText}). Try using different search terms or check your connection.`
-                    );
-                }
-                setLoading(false);
-                return;
-            }
-
-            const searchResults = await partialResponse.json();
-
-            // If Elasticsearch returns no results, check database when filter is disabled
-            if (!searchResults?.datadict?.results?.length) {
-                if (databaseFilterEnabled && databaseElements.size > 0) {
-                    setError(
-                        `No data elements found containing "${term}" in your database. Try disabling the database filter to search all NDA elements.`
-                    );
-                    setLoading(false);
-                    return;
-                } else if (
-                    !databaseFilterEnabled &&
-                    databaseElements.size > 0
-                ) {
-                    // Check database for matches even when filter is disabled
-                    const databaseMatches = searchDatabaseElements(
-                        searchQuery,
-                        false
+                    // Try partial matches in database
+                    const databaseMatches = searchDatabaseElementsWithTerm(
+                        term.trim()
                     );
 
                     if (databaseMatches.length > 0) {
@@ -740,6 +756,7 @@ const DataElementSearch = ({
                         setTotalElementCount(databaseMatches.length);
                         updateRecentSearches(term.trim());
 
+                        // Push to browser history
                         pushHistoryState("results", {
                             results: databaseMatches,
                             searchTerm: term.trim(),
@@ -747,164 +764,356 @@ const DataElementSearch = ({
 
                         setLoading(false);
                         return;
+                    } else {
+                        // No matches in database when filter is enabled
+                        // Try direct fetch to see if element exists in NDA (for better error message)
+                        const directElement = await tryDirectElementFetch(
+                            term.trim()
+                        );
+                        if (directElement) {
+                            // Element exists in NDA but not in database
+                            setError(
+                                `The element "${term}" exists in NDA but is not in your database. Try disabling the database filter to view it.`
+                            );
+                        } else {
+                            setError(
+                                `No data elements found containing "${term}" in your database. Try disabling the database filter to search all NDA elements.`
+                            );
+                        }
+                        setLoading(false);
+                        return;
                     }
                 }
 
-                // No results from Elasticsearch or database
-                setError(`No data elements found containing "${term}"`);
-                setLoading(false);
-                return;
-            }
+                // Use the NDA Elasticsearch API (only when filter is disabled)
+                const searchQuery = term.trim();
 
-            setTotalElementCount(searchResults.datadict.results.length);
+                // First, try to fetch the element directly by name (for exact element name searches)
+                // This allows searching for elements even if the name is less than 3 characters
+                const directElement = await tryDirectElementFetch(searchQuery);
+                if (directElement) {
+                    // Check if element is in database
+                    const inDb = isElementInDatabase(directElement.name);
 
-            const elementDetails = await Promise.all(
-                searchResults.datadict.results.map(async (result) => {
-                    try {
-                        // Validate result.name exists and is a string
-                        if (
-                            !result ||
-                            !result.name ||
-                            typeof result.name !== "string"
-                        ) {
-                            console.warn("Invalid result object:", result);
-                            return null;
+                    // Format the element data
+                    const elementData = {
+                        ...directElement,
+                        inDatabase: inDb,
+                        searchTerms: [searchQuery],
+                        matchType: "exact",
+                    };
+
+                    setElement(elementData);
+                    setIsPartialSearch(false);
+                    updateRecentSearches(searchQuery);
+
+                    // Push to browser history
+                    pushHistoryState("element", {
+                        element: elementData,
+                    });
+
+                    setLoading(false);
+                    return;
+                }
+
+                // Elasticsearch typically requires at least 3 characters for reliable results
+                if (searchQuery.length < 3) {
+                    setError(
+                        "Search term must be at least 3 characters long for Elasticsearch"
+                    );
+                    setLoading(false);
+                    return;
+                }
+
+                // Build Elasticsearch query
+                // Use plain search term - we'll filter for exact matches client-side
+                // The Elasticsearch API doesn't reliably support phrase queries in simple text format
+                const esQuery = searchQuery;
+
+                const searchUrl = NDA_SEARCH_FULL("nda", "dataelement", {
+                    size: 1000,
+                    highlight: true,
+                    ddsize: 100, // API limit: max 100 for ddsize
+                });
+
+                const partialResponse = await fetch(searchUrl, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "text/plain",
+                    },
+                    body: esQuery,
+                });
+
+                if (!partialResponse.ok) {
+                    const statusText =
+                        partialResponse.statusText || "Unknown error";
+                    const status = partialResponse.status;
+
+                    // If we get a 400 error, try to get more details from the response
+                    if (status === 400) {
+                        let errorMessage = "Bad Request";
+                        try {
+                            // Clone the response so we can read it without consuming the original
+                            const clonedResponse = partialResponse.clone();
+                            const errorText = await clonedResponse.text();
+                            if (errorText) {
+                                try {
+                                    const errorData = JSON.parse(errorText);
+                                    errorMessage =
+                                        errorData.message ||
+                                        errorData.error ||
+                                        errorText;
+                                } catch {
+                                    errorMessage = errorText;
+                                }
+                            }
+                        } catch (e) {
+                            // If we can't read the error, use the status text
+                            errorMessage = statusText;
                         }
 
-                        const response = await fetch(
-                            `https://nda.nih.gov/api/datadictionary/dataelement/${result.name}`
+                        // For very short queries, Elasticsearch might have issues
+                        if (searchQuery.length < 3) {
+                            setError(
+                                `Search term "${searchQuery}" is too short. Elasticsearch requires at least 3 characters.`
+                            );
+                            setLoading(false);
+                            return;
+                        }
+
+                        setError(
+                            `Search failed (400): ${errorMessage}. The query "${searchQuery}" may not be supported by the Elasticsearch API. Try a different search term or check the query syntax.`
+                        );
+                        setLoading(false);
+                        return;
+                    }
+
+                    if (status === 500) {
+                        setError(
+                            `The search query "${term}" may be too broad or complex for the NDA API. Try using more specific search terms.`
+                        );
+                    } else if (status === 429) {
+                        setError(
+                            "Too many requests. Please wait a moment and try again."
+                        );
+                    } else if (status === 408 || status === 504) {
+                        setError(
+                            "Search request timed out. Try using more specific search terms."
+                        );
+                    } else {
+                        setError(
+                            `Search failed (${status}: ${statusText}). Try using different search terms or check your connection.`
+                        );
+                    }
+                    setLoading(false);
+                    return;
+                }
+
+                const searchResults = await partialResponse.json();
+
+                // If Elasticsearch returns no results, check database when filter is disabled
+                if (!searchResults?.datadict?.results?.length) {
+                    if (databaseFilterEnabled && databaseElements.size > 0) {
+                        setError(
+                            `No data elements found containing "${term}" in your database. Try disabling the database filter to search all NDA elements.`
+                        );
+                        setLoading(false);
+                        return;
+                    } else if (
+                        !databaseFilterEnabled &&
+                        databaseElements.size > 0
+                    ) {
+                        // Check database for matches even when filter is disabled
+                        const databaseMatches = searchDatabaseElements(
+                            searchQuery,
+                            false
                         );
 
-                        if (!response.ok) {
-                            console.warn(
-                                `Failed to fetch details for ${result.name}, status: ${response.status}`
+                        if (databaseMatches.length > 0) {
+                            // Found matches in database, show those
+                            setMatchingElements(databaseMatches);
+                            setIsPartialSearch(true);
+                            setTotalElementCount(databaseMatches.length);
+                            updateRecentSearches(term.trim());
+
+                            pushHistoryState("results", {
+                                results: databaseMatches,
+                                searchTerm: term.trim(),
+                            });
+
+                            setLoading(false);
+                            return;
+                        }
+                    }
+
+                    // No results from Elasticsearch or database
+                    setError(`No data elements found containing "${term}"`);
+                    setLoading(false);
+                    return;
+                }
+
+                setTotalElementCount(searchResults.datadict.results.length);
+
+                const elementDetails = await Promise.all(
+                    searchResults.datadict.results.map(async (result) => {
+                        try {
+                            // Validate result.name exists and is a string
+                            if (
+                                !result ||
+                                !result.name ||
+                                typeof result.name !== "string"
+                            ) {
+                                console.warn("Invalid result object:", result);
+                                return null;
+                            }
+
+                            const response = await fetch(
+                                `https://nda.nih.gov/api/datadictionary/dataelement/${result.name}`
+                            );
+
+                            if (!response.ok) {
+                                console.warn(
+                                    `Failed to fetch details for ${result.name}, status: ${response.status}`
+                                );
+                                return null;
+                            }
+
+                            const fullData = await response.json();
+
+                            return {
+                                name: result.name,
+                                type: fullData.type || result.type || "Text",
+                                description:
+                                    fullData.description ||
+                                    "No description available",
+                                notes: fullData.notes,
+                                valueRange: fullData.valueRange,
+                                dataStructures:
+                                    result.dataStructures?.map((ds) => ({
+                                        shortName: ds.shortName,
+                                        title: ds.title || "",
+                                        category: ds.category || "",
+                                    })) || [],
+                                total_data_structures:
+                                    result.dataStructures?.length || 0,
+                                _score: result._score,
+                                searchTerms: [searchQuery],
+                                matchType: result.name
+                                    .toLowerCase()
+                                    .includes(searchQuery.toLowerCase())
+                                    ? "name"
+                                    : "description",
+                                inDatabase: isElementInDatabase(result.name),
+                            };
+                        } catch (err) {
+                            console.error(
+                                `Error fetching details for element:`,
+                                err
                             );
                             return null;
                         }
-
-                        const fullData = await response.json();
-
-                        return {
-                            name: result.name,
-                            type: fullData.type || result.type || "Text",
-                            description:
-                                fullData.description ||
-                                "No description available",
-                            notes: fullData.notes,
-                            valueRange: fullData.valueRange,
-                            dataStructures:
-                                result.dataStructures?.map((ds) => ({
-                                    shortName: ds.shortName,
-                                    title: ds.title || "",
-                                    category: ds.category || "",
-                                })) || [],
-                            total_data_structures:
-                                result.dataStructures?.length || 0,
-                            _score: result._score,
-                            searchTerms: [searchQuery],
-                            matchType: result.name
-                                .toLowerCase()
-                                .includes(searchQuery.toLowerCase())
-                                ? "name"
-                                : "description",
-                            inDatabase: isElementInDatabase(result.name),
-                        };
-                    } catch (err) {
-                        console.error(
-                            `Error fetching details for element:`,
-                            err
-                        );
-                        return null;
-                    }
-                })
-            );
-
-            let validElements = elementDetails.filter(Boolean);
-
-            // When database filter is disabled, also check local database for matches
-            // and merge them with Elasticsearch results (to ensure we show all available elements)
-            if (!databaseFilterEnabled && databaseElements.size > 0) {
-                const databaseMatches = searchDatabaseElements(
-                    searchQuery,
-                    false
+                    })
                 );
 
-                // Merge database matches with Elasticsearch results
-                // Create a map of existing elements by name to avoid duplicates
-                const existingElementsMap = new Map();
-                validElements.forEach((el) => {
-                    existingElementsMap.set(el.name.toLowerCase(), el);
-                });
+                let validElements = elementDetails.filter(Boolean);
 
-                // Add database matches that aren't already in Elasticsearch results
-                databaseMatches.forEach((dbMatch) => {
-                    const key = dbMatch.name.toLowerCase();
-                    if (!existingElementsMap.has(key)) {
-                        // This element is in database but not in Elasticsearch results
-                        existingElementsMap.set(key, dbMatch);
-                        validElements.push(dbMatch);
-                    } else {
-                        // Element exists in both - ensure inDatabase flag is set
-                        const existing = existingElementsMap.get(key);
-                        if (existing) {
-                            existing.inDatabase = true;
+                // When database filter is disabled, also check local database for matches
+                // and merge them with Elasticsearch results (to ensure we show all available elements)
+                if (!databaseFilterEnabled && databaseElements.size > 0) {
+                    const databaseMatches = searchDatabaseElements(
+                        searchQuery,
+                        false
+                    );
+
+                    // Merge database matches with Elasticsearch results
+                    // Create a map of existing elements by name to avoid duplicates
+                    const existingElementsMap = new Map();
+                    validElements.forEach((el) => {
+                        existingElementsMap.set(el.name.toLowerCase(), el);
+                    });
+
+                    // Add database matches that aren't already in Elasticsearch results
+                    databaseMatches.forEach((dbMatch) => {
+                        const key = dbMatch.name.toLowerCase();
+                        if (!existingElementsMap.has(key)) {
+                            // This element is in database but not in Elasticsearch results
+                            existingElementsMap.set(key, dbMatch);
+                            validElements.push(dbMatch);
+                        } else {
+                            // Element exists in both - ensure inDatabase flag is set
+                            const existing = existingElementsMap.get(key);
+                            if (existing) {
+                                existing.inDatabase = true;
+                            }
                         }
-                    }
+                    });
+                }
+
+                if (databaseFilterEnabled && databaseElements.size > 0) {
+                    validElements = validElements.filter(
+                        (element) => element.inDatabase
+                    );
+                }
+
+                // Sort by API's _score, but prioritize exact matches
+                validElements = validElements.sort((a, b) => {
+                    const aExact =
+                        a.name.toLowerCase() === searchQuery.toLowerCase();
+                    const bExact =
+                        b.name.toLowerCase() === searchQuery.toLowerCase();
+
+                    // Exact matches first
+                    if (aExact && !bExact) return -1;
+                    if (!aExact && bExact) return 1;
+
+                    // Then by score
+                    return (b._score || 0) - (a._score || 0);
                 });
+
+                setMatchingElements(validElements);
+                setIsPartialSearch(true);
+                updateRecentSearches(term.trim());
+
+                // Push to browser history
+                pushHistoryState("results", {
+                    results: validElements,
+                    searchTerm: term.trim(),
+                });
+            } catch (err) {
+                console.error("Search error:", err);
+
+                if (err.name === "TypeError" && err.message.includes("fetch")) {
+                    setError(
+                        "Network connection error. Please check your internet connection and try again."
+                    );
+                } else if (err.message.includes("JSON")) {
+                    setError(
+                        "Received invalid response from search API. Try a different search term or try again later."
+                    );
+                } else if (err.message.includes("timeout")) {
+                    setError(
+                        "Search request timed out. Try using more specific search terms."
+                    );
+                } else {
+                    setError(`Search error: ${err.message}`);
+                }
+            } finally {
+                setLoading(false);
             }
-
-            if (databaseFilterEnabled && databaseElements.size > 0) {
-                validElements = validElements.filter(
-                    (element) => element.inDatabase
-                );
-            }
-
-            // Sort by API's _score, but prioritize exact matches
-            validElements = validElements.sort((a, b) => {
-                const aExact =
-                    a.name.toLowerCase() === searchQuery.toLowerCase();
-                const bExact =
-                    b.name.toLowerCase() === searchQuery.toLowerCase();
-
-                // Exact matches first
-                if (aExact && !bExact) return -1;
-                if (!aExact && bExact) return 1;
-
-                // Then by score
-                return (b._score || 0) - (a._score || 0);
-            });
-
-            setMatchingElements(validElements);
-            setIsPartialSearch(true);
-            updateRecentSearches(term.trim());
-
-            // Push to browser history
-            pushHistoryState("results", {
-                results: validElements,
-                searchTerm: term.trim(),
-            });
-        } catch (err) {
-            console.error("Search error:", err);
-
-            if (err.name === "TypeError" && err.message.includes("fetch")) {
-                setError(
-                    "Network connection error. Please check your internet connection and try again."
-                );
-            } else if (err.message.includes("JSON")) {
-                setError(
-                    "Received invalid response from search API. Try a different search term or try again later."
-                );
-            } else if (err.message.includes("timeout")) {
-                setError(
-                    "Search request timed out. Try using more specific search terms."
-                );
-            } else {
-                setError(`Search error: ${err.message}`);
-            }
-        } finally {
-            setLoading(false);
-        }
-    }, [databaseFilterEnabled, databaseElements, searchDatabaseElements, updateRecentSearches, pushHistoryState, isElementInDatabase, searchDatabaseElementsWithTerm]);
+        },
+        [
+            databaseFilterEnabled,
+            databaseElements,
+            searchDatabaseElements,
+            updateRecentSearches,
+            pushHistoryState,
+            isElementInDatabase,
+            searchDatabaseElementsWithTerm,
+            dataStructuresMap,
+            getStructuresContainingElement,
+            tryDirectElementFetch,
+        ]
+    );
 
     // Handle initial search term from parent
     useEffect(() => {
@@ -928,7 +1137,23 @@ const DataElementSearch = ({
         setMatchingElements([]);
         setIsPartialSearch(false);
         setTotalElementCount(0);
+        // Push to browser history to clear state
+        pushHistoryState("search", {});
     };
+
+    // Clear results when search term is cleared or becomes empty
+    useEffect(() => {
+        if (!searchTerm.trim()) {
+            // Only clear if search term is empty and we have results displayed
+            if (element || matchingElements.length > 0 || error) {
+                setElement(null);
+                setMatchingElements([]);
+                setIsPartialSearch(false);
+                setError(null);
+                setTotalElementCount(0);
+            }
+        }
+    }, [searchTerm]);
 
     const handleRecentSearch = async (term) => {
         setSearchTerm(term);
@@ -1145,28 +1370,52 @@ const DataElementSearch = ({
                                     setIsPartialSearch(false);
 
                                     // If database filter is enabled, use database data directly (skip NDA API)
-                                    if (databaseFilterEnabled && match.inDatabase) {
+                                    if (
+                                        databaseFilterEnabled &&
+                                        match.inDatabase
+                                    ) {
                                         // Find which database structures contain this element
-                                        const elementName = match.name?.toLowerCase();
+                                        const elementName =
+                                            match.name?.toLowerCase();
                                         const structuresContainingElement = [];
-                                        
-                                        if (elementName && Object.keys(dataStructuresMap).length > 0) {
-                                            Object.values(dataStructuresMap).forEach((dbStructure) => {
-                                                if (dbStructure.dataElements && Array.isArray(dbStructure.dataElements)) {
-                                                    const hasElement = dbStructure.dataElements.some(
-                                                        (el) => el.name?.toLowerCase() === elementName
-                                                    );
-                                                    if (hasElement && dbStructure.shortName) {
-                                                        structuresContainingElement.push(dbStructure.shortName);
+
+                                        if (
+                                            elementName &&
+                                            Object.keys(dataStructuresMap)
+                                                .length > 0
+                                        ) {
+                                            Object.values(
+                                                dataStructuresMap
+                                            ).forEach((dbStructure) => {
+                                                if (
+                                                    dbStructure.dataElements &&
+                                                    Array.isArray(
+                                                        dbStructure.dataElements
+                                                    )
+                                                ) {
+                                                    const hasElement =
+                                                        dbStructure.dataElements.some(
+                                                            (el) =>
+                                                                el.name?.toLowerCase() ===
+                                                                elementName
+                                                        );
+                                                    if (
+                                                        hasElement &&
+                                                        dbStructure.shortName
+                                                    ) {
+                                                        structuresContainingElement.push(
+                                                            dbStructure.shortName
+                                                        );
                                                     }
                                                 }
                                             });
                                         }
-                                        
+
                                         // Use match data and add structures from database
                                         const elementData = {
                                             ...match,
-                                            dataStructures: structuresContainingElement,
+                                            dataStructures:
+                                                structuresContainingElement,
                                             loading: false,
                                         };
                                         setElement(elementData);
@@ -1231,55 +1480,123 @@ const DataElementSearch = ({
                                                     <div className="relative group">
                                                         <Database className="w-4 h-4 text-blue-500 cursor-help" />
                                                         <div className="absolute bottom-full left-0 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-10">
-                                                            This element exists in
-                                                            the IMPACT-MH database
+                                                            This element exists
+                                                            in the IMPACT-MH
+                                                            database
                                                         </div>
                                                     </div>
                                                     {(() => {
                                                         // Get projects from all database structures that contain this element
-                                                        const allProjects = new Set();
-                                                        const elementName = match.name?.toLowerCase();
-                                                        
-                                                        if (elementName && Object.keys(dataStructuresMap).length > 0) {
+                                                        const allProjects =
+                                                            new Set();
+                                                        const elementName =
+                                                            match.name?.toLowerCase();
+
+                                                        if (
+                                                            elementName &&
+                                                            Object.keys(
+                                                                dataStructuresMap
+                                                            ).length > 0
+                                                        ) {
                                                             // Find all database structures that contain this element
-                                                            Object.values(dataStructuresMap).forEach((dbStructure) => {
-                                                                if (dbStructure.dataElements && Array.isArray(dbStructure.dataElements)) {
-                                                                    const hasElement = dbStructure.dataElements.some(
-                                                                        (el) => el.name?.toLowerCase() === elementName
-                                                                    );
-                                                                    if (hasElement && dbStructure.submittedByProjects) {
-                                                                        dbStructure.submittedByProjects.forEach((project) => {
-                                                                            allProjects.add(project);
-                                                                        });
+                                                            Object.values(
+                                                                dataStructuresMap
+                                                            ).forEach(
+                                                                (
+                                                                    dbStructure
+                                                                ) => {
+                                                                    if (
+                                                                        dbStructure.dataElements &&
+                                                                        Array.isArray(
+                                                                            dbStructure.dataElements
+                                                                        )
+                                                                    ) {
+                                                                        const hasElement =
+                                                                            dbStructure.dataElements.some(
+                                                                                (
+                                                                                    el
+                                                                                ) =>
+                                                                                    el.name?.toLowerCase() ===
+                                                                                    elementName
+                                                                            );
+                                                                        if (
+                                                                            hasElement &&
+                                                                            dbStructure.submittedByProjects
+                                                                        ) {
+                                                                            dbStructure.submittedByProjects.forEach(
+                                                                                (
+                                                                                    project
+                                                                                ) => {
+                                                                                    allProjects.add(
+                                                                                        project
+                                                                                    );
+                                                                                }
+                                                                            );
+                                                                        }
                                                                     }
                                                                 }
-                                                            });
+                                                            );
                                                         }
-                                                        
+
                                                         // Also check NDA structures if available
-                                                        if (match.dataStructures && match.dataStructures.length > 0) {
-                                                            match.dataStructures.forEach((structure) => {
-                                                                const dbStructure = dataStructuresMap[structure.shortName] || dataStructuresMap[structure.shortName?.toLowerCase()];
-                                                                if (dbStructure?.submittedByProjects) {
-                                                                    dbStructure.submittedByProjects.forEach((project) => {
-                                                                        allProjects.add(project);
-                                                                    });
+                                                        if (
+                                                            match.dataStructures &&
+                                                            match.dataStructures
+                                                                .length > 0
+                                                        ) {
+                                                            match.dataStructures.forEach(
+                                                                (structure) => {
+                                                                    const dbStructure =
+                                                                        dataStructuresMap[
+                                                                            structure
+                                                                                .shortName
+                                                                        ] ||
+                                                                        dataStructuresMap[
+                                                                            structure.shortName?.toLowerCase()
+                                                                        ];
+                                                                    if (
+                                                                        dbStructure?.submittedByProjects
+                                                                    ) {
+                                                                        dbStructure.submittedByProjects.forEach(
+                                                                            (
+                                                                                project
+                                                                            ) => {
+                                                                                allProjects.add(
+                                                                                    project
+                                                                                );
+                                                                            }
+                                                                        );
+                                                                    }
                                                                 }
-                                                            });
+                                                            );
                                                         }
-                                                        
-                                                        const projects = Array.from(allProjects);
-                                                        if (projects.length > 0) {
+
+                                                        const projects =
+                                                            Array.from(
+                                                                allProjects
+                                                            );
+                                                        if (
+                                                            projects.length > 0
+                                                        ) {
                                                             return (
                                                                 <div className="ml-2 flex flex-wrap gap-1">
-                                                                    {projects.map((project, idx) => (
-                                                                        <span
-                                                                            key={idx}
-                                                                            className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded"
-                                                                        >
-                                                                            {project}
-                                                                        </span>
-                                                                    ))}
+                                                                    {projects.map(
+                                                                        (
+                                                                            project,
+                                                                            idx
+                                                                        ) => (
+                                                                            <span
+                                                                                key={
+                                                                                    idx
+                                                                                }
+                                                                                className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded"
+                                                                            >
+                                                                                {
+                                                                                    project
+                                                                                }
+                                                                            </span>
+                                                                        )
+                                                                    )}
                                                                 </div>
                                                             );
                                                         }
@@ -1359,8 +1676,8 @@ const DataElementSearch = ({
                             </h4>
                             <p className="text-blue-700 mt-1">
                                 Found {totalElementCount} elements in NDA
-                                containing &quot;{searchTerm}&quot;, but none are
-                                available in your database.
+                                containing &quot;{searchTerm}&quot;, but none
+                                are available in your database.
                             </p>
                             <button
                                 onClick={(e) => {
@@ -1482,47 +1799,71 @@ const DataElementSearch = ({
                                         Loading data structures...
                                     </span>
                                 </div>
-                            ) : (() => {
-                                // Filter structures based on database filter
-                                let structuresToShow = element.dataStructures || [];
-                                if (databaseFilterEnabled && structuresToShow.length > 0) {
-                                    structuresToShow = structuresToShow.filter((structure) => {
-                                        const structureName = typeof structure === 'string' ? structure : structure.shortName;
-                                        return dataStructuresMap[structureName] || dataStructuresMap[structureName?.toLowerCase()];
-                                    });
-                                }
-                                
-                                return structuresToShow.length > 0 ? (
-                                    <div className="bg-gray-50 p-3 rounded max-h-64 overflow-y-auto">
-                                        <ul className="space-y-1">
-                                            {structuresToShow.map(
-                                                (structure, index) => {
-                                                    const structureName = typeof structure === 'string' ? structure : structure.shortName;
+                            ) : (
+                                (() => {
+                                    // Filter structures based on database filter
+                                    let structuresToShow =
+                                        element.dataStructures || [];
+                                    if (
+                                        databaseFilterEnabled &&
+                                        structuresToShow.length > 0
+                                    ) {
+                                        structuresToShow =
+                                            structuresToShow.filter(
+                                                (structure) => {
+                                                    const structureName =
+                                                        typeof structure ===
+                                                        "string"
+                                                            ? structure
+                                                            : structure.shortName;
                                                     return (
-                                                        <li
-                                                            key={index}
-                                                            className="font-mono text-sm hover:bg-blue-50 p-1 rounded cursor-pointer text-blue-600 hover:text-blue-800 transition-colors"
-                                                            onClick={() =>
-                                                                onElementDetailStructureSelect(
-                                                                    structureName
-                                                                )
-                                                            }
-                                                        >
-                                                            {structureName}
-                                                        </li>
+                                                        dataStructuresMap[
+                                                            structureName
+                                                        ] ||
+                                                        dataStructuresMap[
+                                                            structureName?.toLowerCase()
+                                                        ]
                                                     );
                                                 }
-                                            )}
-                                        </ul>
-                                    </div>
-                                ) : (
-                                    <p className="text-gray-500 italic">
-                                        {databaseFilterEnabled 
-                                            ? "Not found in any database structures"
-                                            : "Not found in any data structures"}
-                                    </p>
-                                );
-                            })()}
+                                            );
+                                    }
+
+                                    return structuresToShow.length > 0 ? (
+                                        <div className="bg-gray-50 p-3 rounded max-h-64 overflow-y-auto">
+                                            <ul className="space-y-1">
+                                                {structuresToShow.map(
+                                                    (structure, index) => {
+                                                        const structureName =
+                                                            typeof structure ===
+                                                            "string"
+                                                                ? structure
+                                                                : structure.shortName;
+                                                        return (
+                                                            <li
+                                                                key={index}
+                                                                className="font-mono text-sm hover:bg-blue-50 p-1 rounded cursor-pointer text-blue-600 hover:text-blue-800 transition-colors"
+                                                                onClick={() =>
+                                                                    onElementDetailStructureSelect(
+                                                                        structureName
+                                                                    )
+                                                                }
+                                                            >
+                                                                {structureName}
+                                                            </li>
+                                                        );
+                                                    }
+                                                )}
+                                            </ul>
+                                        </div>
+                                    ) : (
+                                        <p className="text-gray-500 italic">
+                                            {databaseFilterEnabled
+                                                ? "Not found in any database structures"
+                                                : "Not found in any data structures"}
+                                        </p>
+                                    );
+                                })()
+                            )}
                         </div>
                     </div>
                 </div>
