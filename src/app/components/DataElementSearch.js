@@ -18,6 +18,7 @@ const DataElementSearch = ({
     databaseName,
     databaseConnectionError,
     initialSearchTerm,
+    onClearInitialSearchTerm,
 }) => {
     const [searchTerm, setSearchTerm] = useState("");
     const [loading, setLoading] = useState(false);
@@ -28,6 +29,8 @@ const DataElementSearch = ({
     const [recentSearches, setRecentSearches] = useState([]);
     const [totalElementCount, setTotalElementCount] = useState(0);
     const [dataStructuresMap, setDataStructuresMap] = useState({});
+    const [hasProcessedInitialSearch, setHasProcessedInitialSearch] =
+        useState(false);
 
     useEffect(() => {
         const saved = localStorage.getItem("elementSearchHistory");
@@ -1115,14 +1118,27 @@ const DataElementSearch = ({
         ]
     );
 
-    // Handle initial search term from parent
+    // Handle initial search term from parent (only once when it changes)
     useEffect(() => {
-        if (initialSearchTerm && initialSearchTerm !== searchTerm) {
+        if (
+            initialSearchTerm &&
+            initialSearchTerm !== searchTerm &&
+            !hasProcessedInitialSearch
+        ) {
             setSearchTerm(initialSearchTerm);
+            setHasProcessedInitialSearch(true);
             // Trigger search automatically
             handleSearchWithTerm(initialSearchTerm);
+        } else if (!initialSearchTerm && hasProcessedInitialSearch) {
+            // Reset the flag when initialSearchTerm is cleared
+            setHasProcessedInitialSearch(false);
         }
-    }, [initialSearchTerm, searchTerm, handleSearchWithTerm]);
+    }, [
+        initialSearchTerm,
+        searchTerm,
+        handleSearchWithTerm,
+        hasProcessedInitialSearch,
+    ]);
 
     const handleKeyDown = (e) => {
         if (e.key === "Enter") {
@@ -1137,14 +1153,20 @@ const DataElementSearch = ({
         setMatchingElements([]);
         setIsPartialSearch(false);
         setTotalElementCount(0);
+        setHasProcessedInitialSearch(false); // Reset flag so initialSearchTerm can be used again if set
+        // Clear the initial search term in parent if callback provided
+        if (onClearInitialSearchTerm) {
+            onClearInitialSearchTerm();
+        }
         // Push to browser history to clear state
         pushHistoryState("search", {});
     };
 
     // Clear results when search term is cleared or becomes empty
     useEffect(() => {
-        if (!searchTerm.trim()) {
-            // Only clear if search term is empty and we have results displayed
+        if (!searchTerm.trim() && !initialSearchTerm) {
+            // Only clear if search term is empty AND no initial search term is pending
+            // This prevents clearing when initialSearchTerm is about to trigger a search
             if (element || matchingElements.length > 0 || error) {
                 setElement(null);
                 setMatchingElements([]);
@@ -1153,7 +1175,7 @@ const DataElementSearch = ({
                 setTotalElementCount(0);
             }
         }
-    }, [searchTerm]);
+    }, [searchTerm, initialSearchTerm]);
 
     const handleRecentSearch = async (term) => {
         setSearchTerm(term);

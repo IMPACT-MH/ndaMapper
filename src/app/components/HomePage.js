@@ -9,10 +9,27 @@ import DataCategorySearch from "./DataCategorySearch";
 import { IMPACT_API_BASE, DATA_STRUCTURES } from "@/const";
 
 const Tabs = {
-    STRUCTURE_SEARCH: "structure-search",
-    FIELD_SEARCH: "field-search",
-    ELEMENT_SEARCH: "element-search",
-    CATEGORY_SEARCH: "category-search",
+    DICTIONARY: "data-dictionary",
+    STRUCTURE: "data-structures",
+    ELEMENT: "data-elements",
+    REVERSE_LOOKUP: "reverse-lookup",
+};
+
+// Backwards compatibility for previously stored tab values
+const normalizeTab = (tab) => {
+    if (!tab) return null;
+    switch (tab) {
+        case "category-search":
+            return Tabs.DICTIONARY;
+        case "structure-search":
+            return Tabs.STRUCTURE;
+        case "element-search":
+            return Tabs.ELEMENT;
+        case "field-search":
+            return Tabs.REVERSE_LOOKUP;
+        default:
+            return Object.values(Tabs).includes(tab) ? tab : null;
+    }
 };
 
 const HomePage = () => {
@@ -28,7 +45,7 @@ const HomePage = () => {
     const [isSearchFocused, setIsSearchFocused] = useState(false);
 
     const [isLoading, setIsLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState(Tabs.STRUCTURE_SEARCH);
+    const [activeTab, setActiveTab] = useState(Tabs.DICTIONARY);
 
     // Database filter state
     const [databaseFilterEnabled, setDatabaseFilterEnabled] = useState(true);
@@ -63,16 +80,17 @@ const HomePage = () => {
         const stateTab = historyState?.tab;
 
         // Priority: history state > URL hash > localStorage > default
+        const storedTab = normalizeTab(localStorage.getItem("activeTab"));
         const initialTab =
-            stateTab ||
-            urlTab ||
-            localStorage.getItem("activeTab") ||
-            Tabs.STRUCTURE_SEARCH;
+            normalizeTab(stateTab) ||
+            normalizeTab(urlTab) ||
+            storedTab ||
+            Tabs.DICTIONARY;
 
-        if (initialTab && Object.values(Tabs).includes(initialTab)) {
+        if (initialTab && normalizeTab(initialTab)) {
             setActiveTab(initialTab);
             // Update URL hash if not already set
-            if (!urlTab && initialTab !== Tabs.STRUCTURE_SEARCH) {
+            if (!urlTab && initialTab !== Tabs.DICTIONARY) {
                 window.history.replaceState(
                     { tab: initialTab },
                     "",
@@ -97,8 +115,8 @@ const HomePage = () => {
                 if (urlTab) {
                     setActiveTab(urlTab);
                 } else {
-                    // Default to structure search
-                    setActiveTab(Tabs.STRUCTURE_SEARCH);
+                    // Default to data dictionary search
+                    setActiveTab(Tabs.DICTIONARY);
                 }
             }
         };
@@ -114,8 +132,7 @@ const HomePage = () => {
         localStorage.setItem("activeTab", activeTab);
 
         // Update URL hash
-        const newHash =
-            activeTab === Tabs.STRUCTURE_SEARCH ? "" : `#${activeTab}`;
+        const newHash = activeTab === Tabs.DICTIONARY ? "" : `#${activeTab}`;
         const newUrl = window.location.pathname + (newHash || "");
 
         // Push to history (but don't push on initial load)
@@ -240,7 +257,7 @@ const HomePage = () => {
     });
 
     const handleElementStructureSelect = async (structureName) => {
-        setActiveTab(Tabs.STRUCTURE_SEARCH);
+        setActiveTab(Tabs.STRUCTURE);
         setSearchTerm(structureName);
 
         try {
@@ -262,7 +279,7 @@ const HomePage = () => {
     };
 
     const handleElementDetailStructureSelect = async (structureName) => {
-        setActiveTab(Tabs.STRUCTURE_SEARCH);
+        setActiveTab(Tabs.STRUCTURE);
         // Don't update search term when coming from element detail view
 
         try {
@@ -284,7 +301,7 @@ const HomePage = () => {
     };
 
     const handleCategoryStructureSelect = async (structureName) => {
-        setActiveTab(Tabs.STRUCTURE_SEARCH);
+        setActiveTab(Tabs.STRUCTURE);
         setSearchTerm(structureName);
 
         try {
@@ -309,7 +326,7 @@ const HomePage = () => {
         setSearchTerm(shortName);
         setCsvFile(file);
         setCsvHeaders(headers);
-        setActiveTab(Tabs.CATEGORY_SEARCH);
+        setActiveTab(Tabs.DICTIONARY);
     };
 
     const handleClearSearch = () => {
@@ -1077,10 +1094,10 @@ const HomePage = () => {
                             <div className="flex space-x-8">
                                 <button
                                     onClick={() =>
-                                        setActiveTab(Tabs.CATEGORY_SEARCH)
+                                        setActiveTab(Tabs.DICTIONARY)
                                     }
                                     className={`whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm ${
-                                        activeTab === Tabs.CATEGORY_SEARCH
+                                        activeTab === Tabs.DICTIONARY
                                             ? "border-blue-500 text-blue-600"
                                             : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                                     }`}
@@ -1091,11 +1108,9 @@ const HomePage = () => {
                                     →
                                 </div> */}
                                 <button
-                                    onClick={() =>
-                                        setActiveTab(Tabs.STRUCTURE_SEARCH)
-                                    }
+                                    onClick={() => setActiveTab(Tabs.STRUCTURE)}
                                     className={`whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm ${
-                                        activeTab === Tabs.STRUCTURE_SEARCH
+                                        activeTab === Tabs.STRUCTURE
                                             ? "border-blue-500 text-blue-600"
                                             : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                                     }`}
@@ -1106,11 +1121,9 @@ const HomePage = () => {
                                     →
                                 </div> */}
                                 <button
-                                    onClick={() =>
-                                        setActiveTab(Tabs.ELEMENT_SEARCH)
-                                    }
+                                    onClick={() => setActiveTab(Tabs.ELEMENT)}
                                     className={`whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm ${
-                                        activeTab === Tabs.ELEMENT_SEARCH
+                                        activeTab === Tabs.ELEMENT
                                             ? "border-blue-500 text-blue-600"
                                             : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                                     }`}
@@ -1122,10 +1135,10 @@ const HomePage = () => {
                                 </div>
                                 <button
                                     onClick={() =>
-                                        setActiveTab(Tabs.FIELD_SEARCH)
+                                        setActiveTab(Tabs.REVERSE_LOOKUP)
                                     }
                                     className={`whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm ${
-                                        activeTab === Tabs.FIELD_SEARCH
+                                        activeTab === Tabs.REVERSE_LOOKUP
                                             ? "border-green-500 text-green-600"
                                             : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                                     }`}
@@ -1152,11 +1165,7 @@ const HomePage = () => {
             </div>
 
             {/* Tab content */}
-            <div
-                className={
-                    activeTab === Tabs.STRUCTURE_SEARCH ? "block" : "hidden"
-                }
-            >
+            <div className={activeTab === Tabs.STRUCTURE ? "block" : "hidden"}>
                 <DataStructureSearch
                     searchTerm={searchTerm}
                     setSearchTerm={setSearchTerm}
@@ -1194,16 +1203,12 @@ const HomePage = () => {
                     databaseConnectionError={databaseConnectionError}
                     onSwitchToElementSearch={(elementName) => {
                         setElementSearchTerm(elementName);
-                        setActiveTab(Tabs.ELEMENT_SEARCH);
+                        setActiveTab(Tabs.ELEMENT);
                     }}
                 />
             </div>
 
-            <div
-                className={
-                    activeTab === Tabs.CATEGORY_SEARCH ? "block" : "hidden"
-                }
-            >
+            <div className={activeTab === Tabs.DICTIONARY ? "block" : "hidden"}>
                 <DataCategorySearch
                     onStructureSelect={handleCategoryStructureSelect}
                     // Pass database filter props
@@ -1217,7 +1222,9 @@ const HomePage = () => {
             </div>
 
             <div
-                className={activeTab === Tabs.FIELD_SEARCH ? "block" : "hidden"}
+                className={
+                    activeTab === Tabs.REVERSE_LOOKUP ? "block" : "hidden"
+                }
             >
                 <div className="mb-8">
                     <h1 className="text-3xl font-bold mb-4">
@@ -1255,16 +1262,12 @@ const HomePage = () => {
                             );
                         }
 
-                        setActiveTab(Tabs.STRUCTURE_SEARCH);
+                        setActiveTab(Tabs.STRUCTURE);
                     }}
                 />
             </div>
 
-            <div
-                className={
-                    activeTab === Tabs.ELEMENT_SEARCH ? "block" : "hidden"
-                }
-            >
+            <div className={activeTab === Tabs.ELEMENT ? "block" : "hidden"}>
                 <DataElementSearch
                     onStructureSelect={handleElementStructureSelect}
                     onElementDetailStructureSelect={
@@ -1280,6 +1283,7 @@ const HomePage = () => {
                     databaseName={databaseName}
                     databaseConnectionError={databaseConnectionError}
                     initialSearchTerm={elementSearchTerm}
+                    onClearInitialSearchTerm={() => setElementSearchTerm("")}
                 />
             </div>
         </div>

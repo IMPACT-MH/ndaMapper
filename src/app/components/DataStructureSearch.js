@@ -59,12 +59,17 @@ const DataStructureSearch = ({
         }
     }, [initialCsvFile]);
 
-    // Collapse details view when search term changes
+    // Manage expansion state based on structure selection and search changes
     useEffect(() => {
-        if (searchTerm && isExpanded) {
+        if (selectedStructure) {
+            // Always expand when a structure is selected
+            setIsExpanded(true);
+        } else {
+            // Only collapse when no structure is selected AND search term changes
+            // This prevents collapsing when a structure is being selected
             setIsExpanded(false);
         }
-    }, [searchTerm, isExpanded]);
+    }, [selectedStructure]);
 
     // Check if current filter is a custom tag
     useEffect(() => {
@@ -295,10 +300,8 @@ const DataStructureSearch = ({
     const showDetailsHeader = useScrollDirection(detailsRef);
 
     const handleCategoryClick = async (category) => {
-        if (isExpanded) {
-            setIsExpanded(false);
-        }
-
+        // Collapse when changing search filters
+        setIsExpanded(false);
         setSearchTerm(`category:${category}`);
 
         window.scrollTo({
@@ -308,10 +311,8 @@ const DataStructureSearch = ({
     };
 
     const handleDataTypeClick = async (dataType) => {
-        if (isExpanded) {
-            setIsExpanded(false);
-        }
-
+        // Collapse when changing search filters
+        setIsExpanded(false);
         setSearchTerm(`datatype:${dataType}`);
 
         window.scrollTo({
@@ -519,7 +520,9 @@ const DataStructureSearch = ({
                                                     handleStructureSelect(
                                                         structure
                                                     );
-                                                    setIsExpanded(false);
+                                                    // Immediate expansion for better UX
+                                                    // Effect will also ensure it stays expanded
+                                                    setIsExpanded(true);
                                                 }}
                                             >
                                                 <div className="flex justify-between items-start">
@@ -639,10 +642,12 @@ const DataStructureSearch = ({
                                     {/* Content Area */}
                                     <div
                                         className="bg-white p-4 rounded-lg shadow cursor-pointer"
-                                        onClick={() =>
-                                            selectedStructure &&
-                                            setIsExpanded(true)
-                                        }
+                                        onClick={() => {
+                                            // Ensure expansion when clicking on detail area
+                                            if (selectedStructure) {
+                                                setIsExpanded(true);
+                                            }
+                                        }}
                                     >
                                         <div className="bg-white rounded-lg shadow">
                                             {/* Details content */}
@@ -664,19 +669,39 @@ const DataStructureSearch = ({
                                                                 )}
                                                     </div>
                                                     {(() => {
-                                                        const dbStructure = dataStructuresMap[selectedStructure.shortName] || dataStructuresMap[selectedStructure.shortName?.toLowerCase()];
-                                                        const projects = dbStructure?.submittedByProjects || [];
-                                                        if (projects.length > 0) {
+                                                        const dbStructure =
+                                                            dataStructuresMap[
+                                                                selectedStructure
+                                                                    .shortName
+                                                            ] ||
+                                                            dataStructuresMap[
+                                                                selectedStructure.shortName?.toLowerCase()
+                                                            ];
+                                                        const projects =
+                                                            dbStructure?.submittedByProjects ||
+                                                            [];
+                                                        if (
+                                                            projects.length > 0
+                                                        ) {
                                                             return (
                                                                 <div className="mt-2 flex flex-wrap gap-2">
-                                                                    {projects.map((project, idx) => (
-                                                                        <span
-                                                                            key={idx}
-                                                                            className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded"
-                                                                        >
-                                                                            {project}
-                                                                        </span>
-                                                                    ))}
+                                                                    {projects.map(
+                                                                        (
+                                                                            project,
+                                                                            idx
+                                                                        ) => (
+                                                                            <span
+                                                                                key={
+                                                                                    idx
+                                                                                }
+                                                                                className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded"
+                                                                            >
+                                                                                {
+                                                                                    project
+                                                                                }
+                                                                            </span>
+                                                                        )
+                                                                    )}
                                                                 </div>
                                                             );
                                                         }
@@ -735,11 +760,14 @@ const DataStructureSearch = ({
                                                                 <h3 className="font-medium text-gray-600 mb-2">
                                                                     Status
                                                                 </h3>
-                                                                <span className={`px-3 py-1 rounded-full text-sm ${
-                                                                    selectedStructure.status === "Draft"
-                                                                        ? "bg-yellow-100 text-yellow-700"
-                                                                        : "bg-green-100 text-green-700"
-                                                                }`}>
+                                                                <span
+                                                                    className={`px-3 py-1 rounded-full text-sm ${
+                                                                        selectedStructure.status ===
+                                                                        "Draft"
+                                                                            ? "bg-yellow-100 text-yellow-700"
+                                                                            : "bg-green-100 text-green-700"
+                                                                    }`}
+                                                                >
                                                                     {
                                                                         selectedStructure.status
                                                                     }
@@ -1061,7 +1089,7 @@ const DataStructureSearch = ({
                                                                                                 index
                                                                                             }
                                                                                             className="hover:bg-gray-50 cursor-pointer"
-                                                                                            onDoubleClick={() =>
+                                                                                            onClick={() =>
                                                                                                 handleElementDoubleClick(
                                                                                                     element.name
                                                                                                 )
