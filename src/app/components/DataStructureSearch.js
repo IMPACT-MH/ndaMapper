@@ -323,8 +323,7 @@ const DataStructureSearch = ({
 
     const handleElementDoubleClick = (elementName) => {
         // Switch to element search tab and search for this element
-        setSearchTerm(elementName);
-        // You'll need to add a prop to handle tab switching
+        // Don't modify the structure search term - keep it independent
         if (typeof onSwitchToElementSearch === "function") {
             onSwitchToElementSearch(elementName);
         }

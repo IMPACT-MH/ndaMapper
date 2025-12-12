@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
 import { Search, X, AlertCircle, Info, Database } from "lucide-react";
 import { NDA_SEARCH_FULL } from "@/const";
@@ -19,6 +19,7 @@ const DataElementSearch = ({
     databaseConnectionError,
     initialSearchTerm,
     onClearInitialSearchTerm,
+    isVisible = true, // Add prop to track if component is visible
 }) => {
     const [searchTerm, setSearchTerm] = useState("");
     const [loading, setLoading] = useState(false);
@@ -31,20 +32,32 @@ const DataElementSearch = ({
     const [dataStructuresMap, setDataStructuresMap] = useState({});
     const [hasProcessedInitialSearch, setHasProcessedInitialSearch] =
         useState(false);
+    const [preferExactMatch, setPreferExactMatch] = useState(false);
+    const preferExactMatchRef = useRef(false);
+    const isInitialMount = useRef(true);
+    const [isMounted, setIsMounted] = useState(false);
 
     useEffect(() => {
-        const saved = localStorage.getItem("elementSearchHistory");
-        if (saved) {
-            setRecentSearches(JSON.parse(saved));
+        setIsMounted(true);
+    }, []);
+
+    useEffect(() => {
+        if (typeof window !== "undefined") {
+            const saved = localStorage.getItem("elementSearchHistory");
+            if (saved) {
+                setRecentSearches(JSON.parse(saved));
+            }
         }
     }, []);
 
     useEffect(() => {
-        localStorage.setItem(
-            "elementSearchHistory",
-            JSON.stringify(recentSearches)
-        );
-    }, [recentSearches]);
+        if (typeof window !== "undefined" && isMounted) {
+            localStorage.setItem(
+                "elementSearchHistory",
+                JSON.stringify(recentSearches)
+            );
+        }
+    }, [recentSearches, isMounted]);
 
     // Fetch database structures map for projects info
     useEffect(() => {
@@ -84,6 +97,8 @@ const DataElementSearch = ({
 
     // Browser history integration
     useEffect(() => {
+        if (typeof window === "undefined") return;
+        
         const handlePopState = (event) => {
             const state = event.state;
             if (state) {
@@ -108,6 +123,8 @@ const DataElementSearch = ({
 
     // Function to push state to browser history
     const pushHistoryState = useCallback((view, data) => {
+        if (typeof window === "undefined") return;
+        
         const state = { view, ...data };
         window.history.pushState(
             state,
@@ -129,18 +146,27 @@ const DataElementSearch = ({
         if (!text || !searchTerms?.length) return text;
 
         try {
-            const pattern = searchTerms
-                .map((term) => term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+            // Flatten search terms array and filter out empty strings
+            const terms = Array.isArray(searchTerms) 
+                ? searchTerms.filter(t => t && t.trim())
+                : [searchTerms].filter(t => t && t.trim());
+            
+            if (terms.length === 0) return text;
+
+            // Create a regex pattern that matches any of the search terms (case-insensitive)
+            const pattern = terms
+                .map((term) => term.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
                 .join("|");
             const regex = new RegExp(`(${pattern})`, "gi");
 
             const parts = text.split(regex);
             return parts.map((part, i) => {
-                const isMatch = searchTerms.some(
-                    (term) => part.toLowerCase() === term.toLowerCase()
+                // Check if this part matches any search term (case-insensitive)
+                const isMatch = terms.some(
+                    (term) => part.toLowerCase().includes(term.trim().toLowerCase())
                 );
                 return isMatch ? (
-                    <span key={i} className="bg-yellow-200 font-medium">
+                    <span key={i} className="bg-yellow-100 text-yellow-800 px-1.5 py-0.5 rounded text-sm font-medium inline-block">
                         {part}
                     </span>
                 ) : (
@@ -304,31 +330,33 @@ const DataElementSearch = ({
         try {
             // If database filter is enabled, only search within database elements (skip NDA API)
             if (effectiveFilterEnabled && databaseElements.size > 0) {
-                // First try exact match in database
-                const exactDatabaseMatch = searchDatabaseElements(
-                    searchTerm.trim(),
-                    true // exact match
-                );
+                // First try exact match in database (if preferExactMatch is enabled)
+                if (preferExactMatch) {
+                    const exactDatabaseMatch = searchDatabaseElements(
+                        searchTerm.trim(),
+                        true // exact match
+                    );
 
-                if (exactDatabaseMatch.length > 0) {
-                    // Found exact match in database, show it directly
-                    const match = exactDatabaseMatch[0];
-                    const structuresContainingElement =
-                        getStructuresContainingElement(match.name);
+                    if (exactDatabaseMatch.length > 0) {
+                        // Found exact match in database, show it directly
+                        const match = exactDatabaseMatch[0];
+                        const structuresContainingElement =
+                            getStructuresContainingElement(match.name);
 
-                    const elementData = {
-                        ...match,
-                        dataStructures: structuresContainingElement,
-                        loading: false,
-                    };
-                    setElement(elementData);
-                    setIsPartialSearch(false);
-                    updateRecentSearches(searchTerm.trim());
-                    pushHistoryState("element", {
-                        element: elementData,
-                    });
-                    setLoading(false);
-                    return;
+                        const elementData = {
+                            ...match,
+                            dataStructures: structuresContainingElement,
+                            loading: false,
+                        };
+                        setElement(elementData);
+                        setIsPartialSearch(false);
+                        updateRecentSearches(searchTerm.trim());
+                        pushHistoryState("element", {
+                            element: elementData,
+                        });
+                        setLoading(false);
+                        return;
+                    }
                 }
 
                 // Try partial matches in database
@@ -378,30 +406,33 @@ const DataElementSearch = ({
 
             // First, try to fetch the element directly by name (for exact element name searches)
             // This allows searching for elements even if the name is less than 3 characters
-            const directElement = await tryDirectElementFetch(searchQuery);
-            if (directElement) {
-                // Check if element is in database
-                const inDb = isElementInDatabase(directElement.name);
+            // Skip if user prefers phrase search
+            if (preferExactMatch) {
+                const directElement = await tryDirectElementFetch(searchQuery);
+                if (directElement) {
+                    // Check if element is in database
+                    const inDb = isElementInDatabase(directElement.name);
 
-                // Format the element data
-                const elementData = {
-                    ...directElement,
-                    inDatabase: inDb,
-                    searchTerms: [searchQuery],
-                    matchType: "exact",
-                };
+                    // Format the element data
+                    const elementData = {
+                        ...directElement,
+                        inDatabase: inDb,
+                        searchTerms: [searchQuery],
+                        matchType: "exact",
+                    };
 
-                setElement(elementData);
-                setIsPartialSearch(false);
-                updateRecentSearches(searchQuery);
+                    setElement(elementData);
+                    setIsPartialSearch(false);
+                    updateRecentSearches(searchQuery);
 
-                // Push to browser history
-                pushHistoryState("element", {
-                    element: elementData,
-                });
+                    // Push to browser history
+                    pushHistoryState("element", {
+                        element: elementData,
+                    });
 
-                setLoading(false);
-                return;
+                    setLoading(false);
+                    return;
+                }
             }
 
             // Add validation for very broad searches that might overwhelm the API
@@ -732,31 +763,33 @@ const DataElementSearch = ({
             try {
                 // If database filter is enabled, only search within database elements (skip NDA API)
                 if (databaseFilterEnabled && databaseElements.size > 0) {
-                    // First try exact match in database
-                    const exactDatabaseMatch = searchDatabaseElements(
-                        term.trim(),
-                        true // exact match
-                    );
+                    // First try exact match in database (if preferExactMatch is enabled)
+                    if (preferExactMatch) {
+                        const exactDatabaseMatch = searchDatabaseElements(
+                            term.trim(),
+                            true // exact match
+                        );
 
-                    if (exactDatabaseMatch.length > 0) {
-                        // Found exact match in database, show it directly
-                        const match = exactDatabaseMatch[0];
-                        const structuresContainingElement =
-                            getStructuresContainingElement(match.name);
+                        if (exactDatabaseMatch.length > 0) {
+                            // Found exact match in database, show it directly
+                            const match = exactDatabaseMatch[0];
+                            const structuresContainingElement =
+                                getStructuresContainingElement(match.name);
 
-                        const elementData = {
-                            ...match,
-                            dataStructures: structuresContainingElement,
-                            loading: false,
-                        };
-                        setElement(elementData);
-                        setIsPartialSearch(false);
-                        updateRecentSearches(term.trim());
-                        pushHistoryState("element", {
-                            element: elementData,
-                        });
-                        setLoading(false);
-                        return;
+                            const elementData = {
+                                ...match,
+                                dataStructures: structuresContainingElement,
+                                loading: false,
+                            };
+                            setElement(elementData);
+                            setIsPartialSearch(false);
+                            updateRecentSearches(term.trim());
+                            pushHistoryState("element", {
+                                element: elementData,
+                            });
+                            setLoading(false);
+                            return;
+                        }
                     }
 
                     // Try partial matches in database
@@ -805,30 +838,33 @@ const DataElementSearch = ({
 
                 // First, try to fetch the element directly by name (for exact element name searches)
                 // This allows searching for elements even if the name is less than 3 characters
-                const directElement = await tryDirectElementFetch(searchQuery);
-                if (directElement) {
-                    // Check if element is in database
-                    const inDb = isElementInDatabase(directElement.name);
+                // Skip if user prefers phrase search
+                if (preferExactMatch) {
+                    const directElement = await tryDirectElementFetch(searchQuery);
+                    if (directElement) {
+                        // Check if element is in database
+                        const inDb = isElementInDatabase(directElement.name);
 
-                    // Format the element data
-                    const elementData = {
-                        ...directElement,
-                        inDatabase: inDb,
-                        searchTerms: [searchQuery],
-                        matchType: "exact",
-                    };
+                        // Format the element data
+                        const elementData = {
+                            ...directElement,
+                            inDatabase: inDb,
+                            searchTerms: [searchQuery],
+                            matchType: "exact",
+                        };
 
-                    setElement(elementData);
-                    setIsPartialSearch(false);
-                    updateRecentSearches(searchQuery);
+                        setElement(elementData);
+                        setIsPartialSearch(false);
+                        updateRecentSearches(searchQuery);
 
-                    // Push to browser history
-                    pushHistoryState("element", {
-                        element: elementData,
-                    });
+                        // Push to browser history
+                        pushHistoryState("element", {
+                            element: elementData,
+                        });
 
-                    setLoading(false);
-                    return;
+                        setLoading(false);
+                        return;
+                    }
                 }
 
                 // Elasticsearch typically requires at least 3 characters for reliable results
@@ -1118,20 +1154,35 @@ const DataElementSearch = ({
                 setLoading(false);
             }
         },
-        [
-            databaseFilterEnabled,
-            databaseElements,
-            searchDatabaseElements,
-            updateRecentSearches,
-            pushHistoryState,
-            isElementInDatabase,
-            searchDatabaseElementsWithTerm,
-            dataStructuresMap,
-            getStructuresContainingElement,
-            tryDirectElementFetch,
-            getBoostedScore,
-        ]
-    );
+         [
+             databaseFilterEnabled,
+             databaseElements,
+             searchDatabaseElements,
+             updateRecentSearches,
+             pushHistoryState,
+             isElementInDatabase,
+             searchDatabaseElementsWithTerm,
+             dataStructuresMap,
+             getStructuresContainingElement,
+             tryDirectElementFetch,
+             getBoostedScore,
+             preferExactMatch,
+         ]
+     );
+
+    // Clear search when tab becomes hidden
+    useEffect(() => {
+        if (!isVisible) {
+            setSearchTerm("");
+            setElement(null);
+            setError(null);
+            setMatchingElements([]);
+            setIsPartialSearch(false);
+            setTotalElementCount(0);
+            setHasProcessedInitialSearch(false);
+            setPreferExactMatch(false);
+        }
+    }, [isVisible]);
 
     // Handle initial search term from parent (only once when it changes)
     useEffect(() => {
@@ -1142,11 +1193,15 @@ const DataElementSearch = ({
         ) {
             setSearchTerm(initialSearchTerm);
             setHasProcessedInitialSearch(true);
+            // Enable exact match when coming from data structure click
+            setPreferExactMatch(true);
             // Trigger search automatically
             handleSearchWithTerm(initialSearchTerm);
         } else if (!initialSearchTerm && hasProcessedInitialSearch) {
             // Reset the flag when initialSearchTerm is cleared
             setHasProcessedInitialSearch(false);
+            // Reset to default (phrase search) when cleared
+            setPreferExactMatch(false);
         }
     }, [
         initialSearchTerm,
@@ -1154,6 +1209,20 @@ const DataElementSearch = ({
         handleSearchWithTerm,
         hasProcessedInitialSearch,
     ]);
+
+    // Auto-search when preferExactMatch changes (if there's a search term and results)
+    useEffect(() => {
+        // Skip on initial mount
+        if (isInitialMount.current) {
+            isInitialMount.current = false;
+            return;
+        }
+        
+        // Only trigger if we have a search term and existing results
+        if (searchTerm.trim() && (element || matchingElements.length > 0 || isPartialSearch)) {
+            handleSearch();
+        }
+    }, [preferExactMatch]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const handleKeyDown = (e) => {
         if (e.key === "Enter") {
@@ -1292,6 +1361,28 @@ const DataElementSearch = ({
                     >
                         Search
                     </button>
+                </div>
+
+                {/* Search Mode Toggle */}
+                <div className="mb-3 flex items-center gap-2">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                            type="checkbox"
+                            checked={preferExactMatch}
+                            onChange={(e) => {
+                                setPreferExactMatch(e.target.checked);
+                            }}
+                            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                        />
+                        <span className="text-sm text-gray-700">
+                            Prefer exact match (direct element lookup)
+                        </span>
+                    </label>
+                    <span className="text-xs text-gray-500">
+                        {preferExactMatch
+                            ? "Searching for exact element names first"
+                            : "Searching for phrase matches in names/descriptions"}
+                    </span>
                 </div>
 
                 {recentSearches.length > 0 && (
@@ -1498,7 +1589,14 @@ const DataElementSearch = ({
                                 <div className="flex justify-between items-start">
                                     <div>
                                         <h3 className="font-mono text-blue-600 font-medium flex items-center gap-2">
-                                            {match.name}
+                                            {match.matchType !== "exact" && (match.searchTerms || searchTerm) ? (
+                                                highlightSearchTerm(
+                                                    match.name, 
+                                                    match.searchTerms || [searchTerm]
+                                                )
+                                            ) : (
+                                                match.name
+                                            )}
                                             <span className="text-xs bg-blue-100 px-2 py-1 rounded text-blue-800">
                                                 {match.type}
                                             </span>
@@ -1649,7 +1747,7 @@ const DataElementSearch = ({
                                     <p className="text-sm text-gray-700 mt-2">
                                         {highlightSearchTerm(
                                             match.description,
-                                            match.searchTerms
+                                            match.searchTerms || [searchTerm]
                                         )}
                                     </p>
                                 )}
@@ -1685,7 +1783,10 @@ const DataElementSearch = ({
                                         <span className="font-medium">
                                             Notes:{" "}
                                         </span>
-                                        {match.notes}
+                                        {highlightSearchTerm(
+                                            match.notes,
+                                            match.searchTerms || [searchTerm]
+                                        )}
                                     </div>
                                 )}
                             </div>

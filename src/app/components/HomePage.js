@@ -1278,6 +1278,7 @@ const HomePage = () => {
                     databaseConnectionError={databaseConnectionError}
                     initialSearchTerm={elementSearchTerm}
                     onClearInitialSearchTerm={() => setElementSearchTerm("")}
+                    isVisible={activeTab === Tabs.ELEMENT}
                 />
             </div>
         </div>
