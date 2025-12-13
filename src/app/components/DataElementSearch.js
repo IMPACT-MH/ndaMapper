@@ -36,6 +36,11 @@ const DataElementSearch = ({
     const preferExactMatchRef = useRef(false);
     const isInitialMount = useRef(true);
     const [isMounted, setIsMounted] = useState(false);
+    const previousInitialSearchTerm = useRef(null);
+
+    useEffect(() => {
+        setIsMounted(true);
+    }, []);
 
     useEffect(() => {
         setIsMounted(true);
@@ -1170,26 +1175,27 @@ const DataElementSearch = ({
          ]
      );
 
-    // Clear search when tab becomes hidden
+    // Clear search when tab becomes hidden (but preserve state for quick navigation)
     useEffect(() => {
         if (!isVisible) {
-            setSearchTerm("");
-            setElement(null);
-            setError(null);
-            setMatchingElements([]);
-            setIsPartialSearch(false);
-            setTotalElementCount(0);
-            setHasProcessedInitialSearch(false);
-            setPreferExactMatch(false);
+            // Only clear the display, but keep hasProcessedInitialSearch to allow quick re-navigation
+            // This prevents delays when clicking multiple elements in quick succession
+        } else {
+            // When becoming visible, reset hasProcessedInitialSearch if initialSearchTerm changed
+            if (previousInitialSearchTerm.current !== initialSearchTerm) {
+                setHasProcessedInitialSearch(false);
+                previousInitialSearchTerm.current = initialSearchTerm;
+            }
         }
-    }, [isVisible]);
+    }, [isVisible, initialSearchTerm]);
 
     // Handle initial search term from parent (only once when it changes)
     useEffect(() => {
         if (
             initialSearchTerm &&
             initialSearchTerm !== searchTerm &&
-            !hasProcessedInitialSearch
+            !hasProcessedInitialSearch &&
+            isVisible
         ) {
             setSearchTerm(initialSearchTerm);
             setHasProcessedInitialSearch(true);
@@ -1208,6 +1214,7 @@ const DataElementSearch = ({
         searchTerm,
         handleSearchWithTerm,
         hasProcessedInitialSearch,
+        isVisible,
     ]);
 
     // Auto-search when preferExactMatch changes (if there's a search term and results)
