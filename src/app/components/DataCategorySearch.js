@@ -2224,22 +2224,12 @@ const DataCategorySearch = ({
                                 Filters
                             </h3>
 
-                            {/* Legend */}
-                            <div className="mb-4 pb-4 border-b border-gray-200">
-                                <div className="flex items-center text-xs text-gray-600">
-                                    <span className="text-orange-500 mr-1">
-                                        ★
-                                    </span>
-                                    <span>Custom tag</span>
-                                </div>
-                            </div>
-
                             {/* Research Partners Filter - Only show when database filter is enabled */}
                             {databaseFilterEnabled &&
                                 availableSites.size > 0 && (
                                     <>
                                         <div className="mb-6">
-                                            <h4 className="font-medium text-gray-700 mb-2">
+                                            <h4 className="font-medium text-amber-50 bg-rose-300 px-3 py-2 rounded-md mb-2 w-full">
                                                 Research Partners
                                             </h4>
                                             <div className="space-y-2 max-h-48 overflow-y-auto">
@@ -2261,7 +2251,7 @@ const DataCategorySearch = ({
                                                                         site,
                                                                     )
                                                                 }
-                                                                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
+                                                                className="w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500 cursor-pointer"
                                                             />
                                                             <span className="ml-2 text-sm text-gray-700">
                                                                 {site}
@@ -2271,15 +2261,17 @@ const DataCategorySearch = ({
                                             </div>
                                         </div>
 
-                                        {/* Horizontal divider */}
-                                        <div className="my-4 border-t border-gray-200"></div>
                                     </>
                                 )}
 
                             {/* Data Type Filters */}
                             <div>
-                                <h4 className="font-medium text-gray-700 mb-2">
-                                    Data Types
+                                <h4 className="font-medium text-gray-700 bg-gray-100 px-3 py-2 rounded-md mb-2 w-full flex items-center justify-between">
+                                    <span>Data Types</span>
+                                    <span className="flex items-center text-xs font-normal text-gray-600">
+                                        <span>custom tag</span>
+                                        <span className="text-orange-500 ml-1">★</span>
+                                    </span>
                                 </h4>
                                 <div className="space-y-2">
                                     {(() => {
@@ -2345,13 +2337,14 @@ const DataCategorySearch = ({
                                 </div>
                             </div>
 
-                            {/* Horizontal divider */}
-                            <div className="my-4 border-t border-gray-200"></div>
-
                             {/* Category Filters */}
-                            <div className="mb-6">
-                                <h4 className="font-medium text-gray-700 mb-2">
-                                    Categories
+                            <div className="mt-6 mb-6">
+                                <h4 className="font-medium text-blue-700 bg-blue-100 px-3 py-2 rounded-md mb-2 w-full flex items-center justify-between">
+                                    <span>Categories</span>
+                                    <span className="flex items-center text-xs font-normal text-gray-600">
+                                        <span>custom tag</span>
+                                        <span className="text-orange-500 ml-1">★</span>
+                                    </span>
                                 </h4>
                                 <div className="space-y-2 max-h-48 overflow-y-auto">
                                     {(() => {
@@ -2621,7 +2614,7 @@ const DataCategorySearch = ({
                                                                                                             key={
                                                                                                                 idx
                                                                                                             }
-                                                                                                            className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded"
+                                                                                                            className="text-xs px-2 py-0.5 bg-rose-300 text-amber-50 rounded"
                                                                                                         >
                                                                                                             {
                                                                                                                 project

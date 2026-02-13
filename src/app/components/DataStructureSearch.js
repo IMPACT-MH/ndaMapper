@@ -696,7 +696,7 @@ const DataStructureSearch = ({
                                                                                 key={
                                                                                     idx
                                                                                 }
-                                                                                className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded"
+                                                                                className="text-xs px-2 py-1 bg-rose-300 text-amber-50 rounded"
                                                                             >
                                                                                 {
                                                                                     project

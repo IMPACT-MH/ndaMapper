@@ -1731,7 +1731,7 @@ const DataElementSearch = ({
                                                                                 key={
                                                                                     idx
                                                                                 }
-                                                                                className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded"
+                                                                                className="text-xs px-2 py-0.5 bg-rose-300 text-amber-50 rounded"
                                                                             >
                                                                                 {
                                                                                     project
