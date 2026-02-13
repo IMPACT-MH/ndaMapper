@@ -2253,7 +2253,7 @@ const DataCategorySearch = ({
                                 availableSites.size > 0 && (
                                     <>
                                         <div className="mb-6">
-                                            <h4 className="font-medium text-amber-50 bg-rose-300 px-3 py-2 rounded-md mb-2 w-full">
+                                            <h4 className="font-medium text-gray-700 bg-indigo-100 px-3 py-2 rounded-md mb-2 w-full">
                                                 Research Partners
                                             </h4>
                                             <div className="space-y-2 max-h-48 overflow-y-auto">
@@ -2641,7 +2641,7 @@ const DataCategorySearch = ({
                                                                                                             key={
                                                                                                                 idx
                                                                                                             }
-                                                                                                            className="text-xs px-2 py-0.5 bg-rose-300 text-amber-50 rounded"
+                                                                                                            className="text-xs px-2 py-0.5 bg-indigo-100 text-gray-700 rounded"
                                                                                                         >
                                                                                                             {
                                                                                                                 project
