@@ -6,6 +6,8 @@ import {
     X,
     CheckCircle,
     ChevronLeft,
+    ChevronDown,
+    ChevronUp,
     FileText,
     Table,
     Database,
@@ -45,6 +47,7 @@ const DataStructureSearch = ({
     const [isExpanded, setIsExpanded] = useState(false);
     const [structureTags, setStructureTags] = useState({});
     const [structureDataTypeTags, setStructureDataTypeTags] = useState({});
+    const [isCsvValidatorOpen, setIsCsvValidatorOpen] = useState(false);
     const [isCurrentFilterCustomTag, setIsCurrentFilterCustomTag] =
         useState(false);
     const [removedCategories, setRemovedCategories] = useState({});
@@ -710,72 +713,34 @@ const DataStructureSearch = ({
 
                                                 {selectedStructure ? (
                                                     <div className="space-y-8">
-                                                        {/* Basic Info Section */}
-                                                        <div className="grid grid-cols-2 gap-x-24">
+                                                        {/* 2 rows x 3 columns grid */}
+                                                        <div className="grid grid-cols-3 gap-x-24 gap-y-6">
+                                                            {/* Row 1 Col 1 */}
                                                             <div>
                                                                 <h3 className="font-medium text-gray-600 mb-2">
                                                                     Short Name
                                                                 </h3>
                                                                 <div className="flex items-center gap-3">
                                                                     <div className="text-lg font-mono font-medium text-blue-600 flex items-center">
-                                                                        {
-                                                                            selectedStructure.shortName
-                                                                        }
+                                                                        {selectedStructure.shortName}
                                                                         {databaseStructures
-                                                                            .map(
-                                                                                (
-                                                                                    name
-                                                                                ) =>
-                                                                                    name.toLowerCase()
-                                                                            )
-                                                                            .includes(
-                                                                                selectedStructure.shortName.toLowerCase()
-                                                                            ) && (
+                                                                            .map((name) => name.toLowerCase())
+                                                                            .includes(selectedStructure.shortName.toLowerCase()) && (
                                                                             <div className="relative group ml-2">
                                                                                 <Database className="w-4 h-4 text-blue-500 cursor-help" />
                                                                                 <div className="absolute bottom-full left-0 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-10">
-                                                                                    This
-                                                                                    structure
-                                                                                    exists
-                                                                                    in
-                                                                                    the
-                                                                                    IMPACT-MH
-                                                                                    database
+                                                                                    This structure exists in the IMPACT-MH database
                                                                                 </div>
                                                                             </div>
                                                                         )}
                                                                     </div>
                                                                     <span className="px-3 py-1 rounded-full text-sm bg-gray-100 text-black-700">
-                                                                        v
-                                                                        {selectedStructure.shortName.slice(
-                                                                            -1
-                                                                        )}
-                                                                        .0
+                                                                        v{selectedStructure.shortName.slice(-1)}.0
                                                                     </span>
                                                                 </div>
                                                             </div>
 
-                                                            <div>
-                                                                <h3 className="font-medium text-gray-600 mb-2">
-                                                                    Status
-                                                                </h3>
-                                                                <span
-                                                                    className={`px-3 py-1 rounded-full text-sm ${
-                                                                        selectedStructure.status ===
-                                                                        "Draft"
-                                                                            ? "bg-yellow-100 text-yellow-700"
-                                                                            : "bg-green-100 text-green-700"
-                                                                    }`}
-                                                                >
-                                                                    {
-                                                                        selectedStructure.status
-                                                                    }
-                                                                </span>
-                                                            </div>
-                                                        </div>
-
-                                                        {/* Extended Info Section */}
-                                                        <div className="grid grid-cols-2 gap-x-24">
+                                                            {/* Row 1 Col 2 */}
                                                             <div>
                                                                 <h3 className="font-medium text-gray-600 mb-2">
                                                                     Data Type
@@ -783,66 +748,45 @@ const DataStructureSearch = ({
                                                                 {(() => {
                                                                     const customDataTypeTags =
                                                                         structureDataTypeTags[
-                                                                            selectedStructure
-                                                                                .shortName
+                                                                            selectedStructure.shortName
                                                                         ] || [];
-                                                                    if (
-                                                                        customDataTypeTags.length >
-                                                                        0
-                                                                    ) {
+                                                                    if (customDataTypeTags.length > 0) {
                                                                         return (
                                                                             <div className="flex flex-wrap gap-2">
-                                                                                {customDataTypeTags.map(
-                                                                                    (
-                                                                                        tag
-                                                                                    ) => (
-                                                                                        <span
-                                                                                            key={
-                                                                                                tag.id
-                                                                                            }
-                                                                                            className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm cursor-pointer hover:bg-gray-200 transition-colors"
-                                                                                            onClick={(
-                                                                                                e
-                                                                                            ) => {
-                                                                                                e.preventDefault();
-                                                                                                e.stopPropagation();
-                                                                                                handleDataTypeClick(
-                                                                                                    tag.name
-                                                                                                );
-                                                                                            }}
-                                                                                        >
-                                                                                            {
-                                                                                                tag.name
-                                                                                            }
-                                                                                            <span className="ml-1 text-xs text-orange-500">
-                                                                                                ★
-                                                                                            </span>
-                                                                                        </span>
-                                                                                    )
-                                                                                )}
+                                                                                {customDataTypeTags.map((tag) => (
+                                                                                    <span
+                                                                                        key={tag.id}
+                                                                                        className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm cursor-pointer hover:bg-gray-200 transition-colors"
+                                                                                        onClick={(e) => {
+                                                                                            e.preventDefault();
+                                                                                            e.stopPropagation();
+                                                                                            handleDataTypeClick(tag.name);
+                                                                                        }}
+                                                                                    >
+                                                                                        {tag.name}
+                                                                                        <span className="ml-1 text-xs text-orange-500">★</span>
+                                                                                    </span>
+                                                                                ))}
                                                                             </div>
                                                                         );
                                                                     } else {
                                                                         return (
                                                                             <span
                                                                                 className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm inline-block cursor-pointer hover:bg-gray-200 transition-colors"
-                                                                                onClick={(
-                                                                                    e
-                                                                                ) => {
+                                                                                onClick={(e) => {
                                                                                     e.preventDefault();
                                                                                     e.stopPropagation();
-                                                                                    handleDataTypeClick(
-                                                                                        selectedStructure.dataType
-                                                                                    );
+                                                                                    handleDataTypeClick(selectedStructure.dataType);
                                                                                 }}
                                                                             >
-                                                                                {selectedStructure.dataType ||
-                                                                                    "Not specified"}
+                                                                                {selectedStructure.dataType || "Not specified"}
                                                                             </span>
                                                                         );
                                                                     }
                                                                 })()}
                                                             </div>
+
+                                                            {/* Row 1 Col 3 */}
                                                             <div>
                                                                 <h3 className="font-medium text-gray-600 mb-2">
                                                                     Categories
@@ -979,60 +923,88 @@ const DataStructureSearch = ({
                                                                     })()}
                                                                 </div>
                                                             </div>
-                                                        </div>
 
-                                                        {/* Status & Downloads Section */}
-                                                        <div className="bg-gray-50 rounded-lg p-6">
-                                                            <div className="space-y-4">
-                                                                <h3 className="font-medium text-gray-700">
+                                                            {/* Row 2 Col 1 */}
+                                                            <div>
+                                                                <h3 className="font-medium text-gray-600 mb-2">
+                                                                    Status
+                                                                </h3>
+                                                                <span
+                                                                    className={`px-3 py-1 rounded-full text-sm ${
+                                                                        selectedStructure.status === "Draft"
+                                                                            ? "bg-yellow-100 text-yellow-700"
+                                                                            : "bg-green-100 text-green-700"
+                                                                    }`}
+                                                                >
+                                                                    {selectedStructure.status}
+                                                                </span>
+                                                            </div>
+
+                                                            {/* Row 2 Col 2 */}
+                                                            <div>
+                                                                <h3 className="font-medium text-gray-600 mb-2">
                                                                     Downloads
                                                                 </h3>
-                                                                <div className="grid grid-cols-2 gap-4">
+                                                                <div className="flex gap-2">
                                                                     <DownloadStructureButton
-                                                                        shortName={
-                                                                            selectedStructure.shortName
-                                                                        }
+                                                                        shortName={selectedStructure.shortName}
                                                                     />
                                                                     <DownloadTemplateButton
-                                                                        shortName={
-                                                                            selectedStructure.shortName
-                                                                        }
+                                                                        shortName={selectedStructure.shortName}
                                                                     />
                                                                 </div>
                                                             </div>
+
+                                                            {/* Row 2 Col 3 */}
+                                                            <div>
+                                                                <h3 className="font-medium text-gray-600 mb-2">
+                                                                    Validate CSV
+                                                                    <span className="ml-2 px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded">
+                                                                        BETA
+                                                                    </span>
+                                                                </h3>
+                                                                <button
+                                                                    onClick={() => setIsCsvValidatorOpen(!isCsvValidatorOpen)}
+                                                                    className="flex items-center gap-2 text-gray-700 hover:text-gray-900"
+                                                                >
+                                                                    <FileText className="w-5 h-5 text-blue-600" />
+                                                                    {isCsvValidatorOpen ? (
+                                                                        <ChevronUp className="w-4 h-4" />
+                                                                    ) : (
+                                                                        <ChevronDown className="w-4 h-4" />
+                                                                    )}
+                                                                </button>
+                                                            </div>
                                                         </div>
 
-                                                        {/* Validator Section */}
-                                                        <div className="pt-6 border-t">
-                                                            <CSVValidator
-                                                                dataElements={
-                                                                    dataElements
-                                                                }
-                                                                onStructureSearch={
-                                                                    handleStructureSearch
-                                                                }
-                                                                initialCsvFile={
-                                                                    initialCsvFile
-                                                                }
-                                                                structureShortName={
-                                                                    selectedStructure?.shortName
-                                                                }
-                                                                onHeadersChange={
-                                                                    setHeaders
-                                                                }
-                                                                validatorState={
-                                                                    validatorState
-                                                                }
-                                                                onFileChange={
-                                                                    onFileChange
-                                                                }
-                                                            />
-                                                        </div>
-                                                        <div>
-                                                            <h3 className="font-medium text-gray-700 mb-4">
-                                                                Data Elements
-                                                            </h3>
-                                                            {loadingElements ? (
+                                                        {/* CSV Validator Content */}
+                                                        {isCsvValidatorOpen && (
+                                                            <div className="pt-6 border-t">
+                                                                <CSVValidator
+                                                                    dataElements={dataElements}
+                                                                    onStructureSearch={handleStructureSearch}
+                                                                    initialCsvFile={initialCsvFile}
+                                                                    structureShortName={selectedStructure?.shortName}
+                                                                    onHeadersChange={setHeaders}
+                                                                    validatorState={validatorState}
+                                                                    onFileChange={onFileChange}
+                                                                />
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ) : (
+                                                    <p className="text-gray-500 text-center py-4">
+                                                        Select a structure to view details
+                                                    </p>
+                                                )}
+
+                                                {/* Data Elements Card - Separate */}
+                                                {selectedStructure && (
+                                                    <div className="bg-white rounded-lg shadow p-6">
+                                                        <h3 className="font-medium text-gray-700 mb-4">
+                                                            Data Elements
+                                                        </h3>
+                                                        {loadingElements ? (
                                                                 <div className="text-center py-4">
                                                                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
                                                                 </div>
@@ -1173,13 +1145,7 @@ const DataStructureSearch = ({
                                                                     </table>
                                                                 </div>
                                                             )}
-                                                        </div>
                                                     </div>
-                                                ) : (
-                                                    <p className="text-gray-500 text-center py-4">
-                                                        Select a structure to
-                                                        view details
-                                                    </p>
                                                 )}
                                             </div>
                                         </div>

@@ -31,6 +31,7 @@ const DataCategorySearch = ({
     databaseFilterEnabled,
     setDatabaseFilterEnabled,
     databaseStructures,
+    databaseSites,
     databaseName,
     loadingDatabaseStructures,
     databaseConnectionError,
@@ -57,11 +58,13 @@ const DataCategorySearch = ({
     const [selectedFilters, setSelectedFilters] = useState({
         categories: new Set(),
         dataTypes: new Set(),
+        sites: new Set(),
     });
 
     // Available filter options
     const [availableCategories, setAvailableCategories] = useState(new Set());
     const [availableDataTypes, setAvailableDataTypes] = useState(new Set());
+    const [availableSites, setAvailableSites] = useState(new Set());
 
     const handleTagsUpdate = (structureShortName, updatedTags) => {
         setStructureTags((prev) => ({
@@ -84,11 +87,11 @@ const DataCategorySearch = ({
     const [structureDataTypeTags, setStructureDataTypeTags] = useState({});
     // Track removed original categories (keyed by structure shortName, value is Set of category names)
     const [removedOriginalCategories, setRemovedOriginalCategories] = useState(
-        {}
+        {},
     );
     // Track removed original data types (keyed by structure shortName, value is boolean)
     const [removedOriginalDataTypes, setRemovedOriginalDataTypes] = useState(
-        {}
+        {},
     );
 
     // Modal states
@@ -142,7 +145,7 @@ const DataCategorySearch = ({
     // NDA category search state
     const [ndaCategorySearchTerm, setNdaCategorySearchTerm] = useState("");
     const [selectedNdaCategories, setSelectedNdaCategories] = useState(
-        new Set()
+        new Set(),
     );
 
     // Helper function to check for plural/singular variations
@@ -194,7 +197,7 @@ const DataCategorySearch = ({
                 // Check if search variations match the item
                 if (
                     searchVariations.some(
-                        (variation) => variation === itemLower
+                        (variation) => variation === itemLower,
                     )
                 )
                     return true;
@@ -202,11 +205,11 @@ const DataCategorySearch = ({
                 // Also check if item variations match the search term (bidirectional)
                 const itemVariations = getPluralSingularVariations(item.name);
                 return itemVariations.some(
-                    (variation) => variation === searchLower
+                    (variation) => variation === searchLower,
                 );
             });
         },
-        [getPluralSingularVariations]
+        [getPluralSingularVariations],
     );
 
     // Helper function to find the existing item name that matches (including plural/singular variations)
@@ -223,7 +226,7 @@ const DataCategorySearch = ({
                 // Check if search variations match the item
                 if (
                     searchVariations.some(
-                        (variation) => variation === itemLower
+                        (variation) => variation === itemLower,
                     )
                 )
                     return true;
@@ -231,11 +234,11 @@ const DataCategorySearch = ({
                 // Also check if item variations match the search term (bidirectional)
                 const itemVariations = getPluralSingularVariations(item.name);
                 return itemVariations.some(
-                    (variation) => variation === searchLower
+                    (variation) => variation === searchLower,
                 );
             });
         },
-        [getPluralSingularVariations]
+        [getPluralSingularVariations],
     );
 
     // Helper function for case-insensitive search matching
@@ -253,13 +256,13 @@ const DataCategorySearch = ({
             ndaIdPrefix,
             ndaItemKey,
             tagNameKey = "name",
-            additionalProps = {}
+            additionalProps = {},
         ) => {
             const combinedMap = new Map();
 
             // Add tags that match search term
             tags.filter((tag) =>
-                matchesSearchTerm(tag[tagNameKey], searchTerm)
+                matchesSearchTerm(tag[tagNameKey], searchTerm),
             ).forEach((tag) => {
                 combinedMap.set(tag.id, tag);
             });
@@ -282,7 +285,7 @@ const DataCategorySearch = ({
 
             return Array.from(combinedMap.values());
         },
-        [matchesSearchTerm]
+        [matchesSearchTerm],
     );
 
     // Helper function to add matched item to filtered list if not already present
@@ -290,7 +293,7 @@ const DataCategorySearch = ({
         if (!matchedItem) return filtered;
         const alreadyInList = filtered.some(
             (item) =>
-                item.id === matchedItem.id || item.name === matchedItem.name
+                item.id === matchedItem.id || item.name === matchedItem.name,
         );
         return alreadyInList ? filtered : [matchedItem, ...filtered];
     }, []);
@@ -304,7 +307,7 @@ const DataCategorySearch = ({
                     (tag) =>
                         tag &&
                         tag.id &&
-                        (!tag.tagType || tag.tagType !== "Data Type")
+                        (!tag.tagType || tag.tagType !== "Data Type"),
                 )
                 .map((tag) => ({
                     ...tag,
@@ -318,10 +321,10 @@ const DataCategorySearch = ({
                 "nda-category",
                 "isNdaCategory",
                 "name",
-                { tagType: "Category" }
+                { tagType: "Category" },
             );
         },
-        [availableTags, availableCategories, combineTagsAndNdaItems]
+        [availableTags, availableCategories, combineTagsAndNdaItems],
     );
 
     // Use the same function for both display and duplicate checking
@@ -345,10 +348,10 @@ const DataCategorySearch = ({
                 availableDataTypes,
                 searchTerm,
                 "nda-datatype",
-                "isNdaDataType"
+                "isNdaDataType",
             );
         },
-        [availableDataTypeTags, availableDataTypes, combineTagsAndNdaItems]
+        [availableDataTypeTags, availableDataTypes, combineTagsAndNdaItems],
     );
 
     // Use the same function for both display and duplicate checking
@@ -418,7 +421,7 @@ const DataCategorySearch = ({
                 const response = await fetch(`${apiBaseUrl}/tags`);
                 if (!response.ok) {
                     console.error(
-                        `Failed to fetch removed items: ${response.status} ${response.statusText}`
+                        `Failed to fetch removed items: ${response.status} ${response.statusText}`,
                     );
                     return;
                 }
@@ -434,7 +437,7 @@ const DataCategorySearch = ({
                 if (!Array.isArray(allTags)) {
                     console.warn(
                         "Expected array for tags, got:",
-                        typeof allTags
+                        typeof allTags,
                     );
                     return;
                 }
@@ -443,7 +446,7 @@ const DataCategorySearch = ({
 
                 // Process removed category tags (format: "REMOVED_CATEGORY:structureShortName:categoryName")
                 const removedCategoryTags = allTags.filter(
-                    (tag) => tag.tagType === "Removed Category"
+                    (tag) => tag.tagType === "Removed Category",
                 );
 
                 for (const tag of removedCategoryTags) {
@@ -457,14 +460,14 @@ const DataCategorySearch = ({
                                 new Set();
                         }
                         removedCategoriesMap[structureShortName].add(
-                            categoryName
+                            categoryName,
                         );
                     }
                 }
 
                 // Process removed data type tags (format: "REMOVED_DATATYPE:structureShortName")
                 const removedDataTypeTags = allTags.filter(
-                    (tag) => tag.tagType === "Removed Data Type"
+                    (tag) => tag.tagType === "Removed Data Type",
                 );
 
                 for (const tag of removedDataTypeTags) {
@@ -481,7 +484,7 @@ const DataCategorySearch = ({
             } catch (err) {
                 console.error(
                     "Error loading removed categories/data types:",
-                    err
+                    err,
                 );
             }
         };
@@ -501,7 +504,7 @@ const DataCategorySearch = ({
                 const response = await fetch(`${apiBaseUrl}/tags`);
                 if (!response.ok) {
                     console.error(
-                        `Failed to fetch tags: ${response.status} ${response.statusText}`
+                        `Failed to fetch tags: ${response.status} ${response.statusText}`,
                     );
                     return;
                 }
@@ -526,7 +529,7 @@ const DataCategorySearch = ({
                         tag.tagType !== "Removed Category" &&
                         tag.tagType !== "Removed Data Type" &&
                         !tag.name.startsWith("REMOVED_CATEGORY:") &&
-                        !tag.name.startsWith("REMOVED_DATATYPE:")
+                        !tag.name.startsWith("REMOVED_DATATYPE:"),
                 );
                 setAvailableTags(categoryTags);
 
@@ -537,7 +540,7 @@ const DataCategorySearch = ({
                         tag.tagType !== "Removed Category" &&
                         tag.tagType !== "Removed Data Type" &&
                         !tag.name.startsWith("REMOVED_CATEGORY:") &&
-                        !tag.name.startsWith("REMOVED_DATATYPE:")
+                        !tag.name.startsWith("REMOVED_DATATYPE:"),
                 );
                 setAvailableDataTypeTags(dataTypeTags);
             } catch (err) {
@@ -559,16 +562,23 @@ const DataCategorySearch = ({
     const [ndaCategories, setNdaCategories] = useState([]);
     const [ndaDataTypes, setNdaDataTypes] = useState([]);
 
-    const isCategoryRemoved = useCallback((structureShortName, categoryName) => {
-        return (
-            removedOriginalCategories[structureShortName]?.has(categoryName) ||
-            false
-        );
-    }, [removedOriginalCategories]);
+    const isCategoryRemoved = useCallback(
+        (structureShortName, categoryName) => {
+            return (
+                removedOriginalCategories[structureShortName]?.has(
+                    categoryName,
+                ) || false
+            );
+        },
+        [removedOriginalCategories],
+    );
 
-    const isDataTypeRemoved = useCallback((structureShortName) => {
-        return removedOriginalDataTypes[structureShortName] || false;
-    }, [removedOriginalDataTypes]);
+    const isDataTypeRemoved = useCallback(
+        (structureShortName) => {
+            return removedOriginalDataTypes[structureShortName] || false;
+        },
+        [removedOriginalDataTypes],
+    );
 
     const fetchAllStructures = async () => {
         setLoading(true);
@@ -576,12 +586,12 @@ const DataCategorySearch = ({
 
         try {
             const response = await fetch(
-                "https://nda.nih.gov/api/datadictionary/datastructure"
+                "https://nda.nih.gov/api/datadictionary/datastructure",
             );
 
             if (!response.ok) {
                 throw new Error(
-                    `Failed to fetch structures: ${response.status} ${response.statusText}`
+                    `Failed to fetch structures: ${response.status} ${response.statusText}`,
                 );
             }
 
@@ -631,7 +641,7 @@ const DataCategorySearch = ({
                         try {
                             const dataStructures = await fetchTagDataStructures(
                                 tag.id,
-                                apiBaseUrl
+                                apiBaseUrl,
                             );
                             return {
                                 ...tag,
@@ -640,18 +650,18 @@ const DataCategorySearch = ({
                         } catch (err) {
                             console.warn(
                                 `Failed to fetch data structures for tag ${tag.name}:`,
-                                err
+                                err,
                             );
                             return { ...tag, dataStructures: [] };
                         }
-                    })
+                    }),
                 );
                 tagsWithStructures.push(...batchResults);
 
                 // Add delay between batches (except for the last batch)
                 if (i + BATCH_SIZE < allTags.length) {
                     await new Promise((resolve) =>
-                        setTimeout(resolve, BATCH_DELAY)
+                        setTimeout(resolve, BATCH_DELAY),
                     );
                 }
             }
@@ -672,7 +682,7 @@ const DataCategorySearch = ({
                         if (!shortName) {
                             console.warn(
                                 "Missing shortName for data structure:",
-                                ds
+                                ds,
                             );
                             return;
                         }
@@ -730,9 +740,9 @@ const DataCategorySearch = ({
                     structure.shortName?.toLowerCase().includes(searchLower) ||
                     structure.title?.toLowerCase().includes(searchLower) ||
                     structure.categories?.some((cat) =>
-                        cat.toLowerCase().includes(searchLower)
+                        cat.toLowerCase().includes(searchLower),
                     ) ||
-                    structure.dataType?.toLowerCase().includes(searchLower)
+                    structure.dataType?.toLowerCase().includes(searchLower),
             );
         }
 
@@ -743,18 +753,18 @@ const DataCategorySearch = ({
                     structureTags[structure.shortName] || [];
                 const originalCategories = (structure.categories || []).filter(
                     (category) =>
-                        !isCategoryRemoved(structure.shortName, category)
+                        !isCategoryRemoved(structure.shortName, category),
                 );
 
                 // Check custom tags
                 const matchesCustomTag = structureCategoryTags.some((tag) =>
-                    selectedFilters.categories.has(tag.name)
+                    selectedFilters.categories.has(tag.name),
                 );
 
                 // Check original categories (excluding removed ones)
                 const matchesOriginalCategory = originalCategories.some((cat) =>
-                    selectedFilters.categories.has(cat)
-            );
+                    selectedFilters.categories.has(cat),
+                );
 
                 // Match if either custom tag or original category matches
                 return matchesCustomTag || matchesOriginalCategory;
@@ -770,7 +780,7 @@ const DataCategorySearch = ({
                 // If structure has custom data type tags, only check those
                 if (structureCustomDataTypeTags.length > 0) {
                     return structureCustomDataTypeTags.some((tag) =>
-                        selectedFilters.dataTypes.has(tag.name)
+                        selectedFilters.dataTypes.has(tag.name),
                     );
                 } else {
                     // No custom tags, check original data type (if not removed)
@@ -789,17 +799,53 @@ const DataCategorySearch = ({
             databaseStructures.length > 0
         ) {
             const databaseStructuresLower = databaseStructures.map((name) =>
-                name.toLowerCase()
+                name.toLowerCase(),
             );
             filtered = filtered.filter((structure) =>
                 databaseStructuresLower.includes(
-                    structure.shortName?.toLowerCase()
-                )
+                    structure.shortName?.toLowerCase(),
+                ),
             );
         }
 
+        // Apply site filter (only when database filter is enabled and sites are selected)
+        if (
+            databaseFilterEnabled &&
+            selectedFilters.sites &&
+            selectedFilters.sites.size > 0
+        ) {
+            filtered = filtered.filter((structure) => {
+                // Get this structure's data from the IMPACT-MH database
+                const shortNameLower = structure.shortName?.toLowerCase();
+                const dbStructure =
+                    dataStructuresMap[shortNameLower] ||
+                    dataStructuresMap[structure.shortName];
+
+                if (!dbStructure || !dbStructure.submittedByProjects) {
+                    return false; // No site data, exclude
+                }
+
+                // Check if any of the structure's sites match selected filters
+                return dbStructure.submittedByProjects.some((site) =>
+                    selectedFilters.sites.has(site),
+                );
+            });
+        }
+
         setFilteredStructures(filtered);
-    }, [allStructures, searchTerm, selectedFilters, structureTags, structureDataTypeTags, databaseFilterEnabled, databaseStructures, isCategoryRemoved, isDataTypeRemoved]);
+    }, [
+        allStructures,
+        searchTerm,
+        selectedFilters,
+        structureTags,
+        structureDataTypeTags,
+        databaseFilterEnabled,
+        databaseStructures,
+        databaseSites,
+        dataStructuresMap,
+        isCategoryRemoved,
+        isDataTypeRemoved,
+    ]);
 
     // Apply filtering when search term, filters, database filter, or structure tags change
     useEffect(() => {
@@ -815,6 +861,26 @@ const DataCategorySearch = ({
         applyFilters,
     ]);
 
+    // Extract available sites from IMPACT-MH database when database filter is enabled
+    useEffect(() => {
+        if (
+            databaseFilterEnabled &&
+            databaseSites &&
+            databaseSites.length > 0
+        ) {
+            // Set available sites from database
+            setAvailableSites(new Set(databaseSites));
+        } else {
+            // Clear sites when database filter is disabled
+            setAvailableSites(new Set());
+            // Clear selected site filters
+            setSelectedFilters((prev) => ({
+                ...prev,
+                sites: new Set(),
+            }));
+        }
+    }, [databaseFilterEnabled, databaseSites]);
+
     const groupStructures = (structures) => {
         const grouped = {};
 
@@ -827,7 +893,7 @@ const DataCategorySearch = ({
                     structureTags[structure.shortName] || [];
                 const originalCategories = (structure.categories || []).filter(
                     (category) =>
-                        !isCategoryRemoved(structure.shortName, category)
+                        !isCategoryRemoved(structure.shortName, category),
                 );
 
                 // Add custom tags
@@ -907,6 +973,7 @@ const DataCategorySearch = ({
         setSelectedFilters({
             categories: new Set(),
             dataTypes: new Set(),
+            sites: new Set(),
         });
         setSearchTerm("");
     };
@@ -931,7 +998,7 @@ const DataCategorySearch = ({
             if (isInDatabase) {
                 // Add original categories
                 structure.categories?.forEach((cat) =>
-                    categoriesInDatabase.add(cat)
+                    categoriesInDatabase.add(cat),
                 );
                 // Add original data types
                 if (structure.dataType) {
@@ -969,7 +1036,8 @@ const DataCategorySearch = ({
             // structureTags only contains custom tags, never original categories
             const isInStructureTags = Object.values(structureTags).some(
                 (tags) =>
-                    Array.isArray(tags) && tags.some((tag) => tag.name === item)
+                    Array.isArray(tags) &&
+                    tags.some((tag) => tag.name === item),
             );
             if (isInStructureTags) {
                 return true; // Found in structureTags, definitely custom
@@ -977,7 +1045,9 @@ const DataCategorySearch = ({
 
             // Check if it's in availableTags (custom tags from API)
             const isInAvailableTags = availableTags.some(
-                (tag) => tag.name === item && (tag.tagType === "Category" || !tag.tagType)
+                (tag) =>
+                    tag.name === item &&
+                    (tag.tagType === "Category" || !tag.tagType),
             );
             if (isInAvailableTags) {
                 return true; // Found in availableTags, definitely custom
@@ -990,7 +1060,7 @@ const DataCategorySearch = ({
         } else {
             // For data types: return true if it's in availableDataTypeTags AND not in original NDA data types
             const isInCustomTags = availableDataTypeTags.some(
-                (tag) => tag.name === item
+                (tag) => tag.name === item,
             );
             // availableDataTypes is a Set, so use .has() instead of .includes()
             const isInOriginalDataTypes = availableDataTypes.has(item);
@@ -1001,7 +1071,7 @@ const DataCategorySearch = ({
     const removeOriginalCategory = async (structureShortName, categoryName) => {
         // Check if this is a custom tag (not an NDA category)
         const isCustomTag = availableTags.some(
-            (tag) => tag.name === categoryName
+            (tag) => tag.name === categoryName,
         );
         // Only show confirmation modal for custom tags
         if (isCustomTag) {
@@ -1049,7 +1119,7 @@ const DataCategorySearch = ({
                             const existingTag = allTags.find(
                                 (tag) =>
                                     tag.name === tagName &&
-                                    tag.tagType === "Removed Category"
+                                    tag.tagType === "Removed Category",
                             );
 
                             if (!existingTag) {
@@ -1066,7 +1136,7 @@ const DataCategorySearch = ({
                                             tagType: "Removed Category",
                                             description: `Removed category ${categoryName} from structure ${structureShortName}`,
                                         }),
-                                    }
+                                    },
                                 );
 
                                 if (createResponse.ok) {
@@ -1075,7 +1145,7 @@ const DataCategorySearch = ({
                                     await apiAssignTag(
                                         newTag.id,
                                         structureShortName,
-                                        apiBaseUrl
+                                        apiBaseUrl,
                                     );
                                 }
                             }
@@ -1094,7 +1164,7 @@ const DataCategorySearch = ({
                     } catch (err) {
                         console.error("Error removing category:", err);
                         setModalError(
-                            `Failed to remove category: ${err.message}`
+                            `Failed to remove category: ${err.message}`,
                         );
                     }
                 },
@@ -1124,7 +1194,7 @@ const DataCategorySearch = ({
                 const existingTag = allTags.find(
                     (tag) =>
                         tag.name === tagName &&
-                        tag.tagType === "Removed Category"
+                        tag.tagType === "Removed Category",
                 );
 
                 if (!existingTag) {
@@ -1147,7 +1217,7 @@ const DataCategorySearch = ({
                         await apiAssignTag(
                             newTag.id,
                             structureShortName,
-                            apiBaseUrl
+                            apiBaseUrl,
                         );
                     }
                 }
@@ -1165,7 +1235,7 @@ const DataCategorySearch = ({
 
         // Check if this is a custom tag (not an NDA data type)
         const isCustomTag = availableDataTypeTags.some(
-            (tag) => tag.name === dataTypeName
+            (tag) => tag.name === dataTypeName,
         );
         // Only show confirmation modal for custom tags
         if (isCustomTag) {
@@ -1207,7 +1277,7 @@ const DataCategorySearch = ({
                             const existingTag = allTags.find(
                                 (tag) =>
                                     tag.name === tagName &&
-                                    tag.tagType === "Removed Data Type"
+                                    tag.tagType === "Removed Data Type",
                             );
 
                             if (!existingTag) {
@@ -1224,7 +1294,7 @@ const DataCategorySearch = ({
                                             tagType: "Removed Data Type",
                                             description: `Removed data type from structure ${structureShortName}`,
                                         }),
-                                    }
+                                    },
                                 );
 
                                 if (createResponse.ok) {
@@ -1233,7 +1303,7 @@ const DataCategorySearch = ({
                                     await apiAssignTag(
                                         newTag.id,
                                         structureShortName,
-                                        apiBaseUrl
+                                        apiBaseUrl,
                                     );
                                 }
                             }
@@ -1252,7 +1322,7 @@ const DataCategorySearch = ({
                     } catch (err) {
                         console.error("Error removing data type:", err);
                         setModalError(
-                            `Failed to remove data type: ${err.message}`
+                            `Failed to remove data type: ${err.message}`,
                         );
                     }
                 },
@@ -1279,7 +1349,7 @@ const DataCategorySearch = ({
                 const existingTag = allTags.find(
                     (tag) =>
                         tag.name === tagName &&
-                        tag.tagType === "Removed Data Type"
+                        tag.tagType === "Removed Data Type",
                 );
 
                 if (!existingTag) {
@@ -1302,7 +1372,7 @@ const DataCategorySearch = ({
                         await apiAssignTag(
                             newTag.id,
                             structureShortName,
-                            apiBaseUrl
+                            apiBaseUrl,
                         );
                     }
                 }
@@ -1391,7 +1461,7 @@ const DataCategorySearch = ({
                                 // Escape quotes and wrap in quotes if contains comma or newline
                                 const escapedValue = stringValue.replace(
                                     /"/g,
-                                    '""'
+                                    '""',
                                 );
                                 return escapedValue.includes(",") ||
                                     escapedValue.includes("\n") ||
@@ -1399,7 +1469,7 @@ const DataCategorySearch = ({
                                     ? `"${escapedValue}"`
                                     : escapedValue;
                             })
-                            .join(",")
+                            .join(","),
                     ),
                 ].join("\n");
 
@@ -1424,11 +1494,14 @@ const DataCategorySearch = ({
 
     const groupedStructures = groupStructures(filteredStructures);
     // When database filter is enabled, use filteredStructures count, otherwise use allStructures
-    const totalCount = databaseFilterEnabled && databaseStructures.length > 0 
-        ? filteredStructures.length 
-        : allStructures.length;
+    const totalCount =
+        databaseFilterEnabled && databaseStructures.length > 0
+            ? filteredStructures.length
+            : allStructures.length;
     const activeFilterCount =
-        selectedFilters.categories.size + selectedFilters.dataTypes.size;
+        selectedFilters.categories.size +
+        selectedFilters.dataTypes.size +
+        selectedFilters.sites.size;
 
     const fetchTags = async () => {
         setTagLoading(true);
@@ -1441,7 +1514,7 @@ const DataCategorySearch = ({
                     tag.tagType !== "Removed Category" &&
                     tag.tagType !== "Removed Data Type" &&
                     !tag.name.startsWith("REMOVED_CATEGORY:") &&
-                    !tag.name.startsWith("REMOVED_DATATYPE:")
+                    !tag.name.startsWith("REMOVED_DATATYPE:"),
             );
             setAvailableTags(categoryTags);
         } catch (err) {
@@ -1463,7 +1536,7 @@ const DataCategorySearch = ({
                     tag.tagType !== "Removed Category" &&
                     tag.tagType !== "Removed Data Type" &&
                     !tag.name.startsWith("REMOVED_CATEGORY:") &&
-                    !tag.name.startsWith("REMOVED_DATATYPE:")
+                    !tag.name.startsWith("REMOVED_DATATYPE:"),
             );
             setAvailableDataTypeTags(dataTypeTags);
         } catch (err) {
@@ -1491,7 +1564,7 @@ const DataCategorySearch = ({
             if (hasMatch) {
                 const existingItem = findExistingItemName(
                     trimmedName,
-                    allAvailableCategories
+                    allAvailableCategories,
                 );
                 const existingName = existingItem?.name || trimmedName;
                 const errorMessage = `"${trimmedName}" already exists as "${existingName}". Please select it from the list below:`;
@@ -1506,7 +1579,7 @@ const DataCategorySearch = ({
             const newTag = await apiCreateTag(
                 nameToUse, // Keep original with spaces
                 "Category",
-                apiBaseUrl
+                apiBaseUrl,
             );
 
             // Log audit event
@@ -1518,7 +1591,7 @@ const DataCategorySearch = ({
                     tagType: "Category",
                     newValue: newTag.name,
                 },
-                apiBaseUrl
+                apiBaseUrl,
             );
 
             setAvailableTags((prev) => [...prev, newTag]);
@@ -1539,11 +1612,16 @@ const DataCategorySearch = ({
             if (err.message) {
                 errorMessage = err.message;
             } else if (err.details) {
-                errorMessage = typeof err.details === 'string' ? err.details : err.details.error || errorMessage;
+                errorMessage =
+                    typeof err.details === "string"
+                        ? err.details
+                        : err.details.error || errorMessage;
             }
             // Handle 400 errors more gracefully
             if (err.status === 400) {
-                errorMessage = errorMessage || "Invalid request. Please check your input and try again.";
+                errorMessage =
+                    errorMessage ||
+                    "Invalid request. Please check your input and try again.";
             }
             setCategoryError(errorMessage);
             // Don't throw - gracefully handle the error
@@ -1567,7 +1645,7 @@ const DataCategorySearch = ({
             if (hasMatch) {
                 const existingItem = findExistingItemName(
                     trimmedName,
-                    allAvailableDataTypes
+                    allAvailableDataTypes,
                 );
                 const existingName = existingItem?.name || trimmedName;
                 const errorMessage = `"${trimmedName}" already exists as "${existingName}". Please select it from the list below:`;
@@ -1582,7 +1660,7 @@ const DataCategorySearch = ({
             const newTag = await apiCreateTag(
                 nameToUse, // Keep original with spaces
                 "Data Type",
-                apiBaseUrl
+                apiBaseUrl,
             );
 
             // Log audit event
@@ -1594,7 +1672,7 @@ const DataCategorySearch = ({
                     tagType: "Data Type",
                     newValue: newTag.name,
                 },
-                apiBaseUrl
+                apiBaseUrl,
             );
 
             // Update available tags
@@ -1619,11 +1697,16 @@ const DataCategorySearch = ({
             if (err.message) {
                 errorMessage = err.message;
             } else if (err.details) {
-                errorMessage = typeof err.details === 'string' ? err.details : err.details.error || errorMessage;
+                errorMessage =
+                    typeof err.details === "string"
+                        ? err.details
+                        : err.details.error || errorMessage;
             }
             // Handle 400 errors more gracefully
             if (err.status === 400) {
-                errorMessage = errorMessage || "Invalid request. Please check your input and try again.";
+                errorMessage =
+                    errorMessage ||
+                    "Invalid request. Please check your input and try again.";
             }
             setDataTypeError(errorMessage);
             // Don't throw - gracefully handle the error
@@ -1663,12 +1746,12 @@ const DataCategorySearch = ({
                     oldValue: oldName,
                     newValue: updatedName,
                 },
-                apiBaseUrl
+                apiBaseUrl,
             );
 
             if (isDataType) {
                 setAvailableDataTypeTags((prev) =>
-                    prev.map((t) => (t.id === tagId ? updatedTag : t))
+                    prev.map((t) => (t.id === tagId ? updatedTag : t)),
                 );
 
                 // Note: Do NOT update availableDataTypes for custom tags
@@ -1678,7 +1761,7 @@ const DataCategorySearch = ({
                 setEditingDataTypeTagId(null);
             } else {
                 setAvailableTags((prev) =>
-                    prev.map((t) => (t.id === tagId ? updatedTag : t))
+                    prev.map((t) => (t.id === tagId ? updatedTag : t)),
                 );
 
                 // Note: Do NOT update availableCategories for custom tags
@@ -1693,7 +1776,7 @@ const DataCategorySearch = ({
                 const updated = {};
                 Object.keys(prev).forEach((key) => {
                     updated[key] = prev[key].map((t) =>
-                        t.id === tagId ? updatedTag : t
+                        t.id === tagId ? updatedTag : t,
                     );
                 });
                 return updated;
@@ -1703,7 +1786,7 @@ const DataCategorySearch = ({
                 const updated = {};
                 Object.keys(prev).forEach((key) => {
                     updated[key] = prev[key].map((t) =>
-                        t.id === tagId ? updatedTag : t
+                        t.id === tagId ? updatedTag : t,
                     );
                 });
                 return updated;
@@ -1778,10 +1861,10 @@ const DataCategorySearch = ({
                 try {
                     // Find the tag to determine its type and name before removing
                     const categoryTag = availableTags.find(
-                        (t) => t.id === tagId
+                        (t) => t.id === tagId,
                     );
                     const dataTypeTag = availableDataTypeTags.find(
-                        (t) => t.id === tagId
+                        (t) => t.id === tagId,
                     );
                     const tagToDelete = categoryTag || dataTypeTag;
                     const isDataType = !!dataTypeTag;
@@ -1799,15 +1882,15 @@ const DataCategorySearch = ({
                             tagType: tagTypeToLog,
                             oldValue: tagNameToLog,
                         },
-                        apiBaseUrl
+                        apiBaseUrl,
                     );
 
                     // Remove from available tags lists
                     setAvailableTags((prev) =>
-                        prev.filter((t) => t.id !== tagId)
+                        prev.filter((t) => t.id !== tagId),
                     );
                     setAvailableDataTypeTags((prev) =>
-                        prev.filter((t) => t.id !== tagId)
+                        prev.filter((t) => t.id !== tagId),
                     );
 
                     // Remove from filter sets
@@ -1835,7 +1918,7 @@ const DataCategorySearch = ({
                         const updated = {};
                         Object.keys(prev).forEach((key) => {
                             updated[key] = prev[key].filter(
-                                (t) => t.id !== tagId
+                                (t) => t.id !== tagId,
                             );
                         });
                         return updated;
@@ -1845,7 +1928,7 @@ const DataCategorySearch = ({
                         const updated = {};
                         Object.keys(prev).forEach((key) => {
                             updated[key] = prev[key].filter(
-                                (t) => t.id !== tagId
+                                (t) => t.id !== tagId,
                             );
                         });
                         return updated;
@@ -1875,7 +1958,7 @@ const DataCategorySearch = ({
         setModalError(null);
         try {
             const response = await fetch(
-                "https://nda.nih.gov/api/datadictionary/datastructure"
+                "https://nda.nih.gov/api/datadictionary/datastructure",
             );
             if (!response.ok) throw new Error("Failed to fetch dataType");
             const data = await response.json();
@@ -1920,16 +2003,16 @@ const DataCategorySearch = ({
         // Initialize with structure's existing tags if any
         if (structureTags[structure.shortName]) {
             const existingTagIds = structureTags[structure.shortName].map(
-                (t) => t.id
+                (t) => t.id,
             );
             setSelectedSocialTags(new Set(existingTagIds));
 
             // Initialize selected NDA categories based on existing tags that match NDA category names
             const existingTagNames = structureTags[structure.shortName].map(
-                (t) => t.name
+                (t) => t.name,
             );
             const matchingNdaCategories = Array.from(
-                availableCategories
+                availableCategories,
             ).filter((cat) => existingTagNames.includes(cat));
             setSelectedNdaCategories(new Set(matchingNdaCategories));
         } else {
@@ -1947,8 +2030,8 @@ const DataCategorySearch = ({
         if (structureDataTypeTags[structure.shortName]) {
             setSelectedDataTypeTags(
                 new Set(
-                    structureDataTypeTags[structure.shortName].map((t) => t.id)
-                )
+                    structureDataTypeTags[structure.shortName].map((t) => t.id),
+                ),
             );
         } else {
             setSelectedDataTypeTags(new Set());
@@ -1960,7 +2043,8 @@ const DataCategorySearch = ({
             <div className="mb-8">
                 <h1 className="text-3xl font-bold mb-4">Data Dictionary</h1>
                 <p className="text-gray-600 -mb-7">
-                    Browse all NDA data structures by data type and category
+                    Browse all NDA Data Structures by Data Type and Category, in
+                    addition to Research Partners.
                 </p>
 
                 {/* Database Filter Checkbox */}
@@ -1983,12 +2067,12 @@ const DataCategorySearch = ({
                                     height={128}
                                     className="object-contain"
                                 />
-                        </div>
+                            </div>
                             {databaseConnectionError && (
                                 <p className="text-sm text-red-600 ml-2">
                                     {databaseConnectionError}
-                        </p>
-                    )}
+                                </p>
+                            )}
                             {loadingDatabaseStructures && (
                                 <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-500"></div>
                             )}
@@ -2042,7 +2126,7 @@ const DataCategorySearch = ({
                                 if (typeof window !== "undefined") {
                                     localStorage.setItem(
                                         "dataCategoryGroupBy",
-                                        newValue
+                                        newValue,
                                     );
                                 }
                             }}
@@ -2116,6 +2200,48 @@ const DataCategorySearch = ({
                                 </div>
                             </div>
 
+                            {/* Sites Filter - Only show when database filter is enabled */}
+                            {databaseFilterEnabled &&
+                                availableSites.size > 0 && (
+                                    <>
+                                        <div className="mb-6">
+                                            <h4 className="font-medium text-gray-700 mb-2">
+                                                Sites
+                                            </h4>
+                                            <div className="space-y-2 max-h-48 overflow-y-auto">
+                                                {Array.from(availableSites)
+                                                    .sort()
+                                                    .map((site) => (
+                                                        <label
+                                                            key={site}
+                                                            className="flex items-center cursor-pointer"
+                                                        >
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={selectedFilters.sites.has(
+                                                                    site,
+                                                                )}
+                                                                onChange={() =>
+                                                                    toggleFilter(
+                                                                        "sites",
+                                                                        site,
+                                                                    )
+                                                                }
+                                                                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
+                                                            />
+                                                            <span className="ml-2 text-sm text-gray-700">
+                                                                {site}
+                                                            </span>
+                                                        </label>
+                                                    ))}
+                                            </div>
+                                        </div>
+
+                                        {/* Horizontal divider */}
+                                        <div className="my-4 border-t border-gray-200"></div>
+                                    </>
+                                )}
+
                             {/* Data Type Filters */}
                             <div>
                                 <h4 className="font-medium text-gray-700 mb-2">
@@ -2125,43 +2251,43 @@ const DataCategorySearch = ({
                                     {(() => {
                                         // Combine NDA data types with custom data type tags
                                         const combinedDataTypes = new Set(
-                                            availableDataTypes
+                                            availableDataTypes,
                                         );
                                         availableDataTypeTags.forEach((tag) => {
                                             combinedDataTypes.add(tag.name);
                                         });
                                         return Array.from(combinedDataTypes)
-                                        .sort()
-                                        .map((dataType) => (
-                                            <label
-                                                key={dataType}
-                                                className="flex items-center"
-                                            >
-                                                <input
-                                                    type="checkbox"
-                                                    checked={selectedFilters.dataTypes.has(
-                                                        dataType
-                                                    )}
-                                                    onChange={() =>
-                                                        toggleFilter(
-                                                            "dataTypes",
-                                                            dataType
-                                                        )
-                                                    }
-                                                    className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-                                                />
+                                            .sort()
+                                            .map((dataType) => (
+                                                <label
+                                                    key={dataType}
+                                                    className="flex items-center"
+                                                >
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={selectedFilters.dataTypes.has(
+                                                            dataType,
+                                                        )}
+                                                        onChange={() =>
+                                                            toggleFilter(
+                                                                "dataTypes",
+                                                                dataType,
+                                                            )
+                                                        }
+                                                        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                                                    />
                                                     <span className="ml-2 text-sm text-gray-700 flex items-center">
-                                                    {dataType}
+                                                        {dataType}
                                                         {isCustomTag(
                                                             dataType,
-                                                            false
+                                                            false,
                                                         ) && (
                                                             <span className="ml-1 text-orange-500 text-xs">
                                                                 ★
                                                             </span>
                                                         )}
                                                         {hasStructuresInDatabase(
-                                                            dataType
+                                                            dataType,
                                                         ) && (
                                                             <div className="relative ml-1 inline-block">
                                                                 <div className="group">
@@ -2178,8 +2304,8 @@ const DataCategorySearch = ({
                                                                 </div>
                                                             </div>
                                                         )}
-                                                </span>
-                                            </label>
+                                                    </span>
+                                                </label>
                                             ));
                                     })()}
                                 </div>
@@ -2197,63 +2323,67 @@ const DataCategorySearch = ({
                                     {(() => {
                                         // Combine NDA categories with custom category tags
                                         const combinedCategories = new Set(
-                                            availableCategories
+                                            availableCategories,
                                         );
                                         availableTags.forEach((tag) => {
                                             combinedCategories.add(tag.name);
                                         });
                                         return Array.from(combinedCategories)
-                                        .sort()
-                                        .map((category) => {
-                                            // Simple check: if it's NOT in availableCategories, it's custom (came from availableTags)
-                                            const isCustom = !availableCategories.has(category);
-                                            return (
-                                            <label
-                                                key={category}
-                                                className="flex items-center"
-                                            >
-                                                <input
-                                                    type="checkbox"
-                                                    checked={selectedFilters.categories.has(
-                                                        category
-                                                    )}
-                                                    onChange={() =>
-                                                        toggleFilter(
-                                                            "categories",
-                                                            category
-                                                        )
-                                                    }
-                                                    className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-                                                />
-                                                    <span className="ml-2 text-sm text-gray-700 flex items-center">
-                                                    {category}
-                                                        {isCustom && (
-                                                            <span className="ml-1 text-orange-500 text-xs">
-                                                                ★
-                                                            </span>
-                                                        )}
-                                                        {hasStructuresInDatabase(
-                                                            category
-                                                        ) && (
-                                                            <div className="relative ml-1 inline-block">
-                                                                <div className="group">
-                                                                    <Database className="w-3 h-3 text-blue-500 cursor-help" />
-                                                                    <div className="absolute bottom-full left-0 mb-1 px-2 py-1 text-xs text-white bg-gray-800 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-10 pointer-events-none">
-                                                                        This
-                                                                        category
-                                                                        has
-                                                                        structures
-                                                                        in the
-                                                                        IMPACT-MH
-                                                                        database
+                                            .sort()
+                                            .map((category) => {
+                                                // Simple check: if it's NOT in availableCategories, it's custom (came from availableTags)
+                                                const isCustom =
+                                                    !availableCategories.has(
+                                                        category,
+                                                    );
+                                                return (
+                                                    <label
+                                                        key={category}
+                                                        className="flex items-center"
+                                                    >
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={selectedFilters.categories.has(
+                                                                category,
+                                                            )}
+                                                            onChange={() =>
+                                                                toggleFilter(
+                                                                    "categories",
+                                                                    category,
+                                                                )
+                                                            }
+                                                            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                                                        />
+                                                        <span className="ml-2 text-sm text-gray-700 flex items-center">
+                                                            {category}
+                                                            {isCustom && (
+                                                                <span className="ml-1 text-orange-500 text-xs">
+                                                                    ★
+                                                                </span>
+                                                            )}
+                                                            {hasStructuresInDatabase(
+                                                                category,
+                                                            ) && (
+                                                                <div className="relative ml-1 inline-block">
+                                                                    <div className="group">
+                                                                        <Database className="w-3 h-3 text-blue-500 cursor-help" />
+                                                                        <div className="absolute bottom-full left-0 mb-1 px-2 py-1 text-xs text-white bg-gray-800 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-10 pointer-events-none">
+                                                                            This
+                                                                            category
+                                                                            has
+                                                                            structures
+                                                                            in
+                                                                            the
+                                                                            IMPACT-MH
+                                                                            database
+                                                                        </div>
                                                                     </div>
                                                                 </div>
-                                                            </div>
-                                                        )}
-                                                </span>
-                                            </label>
-                                            );
-                                        });
+                                                            )}
+                                                        </span>
+                                                    </label>
+                                                );
+                                            });
                                     })()}
                                 </div>
                             </div>
@@ -2278,7 +2408,7 @@ const DataCategorySearch = ({
                                         >
                                             <div className="flex items-center space-x-2">
                                                 {expandedGroups.has(
-                                                    groupName
+                                                    groupName,
                                                 ) ? (
                                                     <ChevronDown className="w-5 h-5 text-gray-500" />
                                                 ) : (
@@ -2287,34 +2417,74 @@ const DataCategorySearch = ({
                                                 <h3 className="font-medium text-gray-900 flex items-center">
                                                     {groupName}
                                                     {(() => {
-                                                        if (groupBy !== "category") {
-                                                            return isCustomTag(groupName, false);
+                                                        if (
+                                                            groupBy !==
+                                                            "category"
+                                                        ) {
+                                                            return isCustomTag(
+                                                                groupName,
+                                                                false,
+                                                            );
                                                         }
                                                         // For categories, check multiple sources
-                                                        const inStructureTags = Object.values(structureTags).some(
-                                                            (tags) =>
-                                                                Array.isArray(tags) && tags.some((tag) => tag.name === groupName)
-                                                        );
-                                                        const inAvailableTags = availableTags.some(
-                                                            (tag) => tag.name === groupName && (tag.tagType === "Category" || !tag.tagType)
-                                                        );
-                                                        const inOriginalCategories = availableCategories.has(groupName);
-                                                        const isCustom = inStructureTags || inAvailableTags || !inOriginalCategories;
-                                                        
-                                                        // Debug for "Positive Emotions"
-                                                        if (groupName === "Positive Emotions") {
-                                                            console.log("Category star check:", {
+                                                        const inStructureTags =
+                                                            Object.values(
+                                                                structureTags,
+                                                            ).some(
+                                                                (tags) =>
+                                                                    Array.isArray(
+                                                                        tags,
+                                                                    ) &&
+                                                                    tags.some(
+                                                                        (tag) =>
+                                                                            tag.name ===
+                                                                            groupName,
+                                                                    ),
+                                                            );
+                                                        const inAvailableTags =
+                                                            availableTags.some(
+                                                                (tag) =>
+                                                                    tag.name ===
+                                                                        groupName &&
+                                                                    (tag.tagType ===
+                                                                        "Category" ||
+                                                                        !tag.tagType),
+                                                            );
+                                                        const inOriginalCategories =
+                                                            availableCategories.has(
                                                                 groupName,
-                                                                inStructureTags,
-                                                                inAvailableTags,
-                                                                inOriginalCategories,
-                                                                isCustom,
-                                                                structureTagsCount: Object.keys(structureTags).length,
-                                                                availableTagsCount: availableTags.length,
-                                                                availableCategoriesSize: availableCategories.size
-                                                            });
+                                                            );
+                                                        const isCustom =
+                                                            inStructureTags ||
+                                                            inAvailableTags ||
+                                                            !inOriginalCategories;
+
+                                                        // Debug for "Positive Emotions"
+                                                        if (
+                                                            groupName ===
+                                                            "Positive Emotions"
+                                                        ) {
+                                                            console.log(
+                                                                "Category star check:",
+                                                                {
+                                                                    groupName,
+                                                                    inStructureTags,
+                                                                    inAvailableTags,
+                                                                    inOriginalCategories,
+                                                                    isCustom,
+                                                                    structureTagsCount:
+                                                                        Object.keys(
+                                                                            structureTags,
+                                                                        )
+                                                                            .length,
+                                                                    availableTagsCount:
+                                                                        availableTags.length,
+                                                                    availableCategoriesSize:
+                                                                        availableCategories.size,
+                                                                },
+                                                            );
                                                         }
-                                                        
+
                                                         return isCustom;
                                                     })() && (
                                                         <span className="ml-1 text-orange-500 text-xs">
@@ -2322,7 +2492,7 @@ const DataCategorySearch = ({
                                                         </span>
                                                     )}
                                                     {hasStructuresInDatabase(
-                                                        groupName
+                                                        groupName,
                                                     ) && (
                                                         <div className="relative group ml-1">
                                                             <Database className="w-3 h-3 text-blue-500 cursor-help" />
@@ -2364,7 +2534,7 @@ const DataCategorySearch = ({
                                                             className="p-3 border rounded hover:bg-gray-50 cursor-pointer transition-colors"
                                                             onClick={() =>
                                                                 onStructureSelect(
-                                                                    structure.shortName
+                                                                    structure.shortName,
                                                                 )
                                                             }
                                                         >
@@ -2375,7 +2545,7 @@ const DataCategorySearch = ({
                                                                             structure.shortName
                                                                         }
                                                                         {isStructureInDatabase(
-                                                                            structure.shortName
+                                                                            structure.shortName,
                                                                         ) && (
                                                                             <>
                                                                                 <div className="relative group">
@@ -2391,19 +2561,40 @@ const DataCategorySearch = ({
                                                                                     </div>
                                                                                 </div>
                                                                                 {(() => {
-                                                                                    const dbStructure = dataStructuresMap[structure.shortName] || dataStructuresMap[structure.shortName?.toLowerCase()];
-                                                                                    const projects = dbStructure?.submittedByProjects || [];
-                                                                                    if (projects.length > 0) {
+                                                                                    const dbStructure =
+                                                                                        dataStructuresMap[
+                                                                                            structure
+                                                                                                .shortName
+                                                                                        ] ||
+                                                                                        dataStructuresMap[
+                                                                                            structure.shortName?.toLowerCase()
+                                                                                        ];
+                                                                                    const projects =
+                                                                                        dbStructure?.submittedByProjects ||
+                                                                                        [];
+                                                                                    if (
+                                                                                        projects.length >
+                                                                                        0
+                                                                                    ) {
                                                                                         return (
                                                                                             <div className="ml-2 flex flex-wrap gap-1">
-                                                                                                {projects.map((project, idx) => (
-                                                                                                    <span
-                                                                                                        key={idx}
-                                                                                                        className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded"
-                                                                                                    >
-                                                                                                        {project}
-                                                                                                    </span>
-                                                                                                ))}
+                                                                                                {projects.map(
+                                                                                                    (
+                                                                                                        project,
+                                                                                                        idx,
+                                                                                                    ) => (
+                                                                                                        <span
+                                                                                                            key={
+                                                                                                                idx
+                                                                                                            }
+                                                                                                            className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded"
+                                                                                                        >
+                                                                                                            {
+                                                                                                                project
+                                                                                                            }
+                                                                                                        </span>
+                                                                                                    ),
+                                                                                                )}
                                                                                             </div>
                                                                                         );
                                                                                     }
@@ -2421,7 +2612,7 @@ const DataCategorySearch = ({
                                                                     <div
                                                                         className="flex flex-wrap gap-2 mt-2"
                                                                         onClick={(
-                                                                            e
+                                                                            e,
                                                                         ) =>
                                                                             e.stopPropagation()
                                                                         }
@@ -2447,50 +2638,50 @@ const DataCategorySearch = ({
                                                                                             {originalCategories
                                                                                                 .filter(
                                                                                                     (
-                                                                                                        category
+                                                                                                        category,
                                                                                                     ) =>
                                                                                                         !isCategoryRemoved(
                                                                                                             structure.shortName,
-                                                                                                            category
-                                                                                                        )
+                                                                                                            category,
+                                                                                                        ),
                                                                                                 )
                                                                                                 .map(
-                                                                            (
-                                                                                category
-                                                                            ) => (
-                                                                                <span
-                                                                                    key={
-                                                                                        category
-                                                                                    }
+                                                                                                    (
+                                                                                                        category,
+                                                                                                    ) => (
+                                                                                                        <span
+                                                                                                            key={
+                                                                                                                category
+                                                                                                            }
                                                                                                             className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-blue-100 text-blue-800 hover:bg-blue-200"
                                                                                                             title="Original NDA category (click to add custom tags)"
                                                                                                         >
                                                                                                             <span
                                                                                                                 onClick={(
-                                                                                                                    e
+                                                                                                                    e,
                                                                                                                 ) => {
                                                                                                                     e.stopPropagation();
                                                                                                                     handleOpenCategoriesModal(
-                                                                                                                        structure
+                                                                                                                        structure,
                                                                                                                     );
                                                                                                                 }}
-                                                                                >
-                                                                                    {
-                                                                                        category
-                                                                                    }
+                                                                                                            >
+                                                                                                                {
+                                                                                                                    category
+                                                                                                                }
                                                                                                             </span>
-                                                                                </span>
-                                                                            )
-                                                                        )}
+                                                                                                        </span>
+                                                                                                    ),
+                                                                                                )}
 
                                                                                             {/* Show custom category tags */}
                                                                                             {customCategoryTags.map(
                                                                                                 (
-                                                                                                    tag
+                                                                                                    tag,
                                                                                                 ) => {
                                                                                                     const isNdaCategory =
                                                                                                         availableCategories.has(
-                                                                                                            tag.name
+                                                                                                            tag.name,
                                                                                                         );
                                                                                                     return (
                                                                                                         <span
@@ -2498,11 +2689,11 @@ const DataCategorySearch = ({
                                                                                                                 tag.id
                                                                                                             }
                                                                                                             onClick={(
-                                                                                                                e
+                                                                                                                e,
                                                                                                             ) => {
                                                                                                                 e.stopPropagation();
                                                                                                                 handleOpenCategoriesModal(
-                                                                                                                    structure
+                                                                                                                    structure,
                                                                                                                 );
                                                                                                             }}
                                                                                                             className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-blue-100 text-blue-700 hover:bg-blue-200"
@@ -2516,7 +2707,7 @@ const DataCategorySearch = ({
                                                                                                             </span>
                                                                                                         </span>
                                                                                                     );
-                                                                                                }
+                                                                                                },
                                                                                             )}
                                                                                         </>
                                                                                     );
@@ -2541,18 +2732,18 @@ const DataCategorySearch = ({
                                                                                                 .shortName
                                                                                         ].map(
                                                                                             (
-                                                                                                tag
+                                                                                                tag,
                                                                                             ) => (
                                                                                                 <span
                                                                                                     key={
                                                                                                         tag.id
                                                                                                     }
                                                                                                     onClick={(
-                                                                                                        e
+                                                                                                        e,
                                                                                                     ) => {
                                                                                                         e.stopPropagation();
                                                                                                         handleOpenDataTypesModal(
-                                                                                                            structure
+                                                                                                            structure,
                                                                                                         );
                                                                                                     }}
                                                                                                     className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-gray-100 text-gray-700 hover:bg-gray-200"
@@ -2565,13 +2756,13 @@ const DataCategorySearch = ({
                                                                                                         ★
                                                                                                     </span>
                                                                                                 </span>
-                                                                                            )
+                                                                                            ),
                                                                                         );
                                                                                     } else {
                                                                                         // Show original NDA data type (if not removed)
                                                                                         if (
                                                                                             isDataTypeRemoved(
-                                                                                                structure.shortName
+                                                                                                structure.shortName,
                                                                                             )
                                                                                         ) {
                                                                                             return null;
@@ -2580,19 +2771,19 @@ const DataCategorySearch = ({
                                                                                             <span
                                                                                                 className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-gray-100 text-gray-700 hover:bg-gray-200"
                                                                                                 onClick={(
-                                                                                                    e
+                                                                                                    e,
                                                                                                 ) => {
                                                                                                     e.stopPropagation();
                                                                                                     handleOpenDataTypesModal(
-                                                                                                        structure
+                                                                                                        structure,
                                                                                                     );
                                                                                                 }}
                                                                                                 title="Click to add custom data type tags"
                                                                                             >
-                                                                            {
-                                                                                structure.dataType
-                                                                            }
-                                                                        </span>
+                                                                                                {
+                                                                                                    structure.dataType
+                                                                                                }
+                                                                                            </span>
                                                                                         );
                                                                                     }
                                                                                 })()}
@@ -2618,18 +2809,18 @@ const DataCategorySearch = ({
                                                                                                 .shortName
                                                                                         ].map(
                                                                                             (
-                                                                                                tag
+                                                                                                tag,
                                                                                             ) => (
                                                                                                 <span
                                                                                                     key={
                                                                                                         tag.id
                                                                                                     }
                                                                                                     onClick={(
-                                                                                                        e
+                                                                                                        e,
                                                                                                     ) => {
                                                                                                         e.stopPropagation();
                                                                                                         handleOpenDataTypesModal(
-                                                                                                            structure
+                                                                                                            structure,
                                                                                                         );
                                                                                                     }}
                                                                                                     className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-gray-100 text-gray-700 hover:bg-gray-200"
@@ -2642,13 +2833,13 @@ const DataCategorySearch = ({
                                                                                                         ★
                                                                                                     </span>
                                                                                                 </span>
-                                                                                            )
+                                                                                            ),
                                                                                         );
                                                                                     } else {
                                                                                         // Show original NDA data type (if not removed)
                                                                                         if (
                                                                                             isDataTypeRemoved(
-                                                                                                structure.shortName
+                                                                                                structure.shortName,
                                                                                             )
                                                                                         ) {
                                                                                             return null;
@@ -2657,11 +2848,11 @@ const DataCategorySearch = ({
                                                                                             <span
                                                                                                 className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-gray-100 text-gray-700 hover:bg-gray-200"
                                                                                                 onClick={(
-                                                                                                    e
+                                                                                                    e,
                                                                                                 ) => {
                                                                                                     e.stopPropagation();
                                                                                                     handleOpenDataTypesModal(
-                                                                                                        structure
+                                                                                                        structure,
                                                                                                     );
                                                                                                 }}
                                                                                                 title="Click to add custom data type tags"
@@ -2692,16 +2883,16 @@ const DataCategorySearch = ({
                                                                                             {originalCategories
                                                                                                 .filter(
                                                                                                     (
-                                                                                                        category
+                                                                                                        category,
                                                                                                     ) =>
                                                                                                         !isCategoryRemoved(
                                                                                                             structure.shortName,
-                                                                                                            category
-                                                                                                        )
+                                                                                                            category,
+                                                                                                        ),
                                                                                                 )
                                                                                                 .map(
                                                                                                     (
-                                                                                                        category
+                                                                                                        category,
                                                                                                     ) => (
                                                                                                         <span
                                                                                                             key={
@@ -2712,11 +2903,11 @@ const DataCategorySearch = ({
                                                                                                         >
                                                                                                             <span
                                                                                                                 onClick={(
-                                                                                                                    e
+                                                                                                                    e,
                                                                                                                 ) => {
                                                                                                                     e.stopPropagation();
                                                                                                                     handleOpenCategoriesModal(
-                                                                                                                        structure
+                                                                                                                        structure,
                                                                                                                     );
                                                                                                                 }}
                                                                                                             >
@@ -2725,26 +2916,26 @@ const DataCategorySearch = ({
                                                                                                                 }
                                                                                                             </span>
                                                                                                         </span>
-                                                                                                    )
+                                                                                                    ),
                                                                                                 )}
 
                                                                                             {/* Show custom category tags */}
                                                                                             {customCategoryTags.map(
                                                                                                 (
-                                                                                                    tag
+                                                                                                    tag,
                                                                                                 ) => {
                                                                                                     const isNdaCategory =
                                                                                                         availableCategories.has(
-                                                                                                            tag.name
+                                                                                                            tag.name,
                                                                                                         );
                                                                                                     // Only show star if it's a NEW tag (in availableTags but not an original NDA category)
                                                                                                     const isNewTag =
                                                                                                         availableTags.some(
                                                                                                             (
-                                                                                                                t
+                                                                                                                t,
                                                                                                             ) =>
                                                                                                                 t.name ===
-                                                                                                                tag.name
+                                                                                                                tag.name,
                                                                                                         ) &&
                                                                                                         !isNdaCategory;
                                                                                                     return (
@@ -2753,11 +2944,11 @@ const DataCategorySearch = ({
                                                                                                                 tag.id
                                                                                                             }
                                                                                                             onClick={(
-                                                                                                                e
+                                                                                                                e,
                                                                                                             ) => {
                                                                                                                 e.stopPropagation();
                                                                                                                 handleOpenCategoriesModal(
-                                                                                                                    structure
+                                                                                                                    structure,
                                                                                                                 );
                                                                                                             }}
                                                                                                             className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-blue-100 text-blue-700 hover:bg-blue-200"
@@ -2773,7 +2964,7 @@ const DataCategorySearch = ({
                                                                                                             )}
                                                                                                         </span>
                                                                                                     );
-                                                                                                }
+                                                                                                },
                                                                                             )}
                                                                                         </>
                                                                                     );
@@ -2782,11 +2973,14 @@ const DataCategorySearch = ({
                                                                         )}
 
                                                                         {/* Status Badge */}
-                                                                        <span className={`text-xs px-2 py-1 rounded ${
-                                                                            structure.status === "Draft"
-                                                                                ? "bg-yellow-100 text-yellow-800"
-                                                                                : "bg-green-100 text-green-800"
-                                                                        }`}>
+                                                                        <span
+                                                                            className={`text-xs px-2 py-1 rounded ${
+                                                                                structure.status ===
+                                                                                "Draft"
+                                                                                    ? "bg-yellow-100 text-yellow-800"
+                                                                                    : "bg-green-100 text-green-800"
+                                                                            }`}
+                                                                        >
                                                                             {
                                                                                 structure.status
                                                                             }
@@ -2854,7 +3048,7 @@ const DataCategorySearch = ({
                                         " - " +
                                         modalStructure.shortName}
                                 </p>
-        </div>
+                            </div>
                             <button
                                 onClick={() => {
                                     setIsCategoriesModalOpen(false);
@@ -2934,7 +3128,7 @@ const DataCategorySearch = ({
                                                             const isRemoved =
                                                                 isCategoryRemoved(
                                                                     modalStructure.shortName,
-                                                                    cat
+                                                                    cat,
                                                                 );
                                                             return (
                                                                 <label
@@ -2952,14 +3146,14 @@ const DataCategorySearch = ({
                                                                             const otherVisibleOriginalCategories =
                                                                                 modalStructure.categories.filter(
                                                                                     (
-                                                                                        c
+                                                                                        c,
                                                                                     ) =>
                                                                                         c !==
                                                                                             cat &&
                                                                                         !isCategoryRemoved(
                                                                                             modalStructure.shortName,
-                                                                                            c
-                                                                                        )
+                                                                                            c,
+                                                                                        ),
                                                                                 );
                                                                             const selectedCustomTagCount =
                                                                                 selectedSocialTags.size;
@@ -2967,7 +3161,7 @@ const DataCategorySearch = ({
                                                                                 selectedNdaCategories.size;
                                                                             const isThisCategorySelected =
                                                                                 selectedNdaCategories.has(
-                                                                                    cat
+                                                                                    cat,
                                                                                 );
                                                                             // Count other selected NDA categories (excluding this one)
                                                                             const otherSelectedNdaCategoryCount =
@@ -3004,11 +3198,11 @@ const DataCategorySearch = ({
                                                                             );
                                                                         })()}
                                                                         onChange={(
-                                                                            e
+                                                                            e,
                                                                         ) => {
                                                                             // Clear any previous errors
                                                                             setModalError(
-                                                                                null
+                                                                                null,
                                                                             );
                                                                             if (
                                                                                 e
@@ -3021,7 +3215,7 @@ const DataCategorySearch = ({
                                                                                         // Update local state
                                                                                         setRemovedOriginalCategories(
                                                                                             (
-                                                                                                prev
+                                                                                                prev,
                                                                                             ) => {
                                                                                                 const updated =
                                                                                                     {
@@ -3037,7 +3231,7 @@ const DataCategorySearch = ({
                                                                                                         modalStructure
                                                                                                             .shortName
                                                                                                     ].delete(
-                                                                                                        cat
+                                                                                                        cat,
                                                                                                     );
                                                                                                     if (
                                                                                                         updated[
@@ -3054,7 +3248,7 @@ const DataCategorySearch = ({
                                                                                                     }
                                                                                                 }
                                                                                                 return updated;
-                                                                                            }
+                                                                                            },
                                                                                         );
 
                                                                                         // Delete tag from backend
@@ -3062,7 +3256,7 @@ const DataCategorySearch = ({
                                                                                             const tagName = `REMOVED_CATEGORY:${modalStructure.shortName}:${cat}`;
                                                                                             const tagsResponse =
                                                                                                 await fetch(
-                                                                                                    `${apiBaseUrl}/tags`
+                                                                                                    `${apiBaseUrl}/tags`,
                                                                                                 );
                                                                                             if (
                                                                                                 tagsResponse.ok
@@ -3072,12 +3266,12 @@ const DataCategorySearch = ({
                                                                                                 const tagToDelete =
                                                                                                     allTags.find(
                                                                                                         (
-                                                                                                            tag
+                                                                                                            tag,
                                                                                                         ) =>
                                                                                                             tag.name ===
                                                                                                                 tagName &&
                                                                                                             tag.tagType ===
-                                                                                                                "Removed Category"
+                                                                                                                "Removed Category",
                                                                                                     );
                                                                                                 if (
                                                                                                     tagToDelete
@@ -3097,23 +3291,23 @@ const DataCategorySearch = ({
                                                                                                                     tagId: tagToDelete.id,
                                                                                                                     dataStructureShortName:
                                                                                                                         modalStructure.shortName,
-                                                                                                                }
+                                                                                                                },
                                                                                                             ),
-                                                                                                        }
+                                                                                                        },
                                                                                                     );
                                                                                                     // Delete the tag
                                                                                                     await fetch(
                                                                                                         `${apiBaseUrl}/tags/${tagToDelete.id}`,
                                                                                                         {
                                                                                                             method: "DELETE",
-                                                                                                        }
+                                                                                                        },
                                                                                                     );
                                                                                                 }
                                                                                             }
                                                                                         } catch (err) {
                                                                                             console.error(
                                                                                                 "Error restoring category:",
-                                                                                                err
+                                                                                                err,
                                                                                             );
                                                                                         }
                                                                                     };
@@ -3124,14 +3318,14 @@ const DataCategorySearch = ({
                                                                                 const otherVisibleOriginalCategories =
                                                                                     modalStructure.categories.filter(
                                                                                         (
-                                                                                            c
+                                                                                            c,
                                                                                         ) =>
                                                                                             c !==
                                                                                                 cat &&
                                                                                             !isCategoryRemoved(
                                                                                                 modalStructure.shortName,
-                                                                                                c
-                                                                                            )
+                                                                                                c,
+                                                                                            ),
                                                                                     );
                                                                                 const selectedCustomTagCount =
                                                                                     selectedSocialTags.size;
@@ -3139,7 +3333,7 @@ const DataCategorySearch = ({
                                                                                     selectedNdaCategories.size;
                                                                                 const isThisCategorySelected =
                                                                                     selectedNdaCategories.has(
-                                                                                        cat
+                                                                                        cat,
                                                                                     );
                                                                                 // Count other selected NDA categories (excluding this one)
                                                                                 const otherSelectedNdaCategoryCount =
@@ -3157,7 +3351,7 @@ const DataCategorySearch = ({
                                                                                     1
                                                                                 ) {
                                                                                     setModalError(
-                                                                                        "Cannot remove the last category. At least one category must remain. Please add a new category first."
+                                                                                        "Cannot remove the last category. At least one category must remain. Please add a new category first.",
                                                                                     );
                                                                                     // Reset checkbox
                                                                                     e.target.checked = true;
@@ -3167,7 +3361,7 @@ const DataCategorySearch = ({
                                                                                 // Remove category
                                                                                 removeOriginalCategory(
                                                                                     modalStructure.shortName,
-                                                                                    cat
+                                                                                    cat,
                                                                                 );
                                                                             }
                                                                         }}
@@ -3178,7 +3372,7 @@ const DataCategorySearch = ({
                                                                     </span>
                                                                 </label>
                                                             );
-                                                        }
+                                                        },
                                                     )}
                                                 </div>
                                             </div>
@@ -3195,18 +3389,18 @@ const DataCategorySearch = ({
                                                     let count =
                                                         selectedNdaCategories.size;
                                                     Array.from(
-                                                        selectedSocialTags
+                                                        selectedSocialTags,
                                                     ).forEach((tagId) => {
                                                         const tag =
                                                             availableTags.find(
                                                                 (t) =>
                                                                     t.id ===
-                                                                    tagId
+                                                                    tagId,
                                                             );
                                                         if (
                                                             tag &&
                                                             !selectedNdaCategories.has(
-                                                                tag.name
+                                                                tag.name,
                                                             )
                                                         ) {
                                                             count++;
@@ -3219,18 +3413,18 @@ const DataCategorySearch = ({
                                             <div className="flex flex-wrap gap-2">
                                                 {/* Show selected custom tags - exclude ones that are also in selectedNdaCategories */}
                                                 {Array.from(
-                                                    selectedSocialTags
+                                                    selectedSocialTags,
                                                 ).map((tagId, index) => {
                                                     const tag =
                                                         availableTags.find(
                                                             (t) =>
-                                                                t.id === tagId
+                                                                t.id === tagId,
                                                         );
                                                     // Skip if this tag name is also in selectedNdaCategories (to avoid duplicates)
                                                     if (
                                                         tag &&
                                                         selectedNdaCategories.has(
-                                                            tag.name
+                                                            tag.name,
                                                         )
                                                     ) {
                                                         return null;
@@ -3249,22 +3443,22 @@ const DataCategorySearch = ({
                                                             </span>
                                                             <button
                                                                 onClick={(
-                                                                    e
+                                                                    e,
                                                                 ) => {
                                                                     e.stopPropagation();
                                                                     setSelectedSocialTags(
                                                                         (
-                                                                            prev
+                                                                            prev,
                                                                         ) => {
                                                                             const newSet =
                                                                                 new Set(
-                                                                                    prev
+                                                                                    prev,
                                                                                 );
                                                                             newSet.delete(
-                                                                                tag.id
+                                                                                tag.id,
                                                                             );
                                                                             return newSet;
-                                                                        }
+                                                                        },
                                                                     );
                                                                 }}
                                                                 className="ml-1 hover:bg-blue-200 rounded-full w-4 h-4 flex items-center justify-center text-blue-600 hover:text-blue-800 font-bold"
@@ -3277,14 +3471,14 @@ const DataCategorySearch = ({
                                                 })}
                                                 {/* Show selected NDA categories */}
                                                 {Array.from(
-                                                    selectedNdaCategories
+                                                    selectedNdaCategories,
                                                 ).map((categoryName) => {
                                                     // Check if there's a custom tag with the same name
                                                     const customTagWithSameName =
                                                         availableTags.find(
                                                             (tag) =>
                                                                 tag.name ===
-                                                                categoryName
+                                                                categoryName,
                                                         );
 
                                                     return (
@@ -3301,24 +3495,24 @@ const DataCategorySearch = ({
                                                             </span>
                                                             <button
                                                                 onClick={(
-                                                                    e
+                                                                    e,
                                                                 ) => {
                                                                     e.stopPropagation();
                                                                     e.preventDefault();
                                                                     // Remove from NDA categories selection
                                                                     setSelectedNdaCategories(
                                                                         (
-                                                                            prev
+                                                                            prev,
                                                                         ) => {
                                                                             const newSet =
                                                                                 new Set(
-                                                                                    prev
+                                                                                    prev,
                                                                                 );
                                                                             newSet.delete(
-                                                                                categoryName
+                                                                                categoryName,
                                                                             );
                                                                             return newSet;
-                                                                        }
+                                                                        },
                                                                     );
                                                                     // Also remove custom tag with same name if it exists
                                                                     if (
@@ -3326,17 +3520,17 @@ const DataCategorySearch = ({
                                                                     ) {
                                                                         setSelectedSocialTags(
                                                                             (
-                                                                                prev
+                                                                                prev,
                                                                             ) => {
                                                                                 const newSet =
                                                                                     new Set(
-                                                                                        prev
+                                                                                        prev,
                                                                                     );
                                                                                 newSet.delete(
-                                                                                    customTagWithSameName.id
+                                                                                    customTagWithSameName.id,
                                                                                 );
                                                                                 return newSet;
-                                                                            }
+                                                                            },
                                                                         );
                                                                     }
                                                                 }}
@@ -3375,13 +3569,13 @@ const DataCategorySearch = ({
                                                             onChange={(e) => {
                                                                 setModalSearchTerm(
                                                                     e.target
-                                                                        .value
+                                                                        .value,
                                                                 );
                                                             }}
                                                             placeholder="Category tag name..."
                                                             className="flex-1 px-3 py-2 border rounded-l-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 focus:outline-none text-sm transition-all"
                                                             onKeyPress={async (
-                                                                e
+                                                                e,
                                                             ) => {
                                                                 const tagName =
                                                                     modalSearchTerm.trim();
@@ -3393,17 +3587,17 @@ const DataCategorySearch = ({
                                                                     // Pass tagName directly to createTag to avoid async state issues
                                                                     const result =
                                                                         await createTag(
-                                                                            tagName
+                                                                            tagName,
                                                                         );
                                                                     // Only close input and clear search if tag was created successfully
                                                                     if (
                                                                         result
                                                                     ) {
                                                                         setShowCreateCategoryInput(
-                                                                            false
+                                                                            false,
                                                                         );
                                                                         setModalSearchTerm(
-                                                                            ""
+                                                                            "",
                                                                         );
                                                                     }
                                                                     // Error is already displayed below search bar by createTag
@@ -3412,10 +3606,10 @@ const DataCategorySearch = ({
                                                                     "Escape"
                                                                 ) {
                                                                     setModalSearchTerm(
-                                                                        ""
+                                                                        "",
                                                                     );
                                                                     setShowCreateCategoryInput(
-                                                                        false
+                                                                        false,
                                                                     );
                                                                 }
                                                             }}
@@ -3429,17 +3623,17 @@ const DataCategorySearch = ({
                                                                     // Pass tagName directly to createTag to avoid async state issues
                                                                     const result =
                                                                         await createTag(
-                                                                            tagName
+                                                                            tagName,
                                                                         );
                                                                     // Only close input and clear search if tag was created successfully
                                                                     if (
                                                                         result
                                                                     ) {
                                                                         setShowCreateCategoryInput(
-                                                                            false
+                                                                            false,
                                                                         );
                                                                         setModalSearchTerm(
-                                                                            ""
+                                                                            "",
                                                                         );
                                                                     }
                                                                     // Error is already displayed below search bar by createTag
@@ -3462,7 +3656,7 @@ const DataCategorySearch = ({
                                         {(() => {
                                             const filteredCategories =
                                                 computeFilteredCombinedCategories(
-                                                    modalSearchTerm
+                                                    modalSearchTerm,
                                                 );
                                             return !(
                                                 showCreateCategoryInput ||
@@ -3478,12 +3672,12 @@ const DataCategorySearch = ({
                                                     value={modalSearchTerm}
                                                     onChange={(e) => {
                                                         setModalSearchTerm(
-                                                            e.target.value
+                                                            e.target.value,
                                                         );
                                                         // Clear error when user starts typing
                                                         if (categoryError) {
                                                             setCategoryError(
-                                                                null
+                                                                null,
                                                             );
                                                         }
                                                     }}
@@ -3498,47 +3692,47 @@ const DataCategorySearch = ({
                                                             // Use empty string to get all categories, exactly like data types modal
                                                             const allAvailableCategories =
                                                                 computeFilteredCombinedCategories(
-                                                                    ""
+                                                                    "",
                                                                 );
                                                             // Check against ALL categories, not just filtered ones
                                                             // This ensures we catch plural/singular matches even if they don't match the search filter
                                                             const hasMatch =
                                                                 hasNameMatch(
                                                                     modalSearchTerm,
-                                                                    allAvailableCategories
+                                                                    allAvailableCategories,
                                                                 );
 
                                                             if (!hasMatch) {
                                                                 // No match, show input to create
                                                                 setNewTagName(
-                                                                    modalSearchTerm.trim()
+                                                                    modalSearchTerm.trim(),
                                                                 );
                                                                 setShowCreateCategoryInput(
-                                                                    true
+                                                                    true,
                                                                 );
                                                                 setCategoryError(
-                                                                    null
+                                                                    null,
                                                                 );
                                                                 setMatchedCategoryItem(
-                                                                    null
+                                                                    null,
                                                                 );
                                                             } else {
                                                                 // Match exists (exact or plural/singular), find the existing name
                                                                 const existingItem =
                                                                     findExistingItemName(
                                                                         modalSearchTerm,
-                                                                        allAvailableCategories
+                                                                        allAvailableCategories,
                                                                     );
 
                                                                 const existingName =
                                                                     existingItem?.name ||
                                                                     modalSearchTerm.trim();
                                                                 setCategoryError(
-                                                                    `"${modalSearchTerm.trim()}" already exists as "${existingName}". Please select it from the list below:`
+                                                                    `"${modalSearchTerm.trim()}" already exists as "${existingName}". Please select it from the list below:`,
                                                                 );
                                                                 // Store the matched item so it appears in the list even if it doesn't match the search term
                                                                 setMatchedCategoryItem(
-                                                                    existingItem
+                                                                    existingItem,
                                                                 );
                                                             }
                                                         }}
@@ -3582,13 +3776,13 @@ const DataCategorySearch = ({
                                                                   const hasRealId =
                                                                       item.id &&
                                                                       !item.id.startsWith(
-                                                                          "nda-category-"
+                                                                          "nda-category-",
                                                                       );
 
                                                                   // Check if the name exists in NDA categories
                                                                   const isNdaCategoryName =
                                                                       availableCategories.has(
-                                                                          item.name
+                                                                          item.name,
                                                                       );
 
                                                                   // Custom tag = has real ID AND NOT an NDA category name
@@ -3600,10 +3794,10 @@ const DataCategorySearch = ({
                                                                   const isSelected =
                                                                       isNdaCategory
                                                                           ? selectedNdaCategories.has(
-                                                                                item.name
+                                                                                item.name,
                                                                             )
                                                                           : selectedSocialTags.has(
-                                                                                item.id
+                                                                                item.id,
                                                                             );
 
                                                                   return (
@@ -3620,23 +3814,23 @@ const DataCategorySearch = ({
                                                                                       editingCategoryTagName
                                                                                   }
                                                                                   onChange={(
-                                                                                      e
+                                                                                      e,
                                                                                   ) =>
                                                                                       setEditingCategoryTagName(
                                                                                           e
                                                                                               .target
-                                                                                              .value
+                                                                                              .value,
                                                                                       )
                                                                                   }
                                                                                   onBlur={() => {
                                                                                       updateTag(
                                                                                           item.id,
                                                                                           editingCategoryTagName,
-                                                                                          false
+                                                                                          false,
                                                                                       );
                                                                                   }}
                                                                                   onKeyDown={(
-                                                                                      e
+                                                                                      e,
                                                                                   ) => {
                                                                                       if (
                                                                                           e.key ===
@@ -3645,21 +3839,21 @@ const DataCategorySearch = ({
                                                                                           updateTag(
                                                                                               item.id,
                                                                                               editingCategoryTagName,
-                                                                                              false
+                                                                                              false,
                                                                                           );
                                                                                       } else if (
                                                                                           e.key ===
                                                                                           "Escape"
                                                                                       ) {
                                                                                           setEditingCategoryTagId(
-                                                                                              null
+                                                                                              null,
                                                                                           );
                                                                                       }
                                                                                   }}
                                                                                   autoFocus
                                                                                   className="px-3 py-1.5 rounded-l-full text-sm border border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                                                                   onClick={(
-                                                                                      e
+                                                                                      e,
                                                                                   ) =>
                                                                                       e.stopPropagation()
                                                                                   }
@@ -3668,7 +3862,7 @@ const DataCategorySearch = ({
                                                                               <>
                                                                                   <button
                                                                                       onClick={(
-                                                                                          e
+                                                                                          e,
                                                                                       ) => {
                                                                                           e.stopPropagation();
                                                                                           if (
@@ -3676,52 +3870,52 @@ const DataCategorySearch = ({
                                                                                           ) {
                                                                                               setSelectedNdaCategories(
                                                                                                   (
-                                                                                                      prev
+                                                                                                      prev,
                                                                                                   ) => {
                                                                                                       const newSet =
                                                                                                           new Set(
-                                                                                                              prev
+                                                                                                              prev,
                                                                                                           );
                                                                                                       if (
                                                                                                           newSet.has(
-                                                                                                              item.name
+                                                                                                              item.name,
                                                                                                           )
                                                                                                       ) {
                                                                                                           newSet.delete(
-                                                                                                              item.name
+                                                                                                              item.name,
                                                                                                           );
                                                                                                       } else {
                                                                                                           newSet.add(
-                                                                                                              item.name
+                                                                                                              item.name,
                                                                                                           );
                                                                                                       }
                                                                                                       return newSet;
-                                                                                                  }
+                                                                                                  },
                                                                                               );
                                                                                           } else {
                                                                                               setSelectedSocialTags(
                                                                                                   (
-                                                                                                      prev
+                                                                                                      prev,
                                                                                                   ) => {
                                                                                                       const newSet =
                                                                                                           new Set(
-                                                                                                              prev
+                                                                                                              prev,
                                                                                                           );
                                                                                                       if (
                                                                                                           newSet.has(
-                                                                                                              item.id
+                                                                                                              item.id,
                                                                                                           )
                                                                                                       ) {
                                                                                                           newSet.delete(
-                                                                                                              item.id
+                                                                                                              item.id,
                                                                                                           );
                                                                                                       } else {
                                                                                                           newSet.add(
-                                                                                                              item.id
+                                                                                                              item.id,
                                                                                                           );
                                                                                                       }
                                                                                                       return newSet;
-                                                                                                  }
+                                                                                                  },
                                                                                               );
                                                                                           }
                                                                                       }}
@@ -3760,14 +3954,14 @@ const DataCategorySearch = ({
                                                                                       <>
                                                                                           <button
                                                                                               onClick={(
-                                                                                                  e
+                                                                                                  e,
                                                                                               ) => {
                                                                                                   e.stopPropagation();
                                                                                                   setEditingCategoryTagId(
-                                                                                                      item.id
+                                                                                                      item.id,
                                                                                                   );
                                                                                                   setEditingCategoryTagName(
-                                                                                                      item.name
+                                                                                                      item.name,
                                                                                                   );
                                                                                               }}
                                                                                               className={`px-2 py-1.5 text-sm transition-all border-l-0 inline-flex items-center justify-center ${
@@ -3781,11 +3975,11 @@ const DataCategorySearch = ({
                                                                                           </button>
                                                                                           <button
                                                                                               onClick={(
-                                                                                                  e
+                                                                                                  e,
                                                                                               ) => {
                                                                                                   e.stopPropagation();
                                                                                                   deleteTag(
-                                                                                                      item.id
+                                                                                                      item.id,
                                                                                                   );
                                                                                               }}
                                                                                               className={`px-2 py-1.5 rounded-r-full text-sm transition-all border-l-0 inline-flex items-center justify-center ${
@@ -3803,7 +3997,7 @@ const DataCategorySearch = ({
                                                                           )}
                                                                       </div>
                                                                   );
-                                                              }
+                                                              },
                                                           )
                                                         : null}
                                                 </div>
@@ -3816,16 +4010,16 @@ const DataCategorySearch = ({
                                             onClick={() => {
                                                 setIsCategoriesModalOpen(false);
                                                 setSelectedSocialTags(
-                                                    new Set()
+                                                    new Set(),
                                                 );
                                                 setSelectedNdaCategories(
-                                                    new Set()
+                                                    new Set(),
                                                 );
                                                 setNewTagName("");
                                                 setModalSearchTerm("");
                                                 setNdaCategorySearchTerm("");
                                                 setShowCreateCategoryInput(
-                                                    false
+                                                    false,
                                                 );
                                                 setCategoryError(null);
                                                 setMatchedCategoryItem(null);
@@ -3846,7 +4040,7 @@ const DataCategorySearch = ({
                                                     // Fetch all tags to check for existing ones
                                                     const allTagsResponse =
                                                         await fetch(
-                                                            `${apiBaseUrl}/tags`
+                                                            `${apiBaseUrl}/tags`,
                                                         );
                                                     let allTags = [];
                                                     if (allTagsResponse.ok) {
@@ -3865,7 +4059,7 @@ const DataCategorySearch = ({
                                                                         "Category" ||
                                                                         !tag.tagType ||
                                                                         tag.tagType ===
-                                                                            "")
+                                                                            ""),
                                                             );
 
                                                         if (!existingTag) {
@@ -3885,9 +4079,9 @@ const DataCategorySearch = ({
                                                                                 name: categoryName,
                                                                                 tagType:
                                                                                     "Category",
-                                                                            }
+                                                                            },
                                                                         ),
-                                                                    }
+                                                                    },
                                                                 );
 
                                                             if (
@@ -3900,10 +4094,10 @@ const DataCategorySearch = ({
                                                                     (prev) => [
                                                                         ...prev,
                                                                         existingTag,
-                                                                    ]
+                                                                    ],
                                                                 );
                                                                 allTags.push(
-                                                                    existingTag
+                                                                    existingTag,
                                                                 );
                                                             } else {
                                                                 const errorText =
@@ -3911,14 +4105,14 @@ const DataCategorySearch = ({
                                                                         .text()
                                                                         .catch(
                                                                             () =>
-                                                                                "Unknown error"
+                                                                                "Unknown error",
                                                                         );
                                                                 console.error(
                                                                     `Failed to create tag for category ${categoryName}:`,
-                                                                    errorText
+                                                                    errorText,
                                                                 );
                                                                 throw new Error(
-                                                                    `Failed to create tag for category "${categoryName}": ${errorText}`
+                                                                    `Failed to create tag for category "${categoryName}": ${errorText}`,
                                                                 );
                                                             }
                                                         } else {
@@ -3927,14 +4121,14 @@ const DataCategorySearch = ({
                                                                 !availableTags.find(
                                                                     (t) =>
                                                                         t.id ===
-                                                                        existingTag.id
+                                                                        existingTag.id,
                                                                 )
                                                             ) {
                                                                 setAvailableTags(
                                                                     (prev) => [
                                                                         ...prev,
                                                                         existingTag,
-                                                                    ]
+                                                                    ],
                                                                 );
                                                             }
                                                         }
@@ -3944,15 +4138,15 @@ const DataCategorySearch = ({
                                                             existingTag.id
                                                         ) {
                                                             ndaCategoryTagIds.push(
-                                                                existingTag.id
+                                                                existingTag.id,
                                                             );
                                                         } else {
                                                             console.error(
                                                                 "Tag created but missing ID:",
-                                                                existingTag
+                                                                existingTag,
                                                             );
                                                             throw new Error(
-                                                                `Tag for category "${categoryName}" was created but is missing an ID`
+                                                                `Tag for category "${categoryName}" was created but is missing an ID`,
                                                             );
                                                         }
                                                     }
@@ -3964,7 +4158,7 @@ const DataCategorySearch = ({
                                                         selectedSocialTags instanceof
                                                         Set
                                                             ? Array.from(
-                                                                  selectedSocialTags
+                                                                  selectedSocialTags,
                                                               )
                                                             : selectedSocialTags;
                                                     const selectedTagIds =
@@ -3972,7 +4166,7 @@ const DataCategorySearch = ({
                                                             new Set([
                                                                 ...selectedSocialTagsArray,
                                                                 ...ndaCategoryTagIds,
-                                                            ])
+                                                            ]),
                                                         );
 
                                                     // Validate that at least one category will remain after save
@@ -3981,8 +4175,8 @@ const DataCategorySearch = ({
                                                             (c) =>
                                                                 !isCategoryRemoved(
                                                                     modalStructure.shortName,
-                                                                    c
-                                                                )
+                                                                    c,
+                                                                ),
                                                         );
                                                     const totalCategoriesAfterSave =
                                                         visibleOriginalCategoriesAfterSave.length +
@@ -3993,7 +4187,7 @@ const DataCategorySearch = ({
                                                         1
                                                     ) {
                                                         setModalError(
-                                                            "Cannot save: At least one category must remain. Please add a category before removing the last one."
+                                                            "Cannot save: At least one category must remain. Please add a category before removing the last one.",
                                                         );
                                                         setModalLoading(false);
                                                         return;
@@ -4007,7 +4201,7 @@ const DataCategorySearch = ({
 
                                                     if (!existingStructure) {
                                                         throw new Error(
-                                                            `Data structure "${modalStructure.shortName}" not found in backend`
+                                                            `Data structure "${modalStructure.shortName}" not found in backend`,
                                                         );
                                                     }
 
@@ -4019,7 +4213,7 @@ const DataCategorySearch = ({
                                                                     modalStructure
                                                                         .shortName
                                                                 ] || []
-                                                            ).map((t) => t.id)
+                                                            ).map((t) => t.id),
                                                         );
 
                                                     // Find tags to add and remove
@@ -4027,16 +4221,16 @@ const DataCategorySearch = ({
                                                         selectedTagIds.filter(
                                                             (id) =>
                                                                 !currentTagIds.has(
-                                                                    id
-                                                                )
+                                                                    id,
+                                                                ),
                                                         );
                                                     const toRemove = Array.from(
-                                                        currentTagIds
+                                                        currentTagIds,
                                                     ).filter(
                                                         (id) =>
                                                             !selectedTagIds.includes(
-                                                                id
-                                                            )
+                                                                id,
+                                                            ),
                                                     );
 
                                                     // If nothing has changed, cancel and close modal
@@ -4045,22 +4239,22 @@ const DataCategorySearch = ({
                                                         toRemove.length === 0
                                                     ) {
                                                         setIsCategoriesModalOpen(
-                                                            false
+                                                            false,
                                                         );
                                                         setSelectedSocialTags(
-                                                            new Set()
+                                                            new Set(),
                                                         );
                                                         setSelectedNdaCategories(
-                                                            new Set()
+                                                            new Set(),
                                                         );
                                                         setNewTagName("");
                                                         setModalSearchTerm("");
                                                         setNdaCategorySearchTerm(
-                                                            ""
+                                                            "",
                                                         );
                                                         setCategoryError(null);
                                                         setMatchedCategoryItem(
-                                                            null
+                                                            null,
                                                         );
                                                         return;
                                                     }
@@ -4073,7 +4267,7 @@ const DataCategorySearch = ({
 
                                                     if (!dataStructureId) {
                                                         throw new Error(
-                                                            `Data structure "${modalStructure.shortName}" is missing a dataStructureId`
+                                                            `Data structure "${modalStructure.shortName}" is missing a dataStructureId`,
                                                         );
                                                     }
 
@@ -4093,9 +4287,9 @@ const DataCategorySearch = ({
                                                                             tagId: tagId,
                                                                             DataStructureID:
                                                                                 dataStructureId,
-                                                                        }
+                                                                        },
                                                                     ),
-                                                                }
+                                                                },
                                                             );
 
                                                         if (!response.ok) {
@@ -4103,7 +4297,7 @@ const DataCategorySearch = ({
                                                                 await response.json();
                                                             throw new Error(
                                                                 errorData.error ||
-                                                                    "Failed to remove tag"
+                                                                    "Failed to remove tag",
                                                             );
                                                         }
                                                     }
@@ -4113,7 +4307,7 @@ const DataCategorySearch = ({
                                                         if (!tagId) {
                                                             console.warn(
                                                                 "Skipping invalid tagId:",
-                                                                tagId
+                                                                tagId,
                                                             );
                                                             continue;
                                                         }
@@ -4127,10 +4321,10 @@ const DataCategorySearch = ({
                                                         if (!dataStructureId) {
                                                             console.error(
                                                                 "Structure missing ID:",
-                                                                existingStructure
+                                                                existingStructure,
                                                             );
                                                             throw new Error(
-                                                                `Data structure "${modalStructure.shortName}" is missing a dataStructureId`
+                                                                `Data structure "${modalStructure.shortName}" is missing a dataStructureId`,
                                                             );
                                                         }
 
@@ -4146,12 +4340,12 @@ const DataCategorySearch = ({
                                                             ...availableDataTypeTags,
                                                         ].find(
                                                             (t) =>
-                                                                t.id === tagId
+                                                                t.id === tagId,
                                                         );
 
                                                         console.log(
                                                             "Assigning tag:",
-                                                            requestBody
+                                                            requestBody,
                                                         );
 
                                                         const response =
@@ -4164,9 +4358,9 @@ const DataCategorySearch = ({
                                                                             "application/json",
                                                                     },
                                                                     body: JSON.stringify(
-                                                                        requestBody
+                                                                        requestBody,
                                                                     ),
-                                                                }
+                                                                },
                                                             );
 
                                                         if (!response.ok) {
@@ -4180,7 +4374,7 @@ const DataCategorySearch = ({
                                                                         .text()
                                                                         .catch(
                                                                             () =>
-                                                                                "Unknown error"
+                                                                                "Unknown error",
                                                                         );
                                                                 errorData = {
                                                                     error: `API returned ${response.status}`,
@@ -4195,12 +4389,12 @@ const DataCategorySearch = ({
                                                                     responseStatus:
                                                                         response.status,
                                                                     error: errorData,
-                                                                }
+                                                                },
                                                             );
                                                             throw new Error(
                                                                 errorData.details ||
                                                                     errorData.error ||
-                                                                    `Failed to assign tag (${response.status}). Check console for details.`
+                                                                    `Failed to assign tag (${response.status}). Check console for details.`,
                                                             );
                                                         }
 
@@ -4218,7 +4412,7 @@ const DataCategorySearch = ({
                                                                     structureShortName:
                                                                         modalStructure.shortName,
                                                                 },
-                                                                apiBaseUrl
+                                                                apiBaseUrl,
                                                             );
                                                         }
                                                     }
@@ -4229,52 +4423,64 @@ const DataCategorySearch = ({
                                                         availableTags.filter(
                                                             (tag) =>
                                                                 selectedTagIds.includes(
-                                                                    tag.id
-                                                                )
+                                                                    tag.id,
+                                                                ),
                                                         );
                                                     setStructureTags(
                                                         (prev) => ({
                                                             ...prev,
                                                             [modalStructure.shortName]:
                                                                 newTags,
-                                                        })
+                                                        }),
                                                     );
 
                                                     setIsCategoriesModalOpen(
-                                                        false
+                                                        false,
                                                     );
                                                     setSelectedSocialTags(
-                                                        new Set()
+                                                        new Set(),
                                                     );
                                                     setSelectedNdaCategories(
-                                                        new Set()
+                                                        new Set(),
                                                     );
                                                     setNewTagName("");
                                                     setModalSearchTerm("");
                                                     setNdaCategorySearchTerm(
-                                                        ""
+                                                        "",
                                                     );
                                                     setCategoryError(null);
                                                     setMatchedCategoryItem(
-                                                        null
+                                                        null,
                                                     );
                                                 } catch (err) {
                                                     console.error(
                                                         "Error saving category tags:",
-                                                        err
+                                                        err,
                                                     );
                                                     // Extract user-friendly error message
-                                                    let errorMessage = "Failed to save category tags";
+                                                    let errorMessage =
+                                                        "Failed to save category tags";
                                                     if (err.message) {
-                                                        errorMessage = err.message;
+                                                        errorMessage =
+                                                            err.message;
                                                     } else if (err.details) {
-                                                        errorMessage = typeof err.details === 'string' ? err.details : err.details.error || errorMessage;
+                                                        errorMessage =
+                                                            typeof err.details ===
+                                                            "string"
+                                                                ? err.details
+                                                                : err.details
+                                                                      .error ||
+                                                                  errorMessage;
                                                     }
                                                     // Handle 400 errors more gracefully
                                                     if (err.status === 400) {
-                                                        errorMessage = errorMessage || "Invalid request. Please check your input and try again.";
+                                                        errorMessage =
+                                                            errorMessage ||
+                                                            "Invalid request. Please check your input and try again.";
                                                     } else {
-                                                        errorMessage = "Failed to save category tags: " + errorMessage;
+                                                        errorMessage =
+                                                            "Failed to save category tags: " +
+                                                            errorMessage;
                                                     }
                                                     setModalError(errorMessage);
                                                 } finally {
@@ -4399,13 +4605,13 @@ const DataCategorySearch = ({
                                                     type="checkbox"
                                                     checked={
                                                         !isDataTypeRemoved(
-                                                            modalStructure.shortName
+                                                            modalStructure.shortName,
                                                         )
                                                     }
                                                     disabled={(() => {
                                                         const isDataTypeCurrentlyRemoved =
                                                             isDataTypeRemoved(
-                                                                modalStructure.shortName
+                                                                modalStructure.shortName,
                                                             );
                                                         const customDataTypeTags =
                                                             structureDataTypeTags[
@@ -4450,7 +4656,7 @@ const DataCategorySearch = ({
                                                                     // Update local state
                                                                     setRemovedOriginalDataTypes(
                                                                         (
-                                                                            prev
+                                                                            prev,
                                                                         ) => {
                                                                             const updated =
                                                                                 {
@@ -4461,7 +4667,7 @@ const DataCategorySearch = ({
                                                                                     .shortName
                                                                             ];
                                                                             return updated;
-                                                                        }
+                                                                        },
                                                                     );
 
                                                                     // Delete tag from backend
@@ -4469,7 +4675,7 @@ const DataCategorySearch = ({
                                                                         const tagName = `REMOVED_DATATYPE:${modalStructure.shortName}`;
                                                                         const tagsResponse =
                                                                             await fetch(
-                                                                                `${apiBaseUrl}/tags`
+                                                                                `${apiBaseUrl}/tags`,
                                                                             );
                                                                         if (
                                                                             tagsResponse.ok
@@ -4479,12 +4685,12 @@ const DataCategorySearch = ({
                                                                             const tagToDelete =
                                                                                 allTags.find(
                                                                                     (
-                                                                                        tag
+                                                                                        tag,
                                                                                     ) =>
                                                                                         tag.name ===
                                                                                             tagName &&
                                                                                         tag.tagType ===
-                                                                                            "Removed Data Type"
+                                                                                            "Removed Data Type",
                                                                                 );
                                                                             if (
                                                                                 tagToDelete
@@ -4504,23 +4710,23 @@ const DataCategorySearch = ({
                                                                                                 tagId: tagToDelete.id,
                                                                                                 dataStructureShortName:
                                                                                                     modalStructure.shortName,
-                                                                                            }
+                                                                                            },
                                                                                         ),
-                                                                                    }
+                                                                                    },
                                                                                 );
                                                                                 // Delete the tag
                                                                                 await fetch(
                                                                                     `${apiBaseUrl}/tags/${tagToDelete.id}`,
                                                                                     {
                                                                                         method: "DELETE",
-                                                                                    }
+                                                                                    },
                                                                                 );
                                                                             }
                                                                         }
                                                                     } catch (err) {
                                                                         console.error(
                                                                             "Error restoring data type:",
-                                                                            err
+                                                                            err,
                                                                         );
                                                                     }
                                                                 };
@@ -4529,7 +4735,7 @@ const DataCategorySearch = ({
                                                             // Check if this is the last visible data type
                                                             const isDataTypeCurrentlyRemoved =
                                                                 isDataTypeRemoved(
-                                                                    modalStructure.shortName
+                                                                    modalStructure.shortName,
                                                                 );
                                                             const customDataTypeTags =
                                                                 structureDataTypeTags[
@@ -4550,7 +4756,7 @@ const DataCategorySearch = ({
                                                                 1
                                                             ) {
                                                                 setModalError(
-                                                                    "Cannot remove the last data type. At least one data type must remain."
+                                                                    "Cannot remove the last data type. At least one data type must remain.",
                                                                 );
                                                                 // Reset checkbox
                                                                 e.target.checked = true;
@@ -4559,7 +4765,7 @@ const DataCategorySearch = ({
 
                                                             // Remove data type
                                                             removeOriginalDataType(
-                                                                modalStructure.shortName
+                                                                modalStructure.shortName,
                                                             );
                                                         }
                                                     }}
@@ -4581,12 +4787,12 @@ const DataCategorySearch = ({
                                             </h3>
                                             <div className="flex flex-wrap gap-2">
                                                 {Array.from(
-                                                    selectedDataTypeTags
+                                                    selectedDataTypeTags,
                                                 ).map((tagId, index) => {
                                                     const tag =
                                                         availableDataTypeTags.find(
                                                             (t) =>
-                                                                t.id === tagId
+                                                                t.id === tagId,
                                                         );
                                                     return tag ? (
                                                         <div
@@ -4598,22 +4804,22 @@ const DataCategorySearch = ({
                                                             </span>
                                                             <button
                                                                 onClick={(
-                                                                    e
+                                                                    e,
                                                                 ) => {
                                                                     e.stopPropagation();
                                                                     setSelectedDataTypeTags(
                                                                         (
-                                                                            prev
+                                                                            prev,
                                                                         ) => {
                                                                             const newSet =
                                                                                 new Set(
-                                                                                    prev
+                                                                                    prev,
                                                                                 );
                                                                             newSet.delete(
-                                                                                tag.id
+                                                                                tag.id,
                                                                             );
                                                                             return newSet;
-                                                                        }
+                                                                        },
                                                                     );
                                                                 }}
                                                                 className="ml-1 hover:bg-gray-200 rounded-full w-4 h-4 flex items-center justify-center text-gray-600 hover:text-gray-700 font-bold"
@@ -4640,7 +4846,7 @@ const DataCategorySearch = ({
                                         {(() => {
                                             const filteredDataTypes =
                                                 computeFilteredCombinedDataTypes(
-                                                    modalSearchTerm
+                                                    modalSearchTerm,
                                                 );
                                             return (
                                                 (showCreateDataTypeInput ||
@@ -4656,13 +4862,13 @@ const DataCategorySearch = ({
                                                         value={modalSearchTerm}
                                                         onChange={(e) => {
                                                             setModalSearchTerm(
-                                                                e.target.value
+                                                                e.target.value,
                                                             );
                                                         }}
                                                         placeholder="Data type tag name..."
                                                         className="flex-1 px-3 py-2 border rounded-l-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 focus:outline-none text-sm transition-all"
                                                         onKeyPress={async (
-                                                            e
+                                                            e,
                                                         ) => {
                                                             const tagName =
                                                                 modalSearchTerm.trim();
@@ -4674,15 +4880,15 @@ const DataCategorySearch = ({
                                                                 // Pass tagName directly to createDataTypeTag to avoid async state issues
                                                                 const result =
                                                                     await createDataTypeTag(
-                                                                        tagName
+                                                                        tagName,
                                                                     );
                                                                 // Only close input and clear search if tag was created successfully
                                                                 if (result) {
                                                                     setShowCreateDataTypeInput(
-                                                                        false
+                                                                        false,
                                                                     );
                                                                     setModalSearchTerm(
-                                                                        ""
+                                                                        "",
                                                                     );
                                                                 }
                                                                 // Error is already displayed below search bar by createDataTypeTag
@@ -4691,7 +4897,7 @@ const DataCategorySearch = ({
                                                                 "Escape"
                                                             ) {
                                                                 setModalSearchTerm(
-                                                                    ""
+                                                                    "",
                                                                 );
                                                             }
                                                         }}
@@ -4705,15 +4911,15 @@ const DataCategorySearch = ({
                                                                 // Pass tagName directly to createDataTypeTag to avoid async state issues
                                                                 const result =
                                                                     await createDataTypeTag(
-                                                                        tagName
+                                                                        tagName,
                                                                     );
                                                                 // Only close input and clear search if tag was created successfully
                                                                 if (result) {
                                                                     setShowCreateDataTypeInput(
-                                                                        false
+                                                                        false,
                                                                     );
                                                                     setModalSearchTerm(
-                                                                        ""
+                                                                        "",
                                                                     );
                                                                 }
                                                                 // Error is already displayed below search bar by createDataTypeTag
@@ -4748,15 +4954,15 @@ const DataCategorySearch = ({
                                                     value={modalSearchTerm}
                                                     onChange={(e) => {
                                                         setModalSearchTerm(
-                                                            e.target.value
+                                                            e.target.value,
                                                         );
                                                         // Clear error when user starts typing
                                                         if (dataTypeError) {
                                                             setDataTypeError(
-                                                                null
+                                                                null,
                                                             );
                                                             setMatchedDataTypeItem(
-                                                                null
+                                                                null,
                                                             );
                                                         }
                                                     }}
@@ -4770,47 +4976,47 @@ const DataCategorySearch = ({
                                                             // Compute all available data types (not filtered) for duplicate checking
                                                             const allAvailableDataTypes =
                                                                 computeFilteredCombinedDataTypes(
-                                                                    ""
+                                                                    "",
                                                                 );
                                                             // Check against ALL data types, not just filtered ones
                                                             // This ensures we catch plural/singular matches even if they don't match the search filter
                                                             const hasMatch =
                                                                 hasNameMatch(
                                                                     modalSearchTerm,
-                                                                    allAvailableDataTypes
+                                                                    allAvailableDataTypes,
                                                                 );
 
                                                             if (!hasMatch) {
                                                                 // No match, show input to create
                                                                 setNewDataTypeTagName(
-                                                                    modalSearchTerm.trim()
+                                                                    modalSearchTerm.trim(),
                                                                 );
                                                                 setShowCreateDataTypeInput(
-                                                                    true
+                                                                    true,
                                                                 );
                                                                 setDataTypeError(
-                                                                    null
+                                                                    null,
                                                                 );
                                                                 setMatchedDataTypeItem(
-                                                                    null
+                                                                    null,
                                                                 );
                                                             } else {
                                                                 // Match exists (exact or plural/singular), find the existing name
                                                                 const existingItem =
                                                                     findExistingItemName(
                                                                         modalSearchTerm,
-                                                                        allAvailableDataTypes
+                                                                        allAvailableDataTypes,
                                                                     );
 
                                                                 const existingName =
                                                                     existingItem?.name ||
                                                                     modalSearchTerm.trim();
                                                                 setDataTypeError(
-                                                                    `"${modalSearchTerm.trim()}" already exists as "${existingName}". Please select it from the list below:`
+                                                                    `"${modalSearchTerm.trim()}" already exists as "${existingName}". Please select it from the list below:`,
                                                                 );
                                                                 // Store the matched item so it appears in the list even if it doesn't match the search term
                                                                 setMatchedDataTypeItem(
-                                                                    existingItem
+                                                                    existingItem,
                                                                 );
                                                             }
                                                         }}
@@ -4849,13 +5055,13 @@ const DataCategorySearch = ({
                                                                   const hasRealId =
                                                                       item.id &&
                                                                       !item.id.startsWith(
-                                                                          "nda-datatype-"
+                                                                          "nda-datatype-",
                                                                       );
 
                                                                   // Check if the name exists in NDA data types
                                                                   const isNdaDataTypeName =
                                                                       availableDataTypes.has(
-                                                                          item.name
+                                                                          item.name,
                                                                       );
 
                                                                   // Custom tag = has real ID AND NOT an NDA data type name
@@ -4869,7 +5075,7 @@ const DataCategorySearch = ({
                                                                       isNdaDataType
                                                                           ? false // NDA data types can't be selected (they're just for display)
                                                                           : selectedDataTypeTags.has(
-                                                                                item.id
+                                                                                item.id,
                                                                             );
 
                                                                   return (
@@ -4886,23 +5092,23 @@ const DataCategorySearch = ({
                                                                                       editingDataTypeTagName
                                                                                   }
                                                                                   onChange={(
-                                                                                      e
+                                                                                      e,
                                                                                   ) =>
                                                                                       setEditingDataTypeTagName(
                                                                                           e
                                                                                               .target
-                                                                                              .value
+                                                                                              .value,
                                                                                       )
                                                                                   }
                                                                                   onBlur={() => {
                                                                                       updateTag(
                                                                                           item.id,
                                                                                           editingDataTypeTagName,
-                                                                                          true
+                                                                                          true,
                                                                                       );
                                                                                   }}
                                                                                   onKeyDown={(
-                                                                                      e
+                                                                                      e,
                                                                                   ) => {
                                                                                       if (
                                                                                           e.key ===
@@ -4911,21 +5117,21 @@ const DataCategorySearch = ({
                                                                                           updateTag(
                                                                                               item.id,
                                                                                               editingDataTypeTagName,
-                                                                                              true
+                                                                                              true,
                                                                                           );
                                                                                       } else if (
                                                                                           e.key ===
                                                                                           "Escape"
                                                                                       ) {
                                                                                           setEditingDataTypeTagId(
-                                                                                              null
+                                                                                              null,
                                                                                           );
                                                                                       }
                                                                                   }}
                                                                                   autoFocus
                                                                                   className="px-3 py-1.5 rounded-l-full text-sm border border-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-500"
                                                                                   onClick={(
-                                                                                      e
+                                                                                      e,
                                                                                   ) =>
                                                                                       e.stopPropagation()
                                                                                   }
@@ -4940,12 +5146,12 @@ const DataCategorySearch = ({
                                                                                               // Only allow one data type to be selected at a time
                                                                                               if (
                                                                                                   selectedDataTypeTags.has(
-                                                                                                      item.id
+                                                                                                      item.id,
                                                                                                   )
                                                                                               ) {
                                                                                                   // If already selected, deselect it
                                                                                                   setSelectedDataTypeTags(
-                                                                                                      new Set()
+                                                                                                      new Set(),
                                                                                                   );
                                                                                               } else {
                                                                                                   // Select only this one (clear all others)
@@ -4953,8 +5159,8 @@ const DataCategorySearch = ({
                                                                                                       new Set(
                                                                                                           [
                                                                                                               item.id,
-                                                                                                          ]
-                                                                                                      )
+                                                                                                          ],
+                                                                                                      ),
                                                                                                   );
                                                                                               }
                                                                                           }
@@ -4994,14 +5200,14 @@ const DataCategorySearch = ({
                                                                                       <>
                                                                                           <button
                                                                                               onClick={(
-                                                                                                  e
+                                                                                                  e,
                                                                                               ) => {
                                                                                                   e.stopPropagation();
                                                                                                   setEditingDataTypeTagId(
-                                                                                                      item.id
+                                                                                                      item.id,
                                                                                                   );
                                                                                                   setEditingDataTypeTagName(
-                                                                                                      item.name
+                                                                                                      item.name,
                                                                                                   );
                                                                                               }}
                                                                                               className={`px-2 py-1.5 text-sm transition-all border-l-0 inline-flex items-center justify-center ${
@@ -5015,11 +5221,11 @@ const DataCategorySearch = ({
                                                                                           </button>
                                                                                           <button
                                                                                               onClick={(
-                                                                                                  e
+                                                                                                  e,
                                                                                               ) => {
                                                                                                   e.stopPropagation();
                                                                                                   deleteTag(
-                                                                                                      item.id
+                                                                                                      item.id,
                                                                                                   );
                                                                                               }}
                                                                                               className={`px-2 py-1.5 rounded-r-full text-sm transition-all border-l-0 inline-flex items-center justify-center ${
@@ -5037,7 +5243,7 @@ const DataCategorySearch = ({
                                                                           )}
                                                                       </div>
                                                                   );
-                                                              }
+                                                              },
                                                           )
                                                         : null}
                                                 </div>
@@ -5050,7 +5256,7 @@ const DataCategorySearch = ({
                                             onClick={() => {
                                                 setIsDataTypesModalOpen(false);
                                                 setShowCreateDataTypeInput(
-                                                    false
+                                                    false,
                                                 );
                                                 setModalSearchTerm("");
                                                 setDataTypeError(null);
@@ -5075,7 +5281,7 @@ const DataCategorySearch = ({
 
                                                     if (!existingStructure) {
                                                         throw new Error(
-                                                            `Data structure "${modalStructure.shortName}" not found in backend`
+                                                            `Data structure "${modalStructure.shortName}" not found in backend`,
                                                         );
                                                     }
 
@@ -5087,25 +5293,25 @@ const DataCategorySearch = ({
                                                                     modalStructure
                                                                         .shortName
                                                                 ] || []
-                                                            ).map((t) => t.id)
+                                                            ).map((t) => t.id),
                                                         );
 
                                                     // Find tags to add and remove
                                                     const toAdd = Array.from(
-                                                        selectedDataTypeTags
+                                                        selectedDataTypeTags,
                                                     ).filter(
                                                         (id) =>
                                                             !currentTagIds.has(
-                                                                id
-                                                            )
+                                                                id,
+                                                            ),
                                                     );
                                                     const toRemove = Array.from(
-                                                        currentTagIds
+                                                        currentTagIds,
                                                     ).filter(
                                                         (id) =>
                                                             !selectedDataTypeTags.has(
-                                                                id
-                                                            )
+                                                                id,
+                                                            ),
                                                     );
 
                                                     // If nothing has changed, cancel and close modal
@@ -5114,18 +5320,18 @@ const DataCategorySearch = ({
                                                         toRemove.length === 0
                                                     ) {
                                                         setIsDataTypesModalOpen(
-                                                            false
+                                                            false,
                                                         );
                                                         setSelectedDataTypeTags(
-                                                            new Set()
+                                                            new Set(),
                                                         );
                                                         setNewDataTypeTagName(
-                                                            ""
+                                                            "",
                                                         );
                                                         setModalSearchTerm("");
                                                         setDataTypeError(null);
                                                         setMatchedDataTypeItem(
-                                                            null
+                                                            null,
                                                         );
                                                         return;
                                                     }
@@ -5138,7 +5344,7 @@ const DataCategorySearch = ({
 
                                                     if (!dataStructureId) {
                                                         throw new Error(
-                                                            `Data structure "${modalStructure.shortName}" is missing a dataStructureId`
+                                                            `Data structure "${modalStructure.shortName}" is missing a dataStructureId`,
                                                         );
                                                     }
 
@@ -5158,9 +5364,9 @@ const DataCategorySearch = ({
                                                                             tagId: tagId,
                                                                             DataStructureID:
                                                                                 dataStructureId,
-                                                                        }
+                                                                        },
                                                                     ),
-                                                                }
+                                                                },
                                                             );
 
                                                         if (!response.ok) {
@@ -5168,7 +5374,7 @@ const DataCategorySearch = ({
                                                                 await response.json();
                                                             throw new Error(
                                                                 errorData.error ||
-                                                                    "Failed to remove tag"
+                                                                    "Failed to remove tag",
                                                             );
                                                         }
                                                     }
@@ -5178,7 +5384,7 @@ const DataCategorySearch = ({
                                                         if (!tagId) {
                                                             console.warn(
                                                                 "Skipping invalid tagId:",
-                                                                tagId
+                                                                tagId,
                                                             );
                                                             continue;
                                                         }
@@ -5192,10 +5398,10 @@ const DataCategorySearch = ({
                                                         if (!dataStructureId) {
                                                             console.error(
                                                                 "Structure missing ID:",
-                                                                existingStructure
+                                                                existingStructure,
                                                             );
                                                             throw new Error(
-                                                                `Data structure "${modalStructure.shortName}" is missing a dataStructureId`
+                                                                `Data structure "${modalStructure.shortName}" is missing a dataStructureId`,
                                                             );
                                                         }
 
@@ -5207,7 +5413,7 @@ const DataCategorySearch = ({
 
                                                         console.log(
                                                             "Assigning tag:",
-                                                            requestBody
+                                                            requestBody,
                                                         );
 
                                                         const response =
@@ -5220,9 +5426,9 @@ const DataCategorySearch = ({
                                                                             "application/json",
                                                                     },
                                                                     body: JSON.stringify(
-                                                                        requestBody
+                                                                        requestBody,
                                                                     ),
-                                                                }
+                                                                },
                                                             );
 
                                                         if (!response.ok) {
@@ -5230,7 +5436,7 @@ const DataCategorySearch = ({
                                                                 await response.json();
                                                             throw new Error(
                                                                 errorData.error ||
-                                                                    "Failed to assign tag"
+                                                                    "Failed to assign tag",
                                                             );
                                                         }
                                                     }
@@ -5240,21 +5446,21 @@ const DataCategorySearch = ({
 
                                                     // Close modal
                                                     setIsDataTypesModalOpen(
-                                                        false
+                                                        false,
                                                     );
                                                     setSelectedDataTypeTags(
-                                                        new Set()
+                                                        new Set(),
                                                     );
                                                     setNewDataTypeTagName("");
                                                     setModalSearchTerm("");
                                                     setDataTypeError(null);
                                                     setMatchedDataTypeItem(
-                                                        null
+                                                        null,
                                                     );
                                                 } catch (err) {
                                                     console.error(
                                                         "Error saving data type tags:",
-                                                        err
+                                                        err,
                                                     );
                                                     setModalError(err.message);
                                                 } finally {

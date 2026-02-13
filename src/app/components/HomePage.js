@@ -50,6 +50,7 @@ const HomePage = () => {
     // Database filter state
     const [databaseFilterEnabled, setDatabaseFilterEnabled] = useState(true);
     const [databaseStructures, setDatabaseStructures] = useState([]);
+    const [databaseSites, setDatabaseSites] = useState([]);
     const [databaseName, setDatabaseName] = useState("IMPACT-MH");
 
     // Database elements state for DataElementSearch
@@ -173,6 +174,15 @@ const HomePage = () => {
                     // Extract structure names
                     const structureNames = Object.keys(data.dataStructures);
                     setDatabaseStructures(structureNames);
+
+                    // Extract all unique sites from submittedByProjects
+                    const allSites = new Set();
+                    Object.values(data.dataStructures).forEach((structure) => {
+                        if (structure.submittedByProjects && Array.isArray(structure.submittedByProjects)) {
+                            structure.submittedByProjects.forEach(site => allSites.add(site));
+                        }
+                    });
+                    setDatabaseSites(Array.from(allSites).sort());
 
                     // Extract all unique elements from all structures
                     const allElements = new Map();
@@ -1209,6 +1219,7 @@ const HomePage = () => {
                     databaseFilterEnabled={databaseFilterEnabled}
                     setDatabaseFilterEnabled={setDatabaseFilterEnabled}
                     databaseStructures={databaseStructures}
+                    databaseSites={databaseSites}
                     databaseName={databaseName}
                     loadingDatabaseStructures={loadingDatabaseStructures}
                     databaseConnectionError={databaseConnectionError}
