@@ -48,7 +48,8 @@ const DataCategorySearch = ({
     const [groupBy, setGroupBy] = useState(() => {
         if (typeof window !== "undefined") {
             const saved = localStorage.getItem("dataCategoryGroupBy");
-            return saved === "category" || saved === "dataType"
+            // Accept "category", "dataType", or "site"
+            return saved === "category" || saved === "dataType" || saved === "site"
                 ? saved
                 : "dataType";
         }
@@ -881,6 +882,17 @@ const DataCategorySearch = ({
         }
     }, [databaseFilterEnabled, databaseSites]);
 
+    // Reset groupBy if database filter is disabled while grouped by site
+    useEffect(() => {
+        if (!databaseFilterEnabled && groupBy === "site") {
+            setGroupBy("dataType");
+            // Update localStorage
+            if (typeof window !== "undefined") {
+                localStorage.setItem("dataCategoryGroupBy", "dataType");
+            }
+        }
+    }, [databaseFilterEnabled, groupBy]);
+
     const groupStructures = (structures) => {
         const grouped = {};
 
@@ -929,6 +941,25 @@ const DataCategorySearch = ({
                     } else {
                         groupKeys = ["Unknown"];
                     }
+                }
+            } else if (groupBy === "site") {
+                // Group by site (submittedByProjects)
+                const shortNameLower = structure.shortName?.toLowerCase();
+                const dbStructure =
+                    dataStructuresMap[shortNameLower] ||
+                    dataStructuresMap[structure.shortName];
+
+                if (
+                    dbStructure &&
+                    dbStructure.submittedByProjects &&
+                    Array.isArray(dbStructure.submittedByProjects) &&
+                    dbStructure.submittedByProjects.length > 0
+                ) {
+                    // Add each site as a group key
+                    groupKeys = dbStructure.submittedByProjects;
+                } else {
+                    // No site data available
+                    groupKeys = ["Unknown"];
                 }
             }
 
@@ -2043,8 +2074,8 @@ const DataCategorySearch = ({
             <div className="mb-8">
                 <h1 className="text-3xl font-bold mb-4">Data Dictionary</h1>
                 <p className="text-gray-600 -mb-7">
-                    Browse all NDA Data Structures by Data Type and Category, in
-                    addition to Research Partners.
+                    Browse all NDA Data Structures by Data Type, Category, or
+                    Research Partner.
                 </p>
 
                 {/* Database Filter Checkbox */}
@@ -2134,6 +2165,9 @@ const DataCategorySearch = ({
                         >
                             <option value="dataType">Data Type</option>
                             <option value="category">Category</option>
+                            {databaseFilterEnabled && (
+                                <option value="site">Research Partner</option>
+                            )}
                         </select>
                     </div>
 
@@ -2200,13 +2234,13 @@ const DataCategorySearch = ({
                                 </div>
                             </div>
 
-                            {/* Sites Filter - Only show when database filter is enabled */}
+                            {/* Research Partners Filter - Only show when database filter is enabled */}
                             {databaseFilterEnabled &&
                                 availableSites.size > 0 && (
                                     <>
                                         <div className="mb-6">
                                             <h4 className="font-medium text-gray-700 mb-2">
-                                                Sites
+                                                Research Partners
                                             </h4>
                                             <div className="space-y-2 max-h-48 overflow-y-auto">
                                                 {Array.from(availableSites)
