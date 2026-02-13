@@ -34,7 +34,7 @@ Development server runs at http://localhost:3000
 ### Application Structure
 
 The app has 4 main features/tabs:
-1. **Data Dictionary** (`DataCategorySearch`) - Search structures by category/data type tags
+1. **Data Dictionary** (`DataCategorySearch`) - Search structures by category/data type tags and research partners
 2. **Data Structures** (`DataStructureSearch`) - Search and view structure details
 3. **Data Elements** (`DataElementSearch`) - Search by field/element names
 4. **Reverse Lookup** (`CSVHeaderAnalyzer`) - Find structures from CSV headers
@@ -109,9 +109,10 @@ Navigation flow: Users typically start at Data Dictionary → select a structure
 **Search Flow:**
 1. User enters search term in HomePage tab
 2. HomePage fetches matching structures from NDA API
-3. If database filter enabled, filter results to structures in IMPACT-MH database
-4. Results sorted by relevance (exact match → partial match)
-5. User selects structure → fetches full data elements
+3. Search matches against: shortName, title, categories, dataTypes, and research partners (submittedByProjects)
+4. If database filter enabled, filter results to structures in IMPACT-MH database
+5. Results sorted by relevance (exact match → partial match)
+6. User selects structure → fetches full data elements
 
 **Validation Flow:**
 1. User uploads CSV and selects structure
@@ -140,6 +141,8 @@ The app includes a toggle to filter all searches to only structures present in t
 - All searches use debouncing (300ms) to avoid excessive API calls
 - The app defaults to Data Dictionary tab on every page load/refresh
 - Structure searches handle both shortName and title matching with normalization (removes hyphens/underscores)
+- Data Dictionary search includes research partners: typing a research partner name (e.g., "JASPer") returns all associated structures
+- Research partner search uses case-insensitive partial matching against `submittedByProjects` field from IMPACT-MH database
 - CSV validation performs automatic value standardization and tracks transformations
 - Custom tags in IMPACT-MH database override NDA native category/datatype searches
 - API routes include 5-minute caching to reduce backend load

@@ -49,7 +49,9 @@ const DataCategorySearch = ({
         if (typeof window !== "undefined") {
             const saved = localStorage.getItem("dataCategoryGroupBy");
             // Accept "category", "dataType", or "site"
-            return saved === "category" || saved === "dataType" || saved === "site"
+            return saved === "category" ||
+                saved === "dataType" ||
+                saved === "site"
                 ? saved
                 : "dataType";
         }
@@ -736,15 +738,37 @@ const DataCategorySearch = ({
         // Apply search term filter
         if (searchTerm.trim()) {
             const searchLower = searchTerm.toLowerCase();
-            filtered = filtered.filter(
-                (structure) =>
+            filtered = filtered.filter((structure) => {
+                // Search in standard fields (existing behavior)
+                if (
                     structure.shortName?.toLowerCase().includes(searchLower) ||
                     structure.title?.toLowerCase().includes(searchLower) ||
                     structure.categories?.some((cat) =>
                         cat.toLowerCase().includes(searchLower),
                     ) ||
-                    structure.dataType?.toLowerCase().includes(searchLower),
-            );
+                    structure.dataType?.toLowerCase().includes(searchLower)
+                ) {
+                    return true;
+                }
+
+                // Search in research partners (submittedByProjects) - NEW
+                const shortNameLower = structure.shortName?.toLowerCase();
+                const dbStructure =
+                    dataStructuresMap[shortNameLower] ||
+                    dataStructuresMap[structure.shortName];
+
+                if (
+                    dbStructure &&
+                    dbStructure.submittedByProjects &&
+                    Array.isArray(dbStructure.submittedByProjects)
+                ) {
+                    return dbStructure.submittedByProjects.some((partner) =>
+                        partner.toLowerCase().includes(searchLower),
+                    );
+                }
+
+                return false;
+            });
         }
 
         // Apply category filters (check both original categories and custom tags)
@@ -2123,7 +2147,7 @@ const DataCategorySearch = ({
                     <input
                         type="text"
                         className="w-full p-4 pl-12 border rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Search structures, categories, or data types..."
+                        placeholder="Search structures, categories, data types, or research partners..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
@@ -2260,7 +2284,6 @@ const DataCategorySearch = ({
                                                     ))}
                                             </div>
                                         </div>
-
                                     </>
                                 )}
 
@@ -2270,7 +2293,9 @@ const DataCategorySearch = ({
                                     <span>Data Types</span>
                                     <span className="flex items-center text-xs font-normal text-gray-600">
                                         <span>custom tag</span>
-                                        <span className="text-orange-500 ml-1">★</span>
+                                        <span className="text-orange-500 ml-1">
+                                            ★
+                                        </span>
                                     </span>
                                 </h4>
                                 <div className="space-y-2">
@@ -2343,7 +2368,9 @@ const DataCategorySearch = ({
                                     <span>Categories</span>
                                     <span className="flex items-center text-xs font-normal text-gray-600">
                                         <span>custom tag</span>
-                                        <span className="text-orange-500 ml-1">★</span>
+                                        <span className="text-orange-500 ml-1">
+                                            ★
+                                        </span>
                                     </span>
                                 </h4>
                                 <div className="space-y-2 max-h-48 overflow-y-auto">
