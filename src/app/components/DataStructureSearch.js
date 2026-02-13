@@ -945,7 +945,7 @@ const DataStructureSearch = ({
                                                                 <h3 className="font-medium text-gray-600 mb-2">
                                                                     Downloads
                                                                 </h3>
-                                                                <div className="flex gap-2">
+                                                                <div className="flex gap-4">
                                                                     <DownloadStructureButton
                                                                         shortName={selectedStructure.shortName}
                                                                     />
@@ -967,7 +967,7 @@ const DataStructureSearch = ({
                                                                     onClick={() => setIsCsvValidatorOpen(!isCsvValidatorOpen)}
                                                                     className="flex items-center gap-2 text-gray-700 hover:text-gray-900"
                                                                 >
-                                                                    <FileText className="w-5 h-5 text-blue-600" />
+                                                                    <CheckCircle className="w-5 h-5 text-blue-600" />
                                                                     {isCsvValidatorOpen ? (
                                                                         <ChevronUp className="w-4 h-4" />
                                                                     ) : (
@@ -1000,7 +1000,7 @@ const DataStructureSearch = ({
 
                                                 {/* Data Elements Card - Separate */}
                                                 {selectedStructure && (
-                                                    <div className="bg-white rounded-lg shadow p-6">
+                                                    <div className="bg-white rounded-lg shadow p-6 mt-6">
                                                         <h3 className="font-medium text-gray-700 mb-4">
                                                             Data Elements
                                                         </h3>
