@@ -188,4 +188,77 @@ export interface NdaSearchParams {
 // App navigation
 // ---------------------------------------------------------------------------
 
-export type TabValue = "dictionary" | "structures" | "elements" | "reverse";
+export type TabValue = "dictionary" | "structures" | "elements" | "reverse" | "research-assistant";
+
+// ---------------------------------------------------------------------------
+// Research Assistant
+// ---------------------------------------------------------------------------
+
+export interface StructureSuggestion {
+  shortName: string;
+  title: string;
+  relevanceReason: string;
+  confidence: "high" | "medium" | "low";
+  sites?: string[];
+  sharedElements?: string[];
+}
+
+export interface ConversationMessage {
+  role: "user" | "assistant";
+  content: string;
+  timestamp: number;
+}
+
+export interface ChartConfig {
+  id: string;
+  type: "bar" | "histogram" | "scatter" | "network";
+  title: string;
+  xField?: string;
+  yField?: string;
+  groupByField?: string;
+  data: Record<string, unknown>[];
+}
+
+export interface NetworkNode {
+  id: string;
+  label: string;
+  type: "instrument" | "element" | "site" | "category";
+  value?: number;
+}
+
+export interface NetworkEdge {
+  source: string;
+  target: string;
+  label?: string;
+  weight?: number;
+}
+
+export interface NetworkGraph {
+  nodes: NetworkNode[];
+  edges: NetworkEdge[];
+}
+
+export interface MockDataset {
+  rows: Record<string, unknown>[];
+  schema: DataElement[];
+  structure: DataStructure;
+}
+
+export interface SuggestRequest {
+  question: string;
+  databaseStructures?: string[];
+  databaseSites?: string[];
+}
+
+export interface SuggestResponse {
+  suggestions: StructureSuggestion[];
+  reasoning: string;
+  networkGraph: NetworkGraph;
+}
+
+export interface AnalyzeRequest {
+  question: string;
+  selectedStructures: DataStructure[];
+  mockDatasets: MockDataset[];
+  conversationHistory: ConversationMessage[];
+}

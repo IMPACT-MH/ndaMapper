@@ -6,6 +6,7 @@ import DataStructureSearch from "./DataStructureSearch";
 import CSVHeaderAnalyzer from "./CSVHeaderAnalyzer";
 import DataElementSearch from "./DataElementSearch";
 import DataCategorySearch from "./DataCategorySearch";
+import ResearchAssistant from "./ResearchAssistant";
 import { IMPACT_API_BASE, DATA_STRUCTURES } from "@/const";
 import type {
   DataStructure,
@@ -24,6 +25,7 @@ const Tabs = {
     STRUCTURE: "data-structures",
     ELEMENT: "data-elements",
     REVERSE_LOOKUP: "reverse-lookup",
+    RESEARCH: "research-assistant",
 } as const;
 
 type TabValue = typeof Tabs[keyof typeof Tabs];
@@ -1111,6 +1113,19 @@ const HomePage = () => {
                                 >
                                     Reverse Lookup by CSV
                                 </button>
+                                <div className="text-gray-400 text-sm pb-4 mx-2">
+                                    |
+                                </div>
+                                <button
+                                    onClick={() => setActiveTab(Tabs.RESEARCH)}
+                                    className={`whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm ${
+                                        activeTab === Tabs.RESEARCH
+                                            ? "border-purple-500 text-purple-600"
+                                            : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                                    }`}
+                                >
+                                    Research Assistant
+                                </button>
                             </div>
 
                             {/* NDA Logo */}
@@ -1255,6 +1270,16 @@ const HomePage = () => {
                     initialSearchTerm={elementSearchTerm}
                     onClearInitialSearchTerm={() => setElementSearchTerm("")}
                     isVisible={activeTab === Tabs.ELEMENT}
+                />
+            </div>
+
+            <div className={activeTab === Tabs.RESEARCH ? "block" : "hidden"}>
+                <ResearchAssistant
+                    databaseStructures={databaseStructures}
+                    databaseSites={databaseSites}
+                    databaseFilterEnabled={databaseFilterEnabled}
+                    databaseConnectionError={databaseConnectionError}
+                    isVisible={activeTab === Tabs.RESEARCH}
                 />
             </div>
         </div>
