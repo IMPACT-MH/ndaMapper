@@ -11,6 +11,7 @@ import {
 import type {
   DataStructure,
   DataElement,
+  CustomTag,
   StructureSuggestion,
   SuggestRequest,
   SuggestResponse,
@@ -51,6 +52,55 @@ async function fetchDataElements(shortName: string): Promise<DataElement[]> {
   }
 }
 
+async function fetchTagMap(): Promise<Record<string, { customCategories: string[]; customDataTypes: string[] }>> {
+  try {
+    const baseUrl =
+      process.env.NEXT_PUBLIC_APP_URL ??
+      `http://localhost:${process.env.PORT ?? 3000}`;
+
+    const tagsRes = await fetch(`${baseUrl}/api/v1/tags`);
+    if (!tagsRes.ok) return {};
+    const tags = (await tagsRes.json()) as CustomTag[];
+
+    // Exclude soft-deleted tags
+    const activeTags = tags.filter(
+      (t) =>
+        t.tagType !== "Removed Category" &&
+        t.tagType !== "Removed Data Type" &&
+        !t.name.startsWith("REMOVED_")
+    );
+
+    // Fetch structures for each active tag in parallel
+    const tagStructures = await Promise.all(
+      activeTags.map(async (tag) => {
+        const res = await fetch(`${baseUrl}/api/v1/tags/${tag.id}/dataStructures`);
+        if (!res.ok) return { tag, shortNames: [] as string[] };
+        const data = (await res.json()) as { dataStructures: DataStructure[] };
+        return {
+          tag,
+          shortNames: (data.dataStructures ?? []).map((s) => s.shortName.toLowerCase()),
+        };
+      })
+    );
+
+    // Build reverse map: lowercase shortName → {customCategories, customDataTypes}
+    const map: Record<string, { customCategories: string[]; customDataTypes: string[] }> = {};
+    for (const { tag, shortNames } of tagStructures) {
+      for (const sn of shortNames) {
+        if (!map[sn]) map[sn] = { customCategories: [], customDataTypes: [] };
+        if (tag.tagType === "Data Type") {
+          map[sn].customDataTypes.push(tag.name);
+        } else {
+          map[sn].customCategories.push(tag.name);
+        }
+      }
+    }
+    return map;
+  } catch {
+    return {};
+  }
+}
+
 export async function POST(request: NextRequest): Promise<NextResponse> {
   if (!process.env.ANTHROPIC_API_KEY) {
     return createErrorResponse(
@@ -66,15 +116,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return createErrorResponse("Invalid JSON request body", 400);
   }
 
-  const { question, databaseStructures = [] } = body;
+  const { question, databaseStructures = [], conversationHistory = [] } = body;
   if (!question?.trim()) {
     return createErrorResponse("question is required", 400);
   }
 
-  // Load mission context and structure list
-  const [missionContext, allStructures] = await Promise.all([
+  // Load mission context, structure list, and custom tag map
+  const [missionContext, allStructures, tagMap] = await Promise.all([
     loadMissionContext(),
     fetchStructureList(),
+    fetchTagMap(),
   ]);
 
   // Filter to database structures if provided
@@ -88,15 +139,20 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       : allStructures;
 
   // Build compact summary for the LLM (omit dataElements to save tokens)
-  const structureSummary = availableStructures
-    .slice(0, 500) // cap at 500 to avoid huge prompts
-    .map((s) => ({
+  const structureSummary = availableStructures.slice(0, 500).map((s) => {
+    const custom = tagMap[s.shortName.toLowerCase()];
+    return {
       shortName: s.shortName,
       title: s.title,
-      categories: s.categories?.slice(0, 3),
-      dataTypes: s.dataTypes?.slice(0, 3),
+      categories: custom?.customCategories.length
+        ? custom.customCategories.slice(0, 3)
+        : s.categories?.slice(0, 3),
+      dataTypes: custom?.customDataTypes.length
+        ? custom.customDataTypes.slice(0, 3)
+        : (s.dataTypes ?? (s.dataType ? [s.dataType] : undefined))?.slice(0, 3),
       sites: s.submittedByProjects?.slice(0, 5),
-    }));
+    };
+  });
 
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -138,7 +194,13 @@ Rules:
       model: "claude-sonnet-4-6",
       max_tokens: 2048,
       system: systemPrompt,
-      messages: [{ role: "user", content: question }],
+      messages: [
+        ...conversationHistory.map((m) => ({
+          role: m.role as "user" | "assistant",
+          content: m.content,
+        })),
+        { role: "user" as const, content: question },
+      ],
     });
 
     const content = message.content[0];
@@ -156,13 +218,27 @@ Rules:
     suggestionsRaw = parsed.suggestions ?? [];
     reasoning = parsed.reasoning ?? "";
 
-    // Validate shortNames against known structures
+    // Validate shortNames against known structures and enrich with tags
     const knownNames = new Set(
       availableStructures.map((s) => s.shortName.toLowerCase())
     );
-    suggestionsRaw = suggestionsRaw.filter((s) =>
-      knownNames.has(s.shortName.toLowerCase())
-    );
+    suggestionsRaw = suggestionsRaw
+      .filter((s) => knownNames.has(s.shortName.toLowerCase()))
+      .map((s) => {
+        const base = availableStructures.find(
+          (a) => a.shortName.toLowerCase() === s.shortName.toLowerCase()
+        );
+        const custom = tagMap[s.shortName.toLowerCase()];
+        return {
+          ...s,
+          categories: custom?.customCategories.length
+            ? custom.customCategories
+            : base?.categories,
+          dataTypes: custom?.customDataTypes.length
+            ? custom.customDataTypes
+            : (base?.dataTypes ?? (base?.dataType ? [base.dataType] : undefined)),
+        };
+      });
   } catch (err) {
     console.error("LLM suggest error:", err);
     return createErrorResponse(

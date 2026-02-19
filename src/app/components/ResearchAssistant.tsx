@@ -592,6 +592,10 @@ export default function ResearchAssistant({
 
   const [conversationHistory, setConversationHistory] = useState<ConversationMessage[]>([]);
   const [followUpQuestion, setFollowUpQuestion] = useState("");
+  const [suggestHistory, setSuggestHistory] = useState<
+    Array<{ role: "user" | "assistant"; content: string }>
+  >([]);
+  const [refineInput, setRefineInput] = useState("");
 
   const analysisEndRef = useRef<HTMLDivElement>(null);
 
@@ -602,26 +606,36 @@ export default function ResearchAssistant({
     }
   }, [analysisText, phase]);
 
-  const handleSuggest = async () => {
-    if (!question.trim()) return;
+  const handleSuggest = async (refinement?: string) => {
+    const isRefinement = refinement !== undefined;
+    const q = isRefinement ? refinement : question;
+    if (!q.trim()) return;
+
+    // On a fresh search, reset history; on refinement, keep it
+    const historyToSend = isRefinement ? suggestHistory : [];
+
     setPhase("suggesting");
     setErrorMsg(null);
     setSuggestions([]);
     setReasoning("");
     setNetworkGraph({ nodes: [], edges: [] });
-    setSelectedShortNames(new Set());
-    setSelectedStructures([]);
-    setMockDatasets([]);
-    setAnalysisText("");
-    setCharts([]);
+    if (!isRefinement) {
+      setSelectedShortNames(new Set());
+      setSelectedStructures([]);
+      setMockDatasets([]);
+      setAnalysisText("");
+      setCharts([]);
+      setSuggestHistory([]);
+    }
 
     try {
       const res = await fetch("/api/v1/research/suggest", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          question,
+          question: q,
           databaseStructures: databaseFilterEnabled ? databaseStructures : [],
+          conversationHistory: historyToSend,
         }),
       });
 
@@ -635,6 +649,17 @@ export default function ResearchAssistant({
       setReasoning(data.reasoning);
       setNetworkGraph(data.networkGraph);
       setPhase("selecting");
+
+      // Append this turn to suggest history
+      const assistantContent = JSON.stringify({
+        suggestions: data.suggestions,
+        reasoning: data.reasoning,
+      });
+      setSuggestHistory((prev) => [
+        ...historyToSend,
+        { role: "user" as const, content: q },
+        { role: "assistant" as const, content: assistantContent },
+      ]);
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : String(err));
       setPhase("error");
@@ -807,7 +832,7 @@ export default function ResearchAssistant({
             disabled={isLoading}
           />
           <button
-            onClick={handleSuggest}
+            onClick={() => void handleSuggest()}
             disabled={isLoading || !question.trim()}
             className="px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
           >
@@ -842,7 +867,7 @@ export default function ResearchAssistant({
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
           </svg>
-          {phase === "suggesting" && "Analyzing your research question…"}
+          {phase === "suggesting" && (suggestHistory.length > 0 ? "Refining suggestions…" : "Analyzing your research question…")}
           {phase === "generating" && "Generating synthetic dataset…"}
           {phase === "analyzing" && "Analyzing mock data…"}
         </div>
@@ -919,26 +944,80 @@ export default function ResearchAssistant({
                         )}
                       </div>
                     )}
+                    {s.dataTypes && s.dataTypes.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {s.dataTypes.slice(0, 3).map((dt) => (
+                          <span
+                            key={dt}
+                            className="px-1.5 py-0.5 text-xs rounded bg-blue-100 text-blue-700"
+                          >
+                            {dt}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    {s.categories && s.categories.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {s.categories.slice(0, 3).map((c) => (
+                          <span
+                            key={c}
+                            className="px-1.5 py-0.5 text-xs rounded bg-violet-100 text-violet-700"
+                          >
+                            {c}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </label>
               ))}
             </div>
 
             {phase === "selecting" && (
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={handleGenerateMock}
-                  disabled={selectedShortNames.size === 0}
-                  className="px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  Generate Mock Dataset
-                  {selectedShortNames.size > 0
-                    ? ` (${selectedShortNames.size} instrument${selectedShortNames.size > 1 ? "s" : ""})`
-                    : ""}
-                </button>
-                <span className="text-xs text-gray-400">
-                  Select instruments above, then generate synthetic data
-                </span>
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={handleGenerateMock}
+                    disabled={selectedShortNames.size === 0}
+                    className="px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Generate Mock Dataset
+                    {selectedShortNames.size > 0
+                      ? ` (${selectedShortNames.size} instrument${selectedShortNames.size > 1 ? "s" : ""})`
+                      : ""}
+                  </button>
+                  <span className="text-xs text-gray-400">
+                    Select instruments above, then generate synthetic data
+                  </span>
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={refineInput}
+                    onChange={(e) => setRefineInput(e.target.value)}
+                    placeholder="Refine: e.g. remove neuropsychological ones, only behavioral tasks…"
+                    className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && refineInput.trim()) {
+                        const q = refineInput;
+                        setRefineInput("");
+                        void handleSuggest(q);
+                      }
+                    }}
+                  />
+                  <button
+                    onClick={() => {
+                      if (!refineInput.trim()) return;
+                      const q = refineInput;
+                      setRefineInput("");
+                      void handleSuggest(q);
+                    }}
+                    disabled={!refineInput.trim()}
+                    className="px-3 py-2 bg-purple-100 text-purple-700 text-sm font-medium rounded-lg hover:bg-purple-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+                  >
+                    Refine list →
+                  </button>
+                </div>
               </div>
             )}
           </div>

@@ -201,6 +201,8 @@ export interface StructureSuggestion {
   confidence: "high" | "medium" | "low";
   sites?: string[];
   sharedElements?: string[];
+  categories?: string[];
+  dataTypes?: string[];
 }
 
 export interface ConversationMessage {
@@ -248,6 +250,7 @@ export interface SuggestRequest {
   question: string;
   databaseStructures?: string[];
   databaseSites?: string[];
+  conversationHistory?: Array<{ role: "user" | "assistant"; content: string }>;
 }
 
 export interface SuggestResponse {
