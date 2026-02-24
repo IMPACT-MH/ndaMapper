@@ -203,6 +203,11 @@ export interface StructureSuggestion {
   sharedElements?: string[];
   categories?: string[];
   dataTypes?: string[];
+  recommendedElements?: Array<{
+    name: string;
+    description: string;
+    reason: string;
+  }>;
 }
 
 export interface ConversationMessage {
@@ -224,7 +229,7 @@ export interface ChartConfig {
 export interface NetworkNode {
   id: string;
   label: string;
-  type: "instrument" | "element" | "site" | "category";
+  type: "instrument" | "datatype" | "site" | "category";
   value?: number;
 }
 
@@ -251,6 +256,7 @@ export interface SuggestRequest {
   databaseStructures?: string[];
   databaseSites?: string[];
   conversationHistory?: Array<{ role: "user" | "assistant"; content: string }>;
+  excludeShortNames?: string[];
 }
 
 export interface SuggestResponse {
@@ -264,4 +270,45 @@ export interface AnalyzeRequest {
   selectedStructures: DataStructure[];
   mockDatasets: MockDataset[];
   conversationHistory: ConversationMessage[];
+}
+
+// ---------------------------------------------------------------------------
+// Harmonization
+// ---------------------------------------------------------------------------
+
+export interface ElementMapping {
+  shortName: string;
+  elementName: string;
+  description?: string;
+  mappingConfidence: "direct" | "partial" | "proxy";
+}
+
+export interface ConstructGroup {
+  constructName: string;
+  domain: string;
+  mappings: ElementMapping[];
+}
+
+export interface HarmonizationResult {
+  constructs: ConstructGroup[];
+  summary: string;
+  reasoning: string;
+  harmonizedDataset: MockDataset;
+}
+
+export interface HarmonizeRequest {
+  question: string;
+  structures: Array<{
+    shortName: string;
+    title: string;
+    dataElements: DataElement[];
+    sites?: string[];
+  }>;
+}
+
+export interface HarmonizeResponse {
+  constructs: ConstructGroup[];
+  summary: string;
+  reasoning: string;
+  harmonizedDataset: MockDataset;
 }

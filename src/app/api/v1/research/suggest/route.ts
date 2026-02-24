@@ -116,7 +116,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return createErrorResponse("Invalid JSON request body", 400);
   }
 
-  const { question, databaseStructures = [], conversationHistory = [] } = body;
+  const { question, databaseStructures = [], conversationHistory = [], excludeShortNames = [] } = body;
   if (!question?.trim()) {
     return createErrorResponse("question is required", 400);
   }
@@ -138,8 +138,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         )
       : allStructures;
 
+  // Filter out already-shown structures if excludeShortNames provided
+  const filteredStructures = excludeShortNames.length > 0
+    ? availableStructures.filter(
+        (s) => !excludeShortNames.map((n) => n.toLowerCase()).includes(s.shortName.toLowerCase())
+      )
+    : availableStructures;
+
   // Build compact summary for the LLM (omit dataElements to save tokens)
-  const structureSummary = availableStructures.slice(0, 500).map((s) => {
+  const structureSummary = filteredStructures.slice(0, 500).map((s) => {
     const custom = tagMap[s.shortName.toLowerCase()];
     return {
       shortName: s.shortName,
@@ -206,7 +213,6 @@ Rules:
     const content = message.content[0];
     if (content.type !== "text") throw new Error("Unexpected response type");
 
-    // Parse JSON from response (handle code blocks)
     const raw = content.text.trim();
     const jsonMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/) ?? [null, raw];
     const jsonStr = jsonMatch[1] ?? raw;
@@ -220,12 +226,12 @@ Rules:
 
     // Validate shortNames against known structures and enrich with tags
     const knownNames = new Set(
-      availableStructures.map((s) => s.shortName.toLowerCase())
+      filteredStructures.map((s) => s.shortName.toLowerCase())
     );
     suggestionsRaw = suggestionsRaw
       .filter((s) => knownNames.has(s.shortName.toLowerCase()))
       .map((s) => {
-        const base = availableStructures.find(
+        const base = filteredStructures.find(
           (a) => a.shortName.toLowerCase() === s.shortName.toLowerCase()
         );
         const custom = tagMap[s.shortName.toLowerCase()];
@@ -251,7 +257,7 @@ Rules:
   // Fetch full dataElements for each suggested structure (in parallel)
   const fullStructures = await Promise.all(
     suggestionsRaw.map(async (suggestion) => {
-      const base = availableStructures.find(
+      const base = filteredStructures.find(
         (s) => s.shortName.toLowerCase() === suggestion.shortName.toLowerCase()
       );
       if (!base) return null;
@@ -263,6 +269,96 @@ Rules:
   const validStructures = fullStructures.filter(
     (s): s is NonNullable<typeof s> => s !== null
   ) as DataStructure[];
+
+  // Second LLM call: recommend specific elements per instrument
+  const recommendElementsTool: Anthropic.Tool = {
+    name: "recommend_elements",
+    description: "For each suggested instrument, identify the most relevant data elements for the researcher's question",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        recommendations: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              shortName: { type: "string" },
+              elements: {
+                type: "array",
+                description: "Top 3-5 most relevant elements for this instrument",
+                items: {
+                  type: "object",
+                  properties: {
+                    name: { type: "string" },
+                    description: { type: "string" },
+                    reason: { type: "string", description: "Why this element is relevant to the question" },
+                  },
+                  required: ["name", "reason"],
+                },
+              },
+            },
+            required: ["shortName", "elements"],
+          },
+        },
+      },
+      required: ["recommendations"],
+    },
+  };
+
+  try {
+    const instrumentsWithElements = validStructures
+      .filter((s) => s.dataElements && s.dataElements.length > 0)
+      .map((s) => ({
+        shortName: s.shortName,
+        elements: (s.dataElements ?? []).map((el) => ({
+          name: el.name,
+          description: el.description,
+          type: el.type,
+        })),
+      }));
+
+    if (instrumentsWithElements.length > 0) {
+      const elementsMessage = await client.messages.create({
+        model: "claude-sonnet-4-6",
+        max_tokens: 2048,
+        tools: [recommendElementsTool],
+        tool_choice: { type: "tool", name: "recommend_elements" },
+        messages: [
+          {
+            role: "user" as const,
+            content: `Research question: "${question}"
+
+For each instrument below, identify the 3-5 data elements most relevant to answering the research question. Only include elements that are genuinely useful for this specific question.
+
+Instruments and their elements:
+${JSON.stringify(instrumentsWithElements, null, 2)}`,
+          },
+        ],
+      });
+
+      const elementsToolBlock = elementsMessage.content.find((b) => b.type === "tool_use");
+      if (elementsToolBlock && elementsToolBlock.type === "tool_use") {
+        const elementsResult = elementsToolBlock.input as {
+          recommendations: Array<{
+            shortName: string;
+            elements: Array<{ name: string; description: string; reason: string }>;
+          }>;
+        };
+
+        // Merge element recommendations into suggestionsRaw
+        const recMap = new Map(
+          (elementsResult.recommendations ?? []).map((r) => [r.shortName.toLowerCase(), r.elements])
+        );
+        suggestionsRaw = suggestionsRaw.map((s) => ({
+          ...s,
+          recommendedElements: recMap.get(s.shortName.toLowerCase()),
+        }));
+      }
+    }
+  } catch (err) {
+    // Element recommendations are best-effort; don't fail the whole request
+    console.warn("Element recommendations failed:", err instanceof Error ? err.message : String(err));
+  }
 
   // Build network graph
   const networkGraph = buildNetworkGraph(validStructures);

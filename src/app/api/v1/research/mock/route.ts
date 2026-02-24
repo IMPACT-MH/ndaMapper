@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generateMockDataset } from "@/lib/mockDataGenerator";
+import { generateMockDataset, generateSubjectPool } from "@/lib/mockDataGenerator";
 import {
   createErrorResponse,
   createOptionsResponse,
@@ -40,6 +40,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return createErrorResponse("selectedStructures (array of shortNames) is required", 400);
   }
 
+  // Generate a shared subject pool so all datasets have the same subjects
+  const subjectPool = generateSubjectPool(ROWS_PER_STRUCTURE);
+
   const datasets = await Promise.all(
     selectedStructures.map(async (shortName): Promise<MockDataset | null> => {
       const dataElements = await fetchDataElements(shortName);
@@ -51,7 +54,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         dataElements,
       };
 
-      return generateMockDataset(structure, ROWS_PER_STRUCTURE);
+      return generateMockDataset(structure, ROWS_PER_STRUCTURE, subjectPool);
     })
   );
 

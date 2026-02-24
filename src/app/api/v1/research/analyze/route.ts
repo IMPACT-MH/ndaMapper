@@ -99,12 +99,18 @@ End your response with exactly this format (do not include it mid-response):
     "type": "bar" | "histogram" | "scatter",
     "title": "Chart title",
     "xField": "field_name",
-    "yField": "field_name",
+    "yField": "field_name (required for bar and scatter only)",
     "groupByField": "optional_group_field"
   }
 ]</charts>
 
-Suggest 1-3 charts that would be most informative given the question and available fields.`;
+Chart type rules — follow these strictly:
+- Use **"histogram"** for any continuous numeric field (age, reaction time, scale total scores, counts, durations). A histogram bins values into ranges; it does NOT need a yField.
+- Use **"bar"** only for categorical fields (sex, site, diagnosis, yes/no columns). Bar charts require a yField (usually the same field, used for counting).
+- Use **"scatter"** when the researcher asks about the relationship between two numeric variables (e.g. age vs. score). Requires both xField and yField.
+
+When the researcher explicitly requests a histogram, ALWAYS use type "histogram".
+Suggest 1–3 charts that are most informative given the question and available fields.`;
 
   // Build conversation messages
   const messages: Anthropic.MessageParam[] = [

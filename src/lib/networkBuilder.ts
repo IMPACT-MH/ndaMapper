@@ -6,11 +6,11 @@ import type { DataStructure, NetworkGraph, NetworkNode, NetworkEdge } from "@/ty
  *
  * Nodes:
  *   - One "instrument" node per structure
- *   - One "element" node per shared data element (appears in ≥2 structures)
+ *   - One "datatype" node per unique data type
  *   - One "site" node per unique site (submittedByProjects)
  *
  * Edges:
- *   - instrument → shared element (contains)
+ *   - instrument → datatype (has_type)
  *   - instrument → site (collected_at)
  *   - instrument → instrument (shares N elements) — only if sharedElements ≥ 1
  */
@@ -26,27 +26,7 @@ export function buildNetworkGraph(structures: DataStructure[]): NetworkGraph {
     }
   }
 
-  // Count how many structures each element appears in
-  const elementCount = new Map<string, number>();
-  for (const structure of structures) {
-    const seen = new Set<string>();
-    for (const element of structure.dataElements ?? []) {
-      const key = element.name.toLowerCase();
-      if (!seen.has(key)) {
-        elementCount.set(key, (elementCount.get(key) ?? 0) + 1);
-        seen.add(key);
-      }
-    }
-  }
-
-  // Shared elements: appear in 2+ structures
-  const sharedElements = new Set<string>(
-    [...elementCount.entries()]
-      .filter(([, count]) => count >= 2)
-      .map(([name]) => name)
-  );
-
-  // Add instrument nodes + site nodes + edges
+  // Add instrument nodes + site nodes + datatype nodes + edges
   for (const structure of structures) {
     const instrId = `instrument:${structure.shortName}`;
     addNode({
@@ -67,19 +47,17 @@ export function buildNetworkGraph(structures: DataStructure[]): NetworkGraph {
       });
     }
 
-    // Shared element edges
-    for (const element of structure.dataElements ?? []) {
-      const key = element.name.toLowerCase();
-      if (sharedElements.has(key)) {
-        const elemId = `element:${key}`;
-        addNode({ id: elemId, label: element.name, type: "element" });
-        edges.push({
-          source: instrId,
-          target: elemId,
-          label: "contains",
-          weight: 1,
-        });
-      }
+    // Data type edges
+    const dataTypes = structure.dataTypes ?? (structure.dataType ? [structure.dataType] : []);
+    for (const dt of dataTypes) {
+      const dtId = `datatype:${dt}`;
+      addNode({ id: dtId, label: dt, type: "datatype" });
+      edges.push({
+        source: instrId,
+        target: dtId,
+        label: "has_type",
+        weight: 1,
+      });
     }
   }
 
