@@ -1197,9 +1197,11 @@ const DataCategorySearch = ({
                                 if (createResponse.ok) {
                                     const newTag = await createResponse.json();
                                     // Assign tag to the structure
+                                    const existingStructure = dataStructuresMap[structureShortName];
+                                    const dataStructureId = existingStructure?.dataStructureId || existingStructure?.id || existingStructure?.DataStructureID;
                                     await apiAssignTag(
                                         newTag.id,
-                                        structureShortName,
+                                        dataStructureId,
                                         apiBaseUrl,
                                     );
                                 }
@@ -1269,9 +1271,11 @@ const DataCategorySearch = ({
                     if (createResponse.ok) {
                         const newTag = await createResponse.json();
                         // Assign tag to the structure
+                        const existingStructure = dataStructuresMap[structureShortName];
+                        const dataStructureId = existingStructure?.dataStructureId || existingStructure?.id || existingStructure?.DataStructureID;
                         await apiAssignTag(
                             newTag.id,
-                            structureShortName,
+                            dataStructureId,
                             apiBaseUrl,
                         );
                     }
@@ -1355,9 +1359,11 @@ const DataCategorySearch = ({
                                 if (createResponse.ok) {
                                     const newTag = await createResponse.json();
                                     // Assign tag to the structure
+                                    const existingStructure = dataStructuresMap[structureShortName];
+                                    const dataStructureId = existingStructure?.dataStructureId || existingStructure?.id || existingStructure?.DataStructureID;
                                     await apiAssignTag(
                                         newTag.id,
-                                        structureShortName,
+                                        dataStructureId,
                                         apiBaseUrl,
                                     );
                                 }
@@ -1424,9 +1430,11 @@ const DataCategorySearch = ({
                     if (createResponse.ok) {
                         const newTag = await createResponse.json();
                         // Assign tag to the structure
+                        const existingStructure = dataStructuresMap[structureShortName];
+                        const dataStructureId = existingStructure?.dataStructureId || existingStructure?.id || existingStructure?.DataStructureID;
                         await apiAssignTag(
                             newTag.id,
-                            structureShortName,
+                            dataStructureId,
                             apiBaseUrl,
                         );
                     }
@@ -2729,7 +2737,13 @@ const DataCategorySearch = ({
                                                                                                 )}
 
                                                                                             {/* Show custom category tags */}
-                                                                                            {customCategoryTags.map(
+                                                                                            {customCategoryTags
+                                                                                                .filter(
+                                                                                                    (tag) =>
+                                                                                                        !tag.name.startsWith("REMOVED_CATEGORY:") &&
+                                                                                                        !tag.name.startsWith("REMOVED_DATATYPE:"),
+                                                                                                )
+                                                                                                .map(
                                                                                                 (
                                                                                                     tag,
                                                                                                 ) => {
@@ -2974,7 +2988,13 @@ const DataCategorySearch = ({
                                                                                                 )}
 
                                                                                             {/* Show custom category tags */}
-                                                                                            {customCategoryTags.map(
+                                                                                            {customCategoryTags
+                                                                                                .filter(
+                                                                                                    (tag) =>
+                                                                                                        !tag.name.startsWith("REMOVED_CATEGORY:") &&
+                                                                                                        !tag.name.startsWith("REMOVED_DATATYPE:"),
+                                                                                                )
+                                                                                                .map(
                                                                                                 (
                                                                                                     tag,
                                                                                                 ) => {
@@ -5559,7 +5579,9 @@ const DataCategorySearch = ({
                         onClick={(e) => e.stopPropagation()}
                     >
                         <h2 className="text-xl font-bold text-gray-900 mb-4">
-                            Are you really sure?
+                            {deleteConfirmModal.type === "category" || deleteConfirmModal.type === "dataType"
+                                ? "Hide from this structure?"
+                                : "Are you really sure?"}
                         </h2>
                         <p className="text-gray-700 mb-6">
                             {deleteConfirmModal.type === "tag" && (
@@ -5583,39 +5605,27 @@ const DataCategorySearch = ({
                             )}
                             {deleteConfirmModal.type === "category" && (
                                 <>
-                                    Are you sure you want to remove the category{" "}
+                                    Are you sure you want to hide the category{" "}
                                     <span className="font-semibold">
                                         &quot;{deleteConfirmModal.itemName}
                                         &quot;
                                     </span>{" "}
-                                    from this structure? This category is used
-                                    by{" "}
-                                    <span className="font-semibold text-red-600">
-                                        {deleteConfirmModal.structureCount}{" "}
-                                        {deleteConfirmModal.structureCount === 1
-                                            ? "structure"
-                                            : "structures"}
-                                    </span>
-                                    . This action cannot be undone.
+                                    from this structure? This only affects this
+                                    structure — the category will remain
+                                    available everywhere else.
                                 </>
                             )}
                             {deleteConfirmModal.type === "dataType" && (
                                 <>
-                                    Are you sure you want to remove the data
+                                    Are you sure you want to hide the data
                                     type{" "}
                                     <span className="font-semibold">
                                         &quot;{deleteConfirmModal.itemName}
                                         &quot;
                                     </span>{" "}
-                                    from this structure? This data type is used
-                                    by{" "}
-                                    <span className="font-semibold text-red-600">
-                                        {deleteConfirmModal.structureCount}{" "}
-                                        {deleteConfirmModal.structureCount === 1
-                                            ? "structure"
-                                            : "structures"}
-                                    </span>
-                                    . This action cannot be undone.
+                                    from this structure? This only affects this
+                                    structure — the data type will remain
+                                    available everywhere else.
                                 </>
                             )}
                         </p>
@@ -5644,7 +5654,9 @@ const DataCategorySearch = ({
                                 }}
                                 className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
                             >
-                                Yes, Delete
+                                {deleteConfirmModal.type === "category" || deleteConfirmModal.type === "dataType"
+                                    ? "Yes, Hide"
+                                    : "Yes, Delete"}
                             </button>
                         </div>
                     </div>

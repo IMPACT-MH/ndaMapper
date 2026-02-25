@@ -195,29 +195,31 @@ const AuditTrail = ({ tagId, structureShortName, tagTypeFilter, apiBaseUrl = "/a
                 finalLogs = auditLogs.filter(log => log.action === filter);
             }
             
-            // Sort by timestamp (newest first), then by action priority when timestamps are equal
-            // Priority: create (1) < update (2) < assign (3) < remove (4) < delete (5)
-            const actionPriority = {
+            // Sort by timestamp (newest first), then by action sequence when timestamps are equal.
+            // When a tag is created+assigned in the same second, ASSIGN happened after CREATE,
+            // so ASSIGN should appear above CREATE in a newest-first list.
+            // Sequence order (higher = more recent = shown first): create(1) < assign(2) < update(3) < remove(4) < delete(5)
+            const actionSequence = {
                 create: 1,
-                update: 2,
-                assign: 3,
+                assign: 2,
+                update: 3,
                 remove: 4,
                 delete: 5,
             };
-            
+
             finalLogs.sort((a, b) => {
                 const timeA = new Date(a.timestamp).getTime();
                 const timeB = new Date(b.timestamp).getTime();
-                
+
                 // First sort by timestamp (newest first)
                 if (timeB !== timeA) {
                     return timeB - timeA;
                 }
-                
-                // If timestamps are equal, sort by action priority (create before assign)
-                const priorityA = actionPriority[a.action] || 99;
-                const priorityB = actionPriority[b.action] || 99;
-                return priorityA - priorityB;
+
+                // If timestamps are equal, show later-in-sequence actions first (newest first)
+                const seqA = actionSequence[a.action] || 99;
+                const seqB = actionSequence[b.action] || 99;
+                return seqB - seqA;
             });
             
             // Limit to 100 most recent

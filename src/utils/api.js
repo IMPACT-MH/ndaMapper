@@ -189,13 +189,13 @@ export const deleteTag = async (tagId, apiBaseUrl = "/api/v1") => {
 /**
  * Assign a tag to a data structure
  * @param {string} tagId - Tag ID
- * @param {string} structureShortName - Structure short name
+ * @param {number} dataStructureId - Numeric data structure ID
  * @param {string} apiBaseUrl - Base URL for API
  * @returns {Promise<void>}
  */
 export const assignTag = async (
     tagId,
-    structureShortName,
+    dataStructureId,
     apiBaseUrl = "/api/v1"
 ) => {
     await apiCall(
@@ -204,7 +204,7 @@ export const assignTag = async (
             method: "POST",
             body: JSON.stringify({
                 tagId: tagId,
-                dataStructureShortName: structureShortName,
+                DataStructureID: dataStructureId,
             }),
         },
         apiBaseUrl
