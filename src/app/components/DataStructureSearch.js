@@ -16,6 +16,7 @@ import CSVValidator from "./CSVValidator";
 import DownloadStructureButton from "./DownloadStructureButton";
 import DownloadTemplateButton from "./DownloadTemplateButton";
 import useScrollDirection from "./useScrollDirection";
+import { getDataTypeTooltip } from "@/utils/dataTypeDescriptions";
 
 const DataStructureSearch = ({
     searchTerm,
@@ -778,8 +779,9 @@ const DataStructureSearch = ({
                                                                                     e.stopPropagation();
                                                                                     handleDataTypeClick(selectedStructure.dataType);
                                                                                 }}
+                                                                                title={getDataTypeTooltip(selectedStructure.dataType === "Clinical Assessments" ? "Uncategorized" : selectedStructure.dataType) ?? undefined}
                                                                             >
-                                                                                {selectedStructure.dataType || "Not specified"}
+                                                                                {(selectedStructure.dataType === "Clinical Assessments" ? "Uncategorized" : selectedStructure.dataType) || "Not specified"}
                                                                             </span>
                                                                         );
                                                                     }

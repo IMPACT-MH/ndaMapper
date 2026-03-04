@@ -12,6 +12,7 @@ import {
     Pencil,
 } from "lucide-react";
 import { IMPACT_API_BASE, DATA_STRUCTURES } from "@/const.js";
+import { getDataTypeTooltip } from "@/utils/dataTypeDescriptions";
 import CategoryTagManagement from "./CategoryTagManagement";
 import AuditTrail from "./AuditTrail";
 import {
@@ -750,7 +751,9 @@ const DataCategorySearch = ({
                     structure.categories?.some((cat) =>
                         cat.toLowerCase().includes(searchLower),
                     ) ||
-                    getDisplayDataType(structure.dataType)?.toLowerCase().includes(searchLower)
+                    getDisplayDataType(structure.dataType)
+                        ?.toLowerCase()
+                        .includes(searchLower)
                 ) {
                     return true;
                 }
@@ -816,7 +819,9 @@ const DataCategorySearch = ({
                     if (isDataTypeRemoved(structure.shortName)) {
                         return false;
                     }
-                    return selectedFilters.dataTypes.has(getDisplayDataType(structure.dataType));
+                    return selectedFilters.dataTypes.has(
+                        getDisplayDataType(structure.dataType),
+                    );
                 }
             });
         }
@@ -1061,7 +1066,9 @@ const DataCategorySearch = ({
                 );
                 // Add original data types
                 if (structure.dataType) {
-                    dataTypesInDatabase.add(getDisplayDataType(structure.dataType));
+                    dataTypesInDatabase.add(
+                        getDisplayDataType(structure.dataType),
+                    );
                 }
 
                 // Add custom category tags if structure is in database
@@ -1201,8 +1208,12 @@ const DataCategorySearch = ({
                                 if (createResponse.ok) {
                                     const newTag = await createResponse.json();
                                     // Assign tag to the structure
-                                    const existingStructure = dataStructuresMap[structureShortName];
-                                    const dataStructureId = existingStructure?.dataStructureId || existingStructure?.id || existingStructure?.DataStructureID;
+                                    const existingStructure =
+                                        dataStructuresMap[structureShortName];
+                                    const dataStructureId =
+                                        existingStructure?.dataStructureId ||
+                                        existingStructure?.id ||
+                                        existingStructure?.DataStructureID;
                                     await apiAssignTag(
                                         newTag.id,
                                         dataStructureId,
@@ -1275,8 +1286,12 @@ const DataCategorySearch = ({
                     if (createResponse.ok) {
                         const newTag = await createResponse.json();
                         // Assign tag to the structure
-                        const existingStructure = dataStructuresMap[structureShortName];
-                        const dataStructureId = existingStructure?.dataStructureId || existingStructure?.id || existingStructure?.DataStructureID;
+                        const existingStructure =
+                            dataStructuresMap[structureShortName];
+                        const dataStructureId =
+                            existingStructure?.dataStructureId ||
+                            existingStructure?.id ||
+                            existingStructure?.DataStructureID;
                         await apiAssignTag(
                             newTag.id,
                             dataStructureId,
@@ -1363,8 +1378,12 @@ const DataCategorySearch = ({
                                 if (createResponse.ok) {
                                     const newTag = await createResponse.json();
                                     // Assign tag to the structure
-                                    const existingStructure = dataStructuresMap[structureShortName];
-                                    const dataStructureId = existingStructure?.dataStructureId || existingStructure?.id || existingStructure?.DataStructureID;
+                                    const existingStructure =
+                                        dataStructuresMap[structureShortName];
+                                    const dataStructureId =
+                                        existingStructure?.dataStructureId ||
+                                        existingStructure?.id ||
+                                        existingStructure?.DataStructureID;
                                     await apiAssignTag(
                                         newTag.id,
                                         dataStructureId,
@@ -1434,8 +1453,12 @@ const DataCategorySearch = ({
                     if (createResponse.ok) {
                         const newTag = await createResponse.json();
                         // Assign tag to the structure
-                        const existingStructure = dataStructuresMap[structureShortName];
-                        const dataStructureId = existingStructure?.dataStructureId || existingStructure?.id || existingStructure?.DataStructureID;
+                        const existingStructure =
+                            dataStructuresMap[structureShortName];
+                        const dataStructureId =
+                            existingStructure?.dataStructureId ||
+                            existingStructure?.id ||
+                            existingStructure?.DataStructureID;
                         await apiAssignTag(
                             newTag.id,
                             dataStructureId,
@@ -2304,7 +2327,7 @@ const DataCategorySearch = ({
                                 <h4 className="font-medium text-gray-700 bg-gray-100 px-3 py-2 rounded-md mb-2 w-full flex items-center justify-between">
                                     <span>Data Types</span>
                                     <span className="flex items-center text-xs font-normal text-gray-600">
-                                        <span>custom tag</span>
+                                        <span>IMPACT-MH Data Type</span>
                                         <span className="text-orange-500 ml-1">
                                             ★
                                         </span>
@@ -2325,6 +2348,11 @@ const DataCategorySearch = ({
                                                 <label
                                                     key={dataType}
                                                     className="flex items-center"
+                                                    title={
+                                                        getDataTypeTooltip(
+                                                            dataType,
+                                                        ) ?? undefined
+                                                    }
                                                 >
                                                     <input
                                                         type="checkbox"
@@ -2379,7 +2407,7 @@ const DataCategorySearch = ({
                                 <h4 className="font-medium text-blue-700 bg-blue-100 px-3 py-2 rounded-md mb-2 w-full flex items-center justify-between">
                                     <span>Categories</span>
                                     <span className="flex items-center text-xs font-normal text-gray-600">
-                                        <span>custom tag</span>
+                                        <span>IMPACT-MH Category</span>
                                         <span className="text-orange-500 ml-1">
                                             ★
                                         </span>
@@ -2743,44 +2771,50 @@ const DataCategorySearch = ({
                                                                                             {/* Show custom category tags */}
                                                                                             {customCategoryTags
                                                                                                 .filter(
-                                                                                                    (tag) =>
-                                                                                                        !tag.name.startsWith("REMOVED_CATEGORY:") &&
-                                                                                                        !tag.name.startsWith("REMOVED_DATATYPE:"),
+                                                                                                    (
+                                                                                                        tag,
+                                                                                                    ) =>
+                                                                                                        !tag.name.startsWith(
+                                                                                                            "REMOVED_CATEGORY:",
+                                                                                                        ) &&
+                                                                                                        !tag.name.startsWith(
+                                                                                                            "REMOVED_DATATYPE:",
+                                                                                                        ),
                                                                                                 )
                                                                                                 .map(
-                                                                                                (
-                                                                                                    tag,
-                                                                                                ) => {
-                                                                                                    const isNdaCategory =
-                                                                                                        availableCategories.has(
-                                                                                                            tag.name,
-                                                                                                        );
-                                                                                                    return (
-                                                                                                        <span
-                                                                                                            key={
-                                                                                                                tag.id
-                                                                                                            }
-                                                                                                            onClick={(
-                                                                                                                e,
-                                                                                                            ) => {
-                                                                                                                e.stopPropagation();
-                                                                                                                handleOpenCategoriesModal(
-                                                                                                                    structure,
-                                                                                                                );
-                                                                                                            }}
-                                                                                                            className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-blue-100 text-blue-700 hover:bg-blue-200"
-                                                                                                            title="Custom category tag (click to modify)"
-                                                                                                        >
-                                                                                                            {
-                                                                                                                tag.name
-                                                                                                            }
-                                                                                                            <span className="ml-1 text-orange-500 text-xs">
-                                                                                                                ★
+                                                                                                    (
+                                                                                                        tag,
+                                                                                                    ) => {
+                                                                                                        const isNdaCategory =
+                                                                                                            availableCategories.has(
+                                                                                                                tag.name,
+                                                                                                            );
+                                                                                                        return (
+                                                                                                            <span
+                                                                                                                key={
+                                                                                                                    tag.id
+                                                                                                                }
+                                                                                                                onClick={(
+                                                                                                                    e,
+                                                                                                                ) => {
+                                                                                                                    e.stopPropagation();
+                                                                                                                    handleOpenCategoriesModal(
+                                                                                                                        structure,
+                                                                                                                    );
+                                                                                                                }}
+                                                                                                                className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-blue-100 text-blue-700 hover:bg-blue-200"
+                                                                                                                title="Custom category tag (click to modify)"
+                                                                                                            >
+                                                                                                                {
+                                                                                                                    tag.name
+                                                                                                                }
+                                                                                                                <span className="ml-1 text-orange-500 text-xs">
+                                                                                                                    ★
+                                                                                                                </span>
                                                                                                             </span>
-                                                                                                        </span>
-                                                                                                    );
-                                                                                                },
-                                                                                            )}
+                                                                                                        );
+                                                                                                    },
+                                                                                                )}
                                                                                         </>
                                                                                     );
                                                                                 })()}
@@ -2819,7 +2853,12 @@ const DataCategorySearch = ({
                                                                                                         );
                                                                                                     }}
                                                                                                     className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-gray-100 text-gray-700 hover:bg-gray-200"
-                                                                                                    title="Custom data type tags (click to modify)"
+                                                                                                    title={
+                                                                                                        getDataTypeTooltip(
+                                                                                                            tag.name,
+                                                                                                        ) ??
+                                                                                                        "Custom data type tag (click to modify)"
+                                                                                                    }
                                                                                                 >
                                                                                                     {
                                                                                                         tag.name
@@ -2850,11 +2889,18 @@ const DataCategorySearch = ({
                                                                                                         structure,
                                                                                                     );
                                                                                                 }}
-                                                                                                title="Click to add custom data type tags"
-                                                                                            >
-                                                                                                {
-                                                                                                    getDisplayDataType(structure.dataType)
+                                                                                                title={
+                                                                                                    getDataTypeTooltip(
+                                                                                                        getDisplayDataType(
+                                                                                                            structure.dataType,
+                                                                                                        ),
+                                                                                                    ) ??
+                                                                                                    "Click to manage data type tags"
                                                                                                 }
+                                                                                            >
+                                                                                                {getDisplayDataType(
+                                                                                                    structure.dataType,
+                                                                                                )}
                                                                                             </span>
                                                                                         );
                                                                                     }
@@ -2896,7 +2942,12 @@ const DataCategorySearch = ({
                                                                                                         );
                                                                                                     }}
                                                                                                     className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-gray-100 text-gray-700 hover:bg-gray-200"
-                                                                                                    title="Custom data type tags (click to modify)"
+                                                                                                    title={
+                                                                                                        getDataTypeTooltip(
+                                                                                                            tag.name,
+                                                                                                        ) ??
+                                                                                                        "Custom data type tag (click to modify)"
+                                                                                                    }
                                                                                                 >
                                                                                                     {
                                                                                                         tag.name
@@ -2927,11 +2978,18 @@ const DataCategorySearch = ({
                                                                                                         structure,
                                                                                                     );
                                                                                                 }}
-                                                                                                title="Click to add custom data type tags"
-                                                                                            >
-                                                                                                {
-                                                                                                    getDisplayDataType(structure.dataType)
+                                                                                                title={
+                                                                                                    getDataTypeTooltip(
+                                                                                                        getDisplayDataType(
+                                                                                                            structure.dataType,
+                                                                                                        ),
+                                                                                                    ) ??
+                                                                                                    "Click to manage data type tags"
                                                                                                 }
+                                                                                            >
+                                                                                                {getDisplayDataType(
+                                                                                                    structure.dataType,
+                                                                                                )}
                                                                                             </span>
                                                                                         );
                                                                                     }
@@ -2994,56 +3052,62 @@ const DataCategorySearch = ({
                                                                                             {/* Show custom category tags */}
                                                                                             {customCategoryTags
                                                                                                 .filter(
-                                                                                                    (tag) =>
-                                                                                                        !tag.name.startsWith("REMOVED_CATEGORY:") &&
-                                                                                                        !tag.name.startsWith("REMOVED_DATATYPE:"),
+                                                                                                    (
+                                                                                                        tag,
+                                                                                                    ) =>
+                                                                                                        !tag.name.startsWith(
+                                                                                                            "REMOVED_CATEGORY:",
+                                                                                                        ) &&
+                                                                                                        !tag.name.startsWith(
+                                                                                                            "REMOVED_DATATYPE:",
+                                                                                                        ),
                                                                                                 )
                                                                                                 .map(
-                                                                                                (
-                                                                                                    tag,
-                                                                                                ) => {
-                                                                                                    const isNdaCategory =
-                                                                                                        availableCategories.has(
-                                                                                                            tag.name,
-                                                                                                        );
-                                                                                                    // Only show star if it's a NEW tag (in availableTags but not an original NDA category)
-                                                                                                    const isNewTag =
-                                                                                                        availableTags.some(
-                                                                                                            (
-                                                                                                                t,
-                                                                                                            ) =>
-                                                                                                                t.name ===
+                                                                                                    (
+                                                                                                        tag,
+                                                                                                    ) => {
+                                                                                                        const isNdaCategory =
+                                                                                                            availableCategories.has(
                                                                                                                 tag.name,
-                                                                                                        ) &&
-                                                                                                        !isNdaCategory;
-                                                                                                    return (
-                                                                                                        <span
-                                                                                                            key={
-                                                                                                                tag.id
-                                                                                                            }
-                                                                                                            onClick={(
-                                                                                                                e,
-                                                                                                            ) => {
-                                                                                                                e.stopPropagation();
-                                                                                                                handleOpenCategoriesModal(
-                                                                                                                    structure,
-                                                                                                                );
-                                                                                                            }}
-                                                                                                            className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-blue-100 text-blue-700 hover:bg-blue-200"
-                                                                                                            title="Custom category tag (click to modify)"
-                                                                                                        >
-                                                                                                            {
-                                                                                                                tag.name
-                                                                                                            }
-                                                                                                            {isNewTag && (
-                                                                                                                <span className="ml-1 text-xs text-orange-500">
-                                                                                                                    ★
-                                                                                                                </span>
-                                                                                                            )}
-                                                                                                        </span>
-                                                                                                    );
-                                                                                                },
-                                                                                            )}
+                                                                                                            );
+                                                                                                        // Only show star if it's a NEW tag (in availableTags but not an original NDA category)
+                                                                                                        const isNewTag =
+                                                                                                            availableTags.some(
+                                                                                                                (
+                                                                                                                    t,
+                                                                                                                ) =>
+                                                                                                                    t.name ===
+                                                                                                                    tag.name,
+                                                                                                            ) &&
+                                                                                                            !isNdaCategory;
+                                                                                                        return (
+                                                                                                            <span
+                                                                                                                key={
+                                                                                                                    tag.id
+                                                                                                                }
+                                                                                                                onClick={(
+                                                                                                                    e,
+                                                                                                                ) => {
+                                                                                                                    e.stopPropagation();
+                                                                                                                    handleOpenCategoriesModal(
+                                                                                                                        structure,
+                                                                                                                    );
+                                                                                                                }}
+                                                                                                                className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-blue-100 text-blue-700 hover:bg-blue-200"
+                                                                                                                title="Custom category tag (click to modify)"
+                                                                                                            >
+                                                                                                                {
+                                                                                                                    tag.name
+                                                                                                                }
+                                                                                                                {isNewTag && (
+                                                                                                                    <span className="ml-1 text-xs text-orange-500">
+                                                                                                                        ★
+                                                                                                                    </span>
+                                                                                                                )}
+                                                                                                            </span>
+                                                                                                        );
+                                                                                                    },
+                                                                                                )}
                                                                                         </>
                                                                                     );
                                                                                 })()}
@@ -4850,7 +4914,9 @@ const DataCategorySearch = ({
                                                     className="w-4 h-4 text-gray-600 border-gray-300 rounded focus:ring-gray-500"
                                                 />
                                                 <span className="text-sm text-gray-700">
-                                                    {getDisplayDataType(modalStructure.dataType)}
+                                                    {getDisplayDataType(
+                                                        modalStructure.dataType,
+                                                    )}
                                                 </span>
                                             </label>
                                         </div>
@@ -5583,7 +5649,8 @@ const DataCategorySearch = ({
                         onClick={(e) => e.stopPropagation()}
                     >
                         <h2 className="text-xl font-bold text-gray-900 mb-4">
-                            {deleteConfirmModal.type === "category" || deleteConfirmModal.type === "dataType"
+                            {deleteConfirmModal.type === "category" ||
+                            deleteConfirmModal.type === "dataType"
                                 ? "Hide from this structure?"
                                 : "Are you really sure?"}
                         </h2>
@@ -5621,8 +5688,7 @@ const DataCategorySearch = ({
                             )}
                             {deleteConfirmModal.type === "dataType" && (
                                 <>
-                                    Are you sure you want to hide the data
-                                    type{" "}
+                                    Are you sure you want to hide the data type{" "}
                                     <span className="font-semibold">
                                         &quot;{deleteConfirmModal.itemName}
                                         &quot;
@@ -5658,7 +5724,8 @@ const DataCategorySearch = ({
                                 }}
                                 className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
                             >
-                                {deleteConfirmModal.type === "category" || deleteConfirmModal.type === "dataType"
+                                {deleteConfirmModal.type === "category" ||
+                                deleteConfirmModal.type === "dataType"
                                     ? "Yes, Hide"
                                     : "Yes, Delete"}
                             </button>
