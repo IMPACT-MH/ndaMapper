@@ -187,19 +187,21 @@ const DataStructureSearch = ({
                 if (data && data.dataStructures) {
                     // Convert object/array to map keyed by shortName (case-insensitive)
                     const map = {};
-                    const structures = Array.isArray(data.dataStructures)
-                        ? data.dataStructures
-                        : Object.values(data.dataStructures);
+                    const entries = Array.isArray(data.dataStructures)
+                        ? data.dataStructures.map((s) => [s.shortName || s.name, s])
+                        : Object.entries(data.dataStructures);
 
-                    structures.forEach((structure) => {
+                    entries.forEach(([entryKey, structure]) => {
                         const key =
                             structure.shortName?.toLowerCase() ||
-                            structure.name?.toLowerCase();
+                            structure.name?.toLowerCase() ||
+                            entryKey?.toLowerCase();
                         if (key) {
                             map[key] = structure;
                             // Also store with original case for backwards compatibility
-                            if (structure.shortName) {
-                                map[structure.shortName] = structure;
+                            const originalKey = structure.shortName || structure.name || entryKey;
+                            if (originalKey) {
+                                map[originalKey] = structure;
                             }
                         }
                     });
@@ -931,15 +933,21 @@ const DataStructureSearch = ({
                                                                 <h3 className="font-medium text-gray-600 mb-2">
                                                                     Status
                                                                 </h3>
-                                                                <span
-                                                                    className={`px-3 py-1 rounded-full text-sm ${
-                                                                        selectedStructure.status === "Draft"
-                                                                            ? "bg-yellow-100 text-yellow-700"
-                                                                            : "bg-green-100 text-green-700"
-                                                                    }`}
-                                                                >
-                                                                    {selectedStructure.status}
-                                                                </span>
+                                                                {(() => {
+                                                                    const dbEntry = dataStructuresMap[selectedStructure.shortName?.toLowerCase()] || dataStructuresMap[selectedStructure.shortName];
+                                                                    const effectiveStatus = dbEntry?.error ? "Draft" : selectedStructure.status;
+                                                                    return (
+                                                                        <span
+                                                                            className={`px-3 py-1 rounded-full text-sm ${
+                                                                                effectiveStatus === "Draft"
+                                                                                    ? "bg-yellow-100 text-yellow-700"
+                                                                                    : "bg-green-100 text-green-700"
+                                                                            }`}
+                                                                        >
+                                                                            {effectiveStatus}
+                                                                        </span>
+                                                                    );
+                                                                })()}
                                                             </div>
 
                                                             {/* Row 2 Col 2 */}

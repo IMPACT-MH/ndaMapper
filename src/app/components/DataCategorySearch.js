@@ -42,6 +42,7 @@ const DataCategorySearch = ({
     databaseConnectionError,
 }) => {
     const [allStructures, setAllStructures] = useState([]);
+    const [dbErrorStructures, setDbErrorStructures] = useState([]);
     const [filteredStructures, setFilteredStructures] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -385,23 +386,36 @@ const DataCategorySearch = ({
                 if (data && data.dataStructures) {
                     // Convert object/array to map keyed by shortName (case-insensitive)
                     const map = {};
-                    const structures = Array.isArray(data.dataStructures)
-                        ? data.dataStructures
-                        : Object.values(data.dataStructures);
+                    const entries = Array.isArray(data.dataStructures)
+                        ? data.dataStructures.map((s) => [s.shortName || s.name, s])
+                        : Object.entries(data.dataStructures);
 
-                    structures.forEach((structure) => {
+                    entries.forEach(([entryKey, structure]) => {
                         const key =
                             structure.shortName?.toLowerCase() ||
-                            structure.name?.toLowerCase();
+                            structure.name?.toLowerCase() ||
+                            entryKey?.toLowerCase();
                         if (key) {
                             map[key] = structure;
                             // Also store with original case for backwards compatibility
-                            if (structure.shortName) {
-                                map[structure.shortName] = structure;
+                            const originalKey = structure.shortName || structure.name || entryKey;
+                            if (originalKey) {
+                                map[originalKey] = structure;
                             }
                         }
                     });
                     setDataStructuresMap(map);
+
+                    const errorStructures = entries
+                        .filter(([, structure]) => structure?.error)
+                        .map(([entryKey]) => ({
+                            shortName: entryKey,
+                            title: entryKey,
+                            status: "Draft",
+                            categories: [],
+                            dataType: null,
+                        }));
+                    setDbErrorStructures(errorStructures);
                 }
             } catch (err) {
                 console.error("Error fetching data structures:", err);
@@ -737,8 +751,15 @@ const DataCategorySearch = ({
         }
     };
 
+    const augmentedStructures = useMemo(() => {
+        if (dbErrorStructures.length === 0) return allStructures;
+        const existing = new Set(allStructures.map(s => s.shortName?.toLowerCase()));
+        const missing = dbErrorStructures.filter(s => !existing.has(s.shortName.toLowerCase()));
+        return missing.length > 0 ? [...allStructures, ...missing] : allStructures;
+    }, [allStructures, dbErrorStructures]);
+
     const applyFilters = useCallback(() => {
-        let filtered = [...allStructures];
+        let filtered = [...augmentedStructures];
 
         // Apply search term filter
         if (searchTerm.trim()) {
@@ -869,6 +890,7 @@ const DataCategorySearch = ({
         setFilteredStructures(filtered);
     }, [
         allStructures,
+        augmentedStructures,
         searchTerm,
         selectedFilters,
         structureTags,
@@ -886,6 +908,7 @@ const DataCategorySearch = ({
         applyFilters();
     }, [
         allStructures,
+        augmentedStructures,
         searchTerm,
         selectedFilters,
         databaseFilterEnabled,
@@ -3115,18 +3138,21 @@ const DataCategorySearch = ({
                                                                         )}
 
                                                                         {/* Status Badge */}
-                                                                        <span
-                                                                            className={`text-xs px-2 py-1 rounded ${
-                                                                                structure.status ===
-                                                                                "Draft"
-                                                                                    ? "bg-yellow-100 text-yellow-800"
-                                                                                    : "bg-green-100 text-green-800"
-                                                                            }`}
-                                                                        >
-                                                                            {
-                                                                                structure.status
-                                                                            }
-                                                                        </span>
+                                                                        {(() => {
+                                                                            const dbEntry = dataStructuresMap[structure.shortName?.toLowerCase()] || dataStructuresMap[structure.shortName];
+                                                                            const effectiveStatus = dbEntry?.error ? "Draft" : structure.status;
+                                                                            return (
+                                                                                <span
+                                                                                    className={`text-xs px-2 py-1 rounded ${
+                                                                                        effectiveStatus === "Draft"
+                                                                                            ? "bg-yellow-100 text-yellow-800"
+                                                                                            : "bg-green-100 text-green-800"
+                                                                                    }`}
+                                                                                >
+                                                                                    {effectiveStatus}
+                                                                                </span>
+                                                                            );
+                                                                        })()}
                                                                     </div>
                                                                 </div>
                                                             </div>

@@ -66,6 +66,9 @@ const HomePage = () => {
     const [databaseConnectionError, setDatabaseConnectionError] =
         useState(null);
 
+    // Error structures from IMPACT-MH (entries that failed NDA metadata fetch)
+    const [databaseErrorStructures, setDatabaseErrorStructures] = useState({});
+
     // Tags state for custom tag searches
     const [structureDataTypeTags, setStructureDataTypeTags] = useState({});
     const apiBaseUrl = "/api/v1";
@@ -174,6 +177,15 @@ const HomePage = () => {
                     // Extract structure names
                     const structureNames = Object.keys(data.dataStructures);
                     setDatabaseStructures(structureNames);
+
+                    // Extract error entries (structures that failed NDA metadata fetch)
+                    const errorMap = {};
+                    Object.entries(data.dataStructures).forEach(([key, structure]) => {
+                        if (structure?.error) {
+                            errorMap[key.toLowerCase()] = { shortName: key, title: key, status: "Draft" };
+                        }
+                    });
+                    setDatabaseErrorStructures(errorMap);
 
                     // Extract all unique sites from submittedByProjects
                     const allSites = new Set();
@@ -835,6 +847,19 @@ const HomePage = () => {
                     return databaseStructuresLower.includes(structureNameLower);
                 });
 
+                // Inject error structures missing from NDA results (plain text search only)
+                if (!isCategory && !isDataType && Object.keys(databaseErrorStructures).length > 0) {
+                    const filteredLower = new Set(filteredData.map(s => s.shortName.toLowerCase()));
+                    const injected = Object.values(databaseErrorStructures).filter(s => {
+                        const nameLower = s.shortName.toLowerCase();
+                        return !filteredLower.has(nameLower) &&
+                            (nameLower.includes(searchLower) || nameLower.replace(/[_-]/g, "").includes(normalizedSearch));
+                    });
+                    if (injected.length > 0) {
+                        filteredData.push(...injected);
+                    }
+                }
+
                 setTotalStructureCount(filteredData.length);
 
                 // Sort the filtered results
@@ -1020,7 +1045,7 @@ const HomePage = () => {
         } finally {
             setLoading(false);
         }
-    }, [databaseFilterEnabled, databaseStructures, searchTerm, apiBaseUrl]);
+    }, [databaseFilterEnabled, databaseStructures, databaseErrorStructures, searchTerm, apiBaseUrl]);
 
     useEffect(() => {
         if (searchTerm) {
