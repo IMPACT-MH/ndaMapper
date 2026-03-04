@@ -25,6 +25,10 @@ import {
     fetchAuditLogs,
 } from "@/utils/api";
 
+// Mask NDA data types that are too broad to be useful as filter labels
+const getDisplayDataType = (dataType) =>
+    dataType === "Clinical Assessments" ? "Uncategorized" : dataType;
+
 const DataCategorySearch = ({
     onStructureSelect,
     // Database filter props
@@ -609,7 +613,7 @@ const DataCategorySearch = ({
                     structure.categories.forEach((cat) => categories.add(cat));
                 }
                 if (structure.dataType) {
-                    dataTypes.add(structure.dataType);
+                    dataTypes.add(getDisplayDataType(structure.dataType));
                 }
             });
 
@@ -746,7 +750,7 @@ const DataCategorySearch = ({
                     structure.categories?.some((cat) =>
                         cat.toLowerCase().includes(searchLower),
                     ) ||
-                    structure.dataType?.toLowerCase().includes(searchLower)
+                    getDisplayDataType(structure.dataType)?.toLowerCase().includes(searchLower)
                 ) {
                     return true;
                 }
@@ -812,7 +816,7 @@ const DataCategorySearch = ({
                     if (isDataTypeRemoved(structure.shortName)) {
                         return false;
                     }
-                    return selectedFilters.dataTypes.has(structure.dataType);
+                    return selectedFilters.dataTypes.has(getDisplayDataType(structure.dataType));
                 }
             });
         }
@@ -961,7 +965,7 @@ const DataCategorySearch = ({
                         !isDataTypeRemoved(structure.shortName) &&
                         structure.dataType
                     ) {
-                        groupKeys = [structure.dataType];
+                        groupKeys = [getDisplayDataType(structure.dataType)];
                     } else {
                         groupKeys = ["Unknown"];
                     }
@@ -1057,7 +1061,7 @@ const DataCategorySearch = ({
                 );
                 // Add original data types
                 if (structure.dataType) {
-                    dataTypesInDatabase.add(structure.dataType);
+                    dataTypesInDatabase.add(getDisplayDataType(structure.dataType));
                 }
 
                 // Add custom category tags if structure is in database
@@ -1304,7 +1308,7 @@ const DataCategorySearch = ({
                 ? allStructures
                 : Object.values(allStructures)
             ).forEach((structure) => {
-                if (structure.dataType === dataTypeName) {
+                if (getDisplayDataType(structure.dataType) === dataTypeName) {
                     structureCount++;
                 }
             });
@@ -2032,7 +2036,7 @@ const DataCategorySearch = ({
             const uniqueDataTypes = new Set();
             data.forEach((structure) => {
                 if (structure.dataType) {
-                    uniqueDataTypes.add(structure.dataType);
+                    uniqueDataTypes.add(getDisplayDataType(structure.dataType));
                 }
             });
 
@@ -2849,7 +2853,7 @@ const DataCategorySearch = ({
                                                                                                 title="Click to add custom data type tags"
                                                                                             >
                                                                                                 {
-                                                                                                    structure.dataType
+                                                                                                    getDisplayDataType(structure.dataType)
                                                                                                 }
                                                                                             </span>
                                                                                         );
@@ -2926,7 +2930,7 @@ const DataCategorySearch = ({
                                                                                                 title="Click to add custom data type tags"
                                                                                             >
                                                                                                 {
-                                                                                                    structure.dataType
+                                                                                                    getDisplayDataType(structure.dataType)
                                                                                                 }
                                                                                             </span>
                                                                                         );
@@ -4846,7 +4850,7 @@ const DataCategorySearch = ({
                                                     className="w-4 h-4 text-gray-600 border-gray-300 rounded focus:ring-gray-500"
                                                 />
                                                 <span className="text-sm text-gray-700">
-                                                    {modalStructure.dataType}
+                                                    {getDisplayDataType(modalStructure.dataType)}
                                                 </span>
                                             </label>
                                         </div>
