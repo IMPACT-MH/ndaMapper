@@ -2838,6 +2838,19 @@ const DataCategorySearch = ({
                                                                                                         );
                                                                                                     },
                                                                                                 )}
+                                                                                            {/* Fallback for structures with no categories or custom tags */}
+                                                                                            {originalCategories.length === 0 && customCategoryTags.filter(t => !t.name.startsWith("REMOVED_CATEGORY:") && !t.name.startsWith("REMOVED_DATATYPE:")).length === 0 && (
+                                                                                                <span
+                                                                                                    onClick={(e) => {
+                                                                                                        e.stopPropagation();
+                                                                                                        handleOpenCategoriesModal(structure);
+                                                                                                    }}
+                                                                                                    className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-blue-50 text-blue-400 hover:bg-blue-100 border border-dashed border-blue-300"
+                                                                                                    title="Add category tag"
+                                                                                                >
+                                                                                                    + category
+                                                                                                </span>
+                                                                                            )}
                                                                                         </>
                                                                                     );
                                                                                 })()}
@@ -2901,6 +2914,21 @@ const DataCategorySearch = ({
                                                                                         ) {
                                                                                             return null;
                                                                                         }
+                                                                                        const displayDataType = getDisplayDataType(structure.dataType);
+                                                                                        if (!displayDataType) {
+                                                                                            return (
+                                                                                                <span
+                                                                                                    className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-gray-50 text-gray-400 hover:bg-gray-100 border border-dashed border-gray-300"
+                                                                                                    onClick={(e) => {
+                                                                                                        e.stopPropagation();
+                                                                                                        handleOpenDataTypesModal(structure);
+                                                                                                    }}
+                                                                                                    title="Add data type tag"
+                                                                                                >
+                                                                                                    + data type
+                                                                                                </span>
+                                                                                            );
+                                                                                        }
                                                                                         return (
                                                                                             <span
                                                                                                 className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-gray-100 text-gray-700 hover:bg-gray-200"
@@ -2914,16 +2942,12 @@ const DataCategorySearch = ({
                                                                                                 }}
                                                                                                 title={
                                                                                                     getDataTypeTooltip(
-                                                                                                        getDisplayDataType(
-                                                                                                            structure.dataType,
-                                                                                                        ),
+                                                                                                        displayDataType,
                                                                                                     ) ??
                                                                                                     "Click to manage data type tags"
                                                                                                 }
                                                                                             >
-                                                                                                {getDisplayDataType(
-                                                                                                    structure.dataType,
-                                                                                                )}
+                                                                                                {displayDataType}
                                                                                             </span>
                                                                                         );
                                                                                     }
@@ -2990,6 +3014,21 @@ const DataCategorySearch = ({
                                                                                         ) {
                                                                                             return null;
                                                                                         }
+                                                                                        const displayDataType = getDisplayDataType(structure.dataType);
+                                                                                        if (!displayDataType) {
+                                                                                            return (
+                                                                                                <span
+                                                                                                    className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-gray-50 text-gray-400 hover:bg-gray-100 border border-dashed border-gray-300"
+                                                                                                    onClick={(e) => {
+                                                                                                        e.stopPropagation();
+                                                                                                        handleOpenDataTypesModal(structure);
+                                                                                                    }}
+                                                                                                    title="Add data type tag"
+                                                                                                >
+                                                                                                    + data type
+                                                                                                </span>
+                                                                                            );
+                                                                                        }
                                                                                         return (
                                                                                             <span
                                                                                                 className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-gray-100 text-gray-700 hover:bg-gray-200"
@@ -3003,16 +3042,12 @@ const DataCategorySearch = ({
                                                                                                 }}
                                                                                                 title={
                                                                                                     getDataTypeTooltip(
-                                                                                                        getDisplayDataType(
-                                                                                                            structure.dataType,
-                                                                                                        ),
+                                                                                                        displayDataType,
                                                                                                     ) ??
                                                                                                     "Click to manage data type tags"
                                                                                                 }
                                                                                             >
-                                                                                                {getDisplayDataType(
-                                                                                                    structure.dataType,
-                                                                                                )}
+                                                                                                {displayDataType}
                                                                                             </span>
                                                                                         );
                                                                                     }
@@ -3131,6 +3166,19 @@ const DataCategorySearch = ({
                                                                                                         );
                                                                                                     },
                                                                                                 )}
+                                                                                            {/* Fallback for structures with no categories or custom tags */}
+                                                                                            {originalCategories.length === 0 && customCategoryTags.filter(t => !t.name.startsWith("REMOVED_CATEGORY:") && !t.name.startsWith("REMOVED_DATATYPE:")).length === 0 && (
+                                                                                                <span
+                                                                                                    onClick={(e) => {
+                                                                                                        e.stopPropagation();
+                                                                                                        handleOpenCategoriesModal(structure);
+                                                                                                    }}
+                                                                                                    className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-blue-50 text-blue-400 hover:bg-blue-100 border border-dashed border-blue-300"
+                                                                                                    title="Add category tag"
+                                                                                                >
+                                                                                                    + category
+                                                                                                </span>
+                                                                                            )}
                                                                                         </>
                                                                                     );
                                                                                 })()}
