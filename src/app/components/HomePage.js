@@ -182,7 +182,7 @@ const HomePage = () => {
                     const errorMap = {};
                     Object.entries(data.dataStructures).forEach(([key, structure]) => {
                         if (structure?.error) {
-                            errorMap[key.toLowerCase()] = { shortName: key, title: key, status: "Draft" };
+                            errorMap[key.toLowerCase()] = { shortName: key, title: key, status: "Draft", dataStructureId: structure.dataStructureId };
                         }
                     });
                     setDatabaseErrorStructures(errorMap);

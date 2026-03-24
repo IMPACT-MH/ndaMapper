@@ -55,6 +55,11 @@ export async function GET() {
     }
 }
 
+export function clearCache() {
+    cache = null;
+    cacheTimestamp = 0;
+}
+
 export async function OPTIONS() {
     return createOptionsResponse();
 }

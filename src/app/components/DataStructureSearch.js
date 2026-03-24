@@ -11,7 +11,9 @@ import {
     FileText,
     Table,
     Database,
+    Pencil,
 } from "lucide-react";
+import { updateStructureTitle } from "@/utils/api";
 import CSVValidator from "./CSVValidator";
 import DownloadStructureButton from "./DownloadStructureButton";
 import DownloadTemplateButton from "./DownloadTemplateButton";
@@ -55,6 +57,10 @@ const DataStructureSearch = ({
     const [availableCategories, setAvailableCategories] = useState(new Set());
     const [dataStructuresMap, setDataStructuresMap] = useState({});
     const apiBaseUrl = "/api/v1";
+
+    const [titleOverrides, setTitleOverrides] = useState({});
+    const [editingTitleFor, setEditingTitleFor] = useState(null);
+    const [editingTitleValue, setEditingTitleValue] = useState("");
 
     // Clear headers when CSV file is removed
     useEffect(() => {
@@ -335,6 +341,25 @@ const DataStructureSearch = ({
         }
     };
 
+    const startTitleEdit = (structure) => {
+        setEditingTitleFor(structure.shortName);
+        setEditingTitleValue(titleOverrides[structure.shortName] || structure.title);
+    };
+
+    const saveTitleEdit = async (structure) => {
+        const newTitle = editingTitleValue.trim();
+        setEditingTitleFor(null);
+        if (!newTitle || newTitle === (titleOverrides[structure.shortName] || structure.title)) return;
+        const dataStructureId = structure.dataStructureId;
+        if (!dataStructureId) return;
+        try {
+            await updateStructureTitle(dataStructureId, newTitle, apiBaseUrl);
+            setTitleOverrides((prev) => ({ ...prev, [structure.shortName]: newTitle }));
+        } catch (err) {
+            console.error("Failed to update title:", err);
+        }
+    };
+
     return (
         <>
             <div className="flex flex-col h-screen">
@@ -558,9 +583,35 @@ const DataStructureSearch = ({
                                                             "NDA"}
                                                     </span>
                                                 </div>
-                                                <p className="text-base mt-2">
-                                                    {structure.title}
-                                                </p>
+                                                {structure.status === "Draft" ? (
+                                                    editingTitleFor === structure.shortName ? (
+                                                        <input
+                                                            autoFocus
+                                                            className="text-base mt-2 border border-blue-400 rounded px-1 w-full"
+                                                            value={editingTitleValue}
+                                                            onChange={(e) => setEditingTitleValue(e.target.value)}
+                                                            onBlur={() => saveTitleEdit(structure)}
+                                                            onKeyDown={(e) => {
+                                                                if (e.key === "Enter") saveTitleEdit(structure);
+                                                                if (e.key === "Escape") setEditingTitleFor(null);
+                                                            }}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                        />
+                                                    ) : (
+                                                        <p
+                                                            className="text-base mt-2 cursor-pointer hover:text-blue-600 group flex items-center gap-1"
+                                                            onClick={(e) => { e.stopPropagation(); startTitleEdit(structure); }}
+                                                            title="Click to edit title"
+                                                        >
+                                                            {titleOverrides[structure.shortName] || structure.title}
+                                                            <Pencil className="w-3 h-3 opacity-0 group-hover:opacity-50" />
+                                                        </p>
+                                                    )
+                                                ) : (
+                                                    <p className="text-base mt-2">
+                                                        {structure.title}
+                                                    </p>
+                                                )}
                                             </div>
                                         ))}
                                     </div>
@@ -660,9 +711,33 @@ const DataStructureSearch = ({
                                                 <div className="mb-8">
                                                     <div className="flex items-center gap-3">
                                                         <h1 className="text-2xl font-semibold">
-                                                            {
-                                                                selectedStructure.title
-                                                            }
+                                                            {selectedStructure.status === "Draft" ? (
+                                                                editingTitleFor === selectedStructure.shortName ? (
+                                                                    <input
+                                                                        autoFocus
+                                                                        className="border border-blue-400 rounded px-1 w-full text-2xl font-semibold"
+                                                                        value={editingTitleValue}
+                                                                        onChange={(e) => setEditingTitleValue(e.target.value)}
+                                                                        onBlur={() => saveTitleEdit(selectedStructure)}
+                                                                        onKeyDown={(e) => {
+                                                                            if (e.key === "Enter") saveTitleEdit(selectedStructure);
+                                                                            if (e.key === "Escape") setEditingTitleFor(null);
+                                                                        }}
+                                                                        onClick={(e) => e.stopPropagation()}
+                                                                    />
+                                                                ) : (
+                                                                    <span
+                                                                        className="cursor-pointer hover:text-blue-600 group inline-flex items-center gap-1"
+                                                                        onClick={(e) => { e.stopPropagation(); startTitleEdit(selectedStructure); }}
+                                                                        title="Click to edit title"
+                                                                    >
+                                                                        {titleOverrides[selectedStructure.shortName] || selectedStructure.title}
+                                                                        <Pencil className="w-4 h-4 opacity-0 group-hover:opacity-50" />
+                                                                    </span>
+                                                                )
+                                                            ) : (
+                                                                titleOverrides[selectedStructure.shortName] || selectedStructure.title
+                                                            )}
                                                         </h1>
                                                         {databaseFilterEnabled &&
                                                             databaseStructures

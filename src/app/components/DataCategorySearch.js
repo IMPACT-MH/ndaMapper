@@ -24,6 +24,7 @@ import {
     fetchTagDataStructures,
     logAuditEvent,
     fetchAuditLogs,
+    updateStructureTitle,
 } from "@/utils/api";
 
 // Mask NDA data types that are too broad to be useful as filter labels
@@ -91,6 +92,10 @@ const DataCategorySearch = ({
 
     const [dataStructuresMap, setDataStructuresMap] = useState({});
     const apiBaseUrl = "/api/v1";
+
+    const [titleOverrides, setTitleOverrides] = useState({});
+    const [editingTitleFor, setEditingTitleFor] = useState(null);
+    const [editingTitleValue, setEditingTitleValue] = useState("");
 
     const [structureTags, setStructureTags] = useState({});
     const [structureDataTypeTags, setStructureDataTypeTags] = useState({});
@@ -2151,6 +2156,27 @@ const DataCategorySearch = ({
         }
     };
 
+    const startTitleEdit = (structure) => {
+        setEditingTitleFor(structure.shortName);
+        setEditingTitleValue(titleOverrides[structure.shortName] || structure.title);
+    };
+
+    const saveTitleEdit = async (structure) => {
+        const newTitle = editingTitleValue.trim();
+        setEditingTitleFor(null);
+        if (!newTitle || newTitle === (titleOverrides[structure.shortName] || structure.title)) return;
+        const dataStructureId =
+            dataStructuresMap[structure.shortName]?.dataStructureId ||
+            dataStructuresMap[structure.shortName?.toLowerCase()]?.dataStructureId;
+        if (!dataStructureId) return;
+        try {
+            await updateStructureTitle(dataStructureId, newTitle, apiBaseUrl);
+            setTitleOverrides((prev) => ({ ...prev, [structure.shortName]: newTitle }));
+        } catch (err) {
+            console.error("Failed to update title:", err);
+        }
+    };
+
     return (
         <div className="space-y-6">
             <div className="mb-8">
@@ -2720,11 +2746,35 @@ const DataCategorySearch = ({
                                                                             </>
                                                                         )}
                                                                     </h4>
-                                                                    <p className="text-gray-700 mt-1">
-                                                                        {
-                                                                            structure.title
-                                                                        }
-                                                                    </p>
+                                                                    {structure.status === "Draft" ? (
+                                                                        editingTitleFor === structure.shortName ? (
+                                                                            <input
+                                                                                autoFocus
+                                                                                className="text-gray-700 mt-1 border border-blue-400 rounded px-1 w-full text-sm"
+                                                                                value={editingTitleValue}
+                                                                                onChange={(e) => setEditingTitleValue(e.target.value)}
+                                                                                onBlur={() => saveTitleEdit(structure)}
+                                                                                onKeyDown={(e) => {
+                                                                                    if (e.key === "Enter") saveTitleEdit(structure);
+                                                                                    if (e.key === "Escape") setEditingTitleFor(null);
+                                                                                }}
+                                                                                onClick={(e) => e.stopPropagation()}
+                                                                            />
+                                                                        ) : (
+                                                                            <p
+                                                                                className="text-gray-700 mt-1 cursor-pointer hover:text-blue-600 group flex items-center gap-1"
+                                                                                onClick={(e) => { e.stopPropagation(); startTitleEdit(structure); }}
+                                                                                title="Click to edit title"
+                                                                            >
+                                                                                {titleOverrides[structure.shortName] || structure.title}
+                                                                                <Pencil className="w-3 h-3 opacity-0 group-hover:opacity-50" />
+                                                                            </p>
+                                                                        )
+                                                                    ) : (
+                                                                        <p className="text-gray-700 mt-1">
+                                                                            {structure.title}
+                                                                        </p>
+                                                                    )}
 
                                                                     <div
                                                                         className="flex flex-wrap gap-2 mt-2"
