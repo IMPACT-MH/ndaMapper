@@ -44,6 +44,29 @@ function extractStructureNames(
         .filter(Boolean);
 }
 
+async function fetchStructureElements(shortName: string): Promise<NdaElementDetail[]> {
+    try {
+        const res = await fetch(
+            `https://nda.nih.gov/api/datadictionary/datastructure/${encodeURIComponent(shortName)}`,
+            { signal: AbortSignal.timeout(10000) }
+        );
+        if (!res.ok) return [];
+        const data = await res.json() as { dataElements?: NdaElementDetail[] };
+        return data.dataElements ?? [];
+    } catch {
+        return [];
+    }
+}
+
+function wordOverlapScore(a: string, b: string): number {
+    const tokenize = (s: string) =>
+        new Set(s.toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter((w) => w.length > 2));
+    const setA = tokenize(a);
+    const setB = tokenize(b);
+    const intersection = [...setA].filter((w) => setB.has(w)).length;
+    return intersection / Math.max(setA.size, setB.size, 1);
+}
+
 async function searchNDA(query: string): Promise<{ results: NdaSearchResult[]; matchedBy: "description" | "term" }> {
     try {
         const res = await fetch(NDA_SEARCH_URL, {
@@ -99,23 +122,28 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
     let searchTerms: string[] = [];
     let candidateNames: string[] = [];
+    let structureShortNames: string[] = [];
 
     try {
         const msg = await client.messages.create({
-            model: "claude-haiku-4-5-20251001",
-            max_tokens: 256,
+            model: "claude-sonnet-4-6",
+            max_tokens: 512,
             messages: [
                 {
                     role: "user",
-                    content: `You are an expert in the NIMH Data Archive (NDA) data dictionary. Given a research variable description, extract search terms that will help find the matching NDA data element.
+                    content: `You are an expert in the NIMH Data Archive (NDA) data dictionary and clinical psychology measurement.
+Given a research variable description, identify what is being measured and return search targets.
 
 Description: "${description}"
 
 Return ONLY valid JSON (no markdown, no explanation):
 {
-  "searchTerms": ["2-4 short clinical keyword phrases, NDA-style"],
-  "candidateNames": ["1-2 guesses at the actual NDA element name in snake_case, e.g. bdi_01 or interview_age"]
-}`,
+  "searchTerms": ["2-4 concise NDA-style keyword phrases — prefer specific clinical terms over generic ones"],
+  "candidateNames": ["up to 4 guesses at the actual NDA element name in snake_case, e.g. erq_1, bdi_01, interview_age"],
+  "structureShortNames": ["up to 2 guesses at the NDA data structure shortName that would contain this element, e.g. emrq01, bdi01, phq901"]
+}
+
+Tip: if the description looks like a Likert-scale item from a known questionnaire (ERQ, BDI, PHQ-9, GAD-7, PCL, etc.), identify the questionnaire and guess the element name using its conventional NDA pattern (scale_itemNumber).`,
                 },
             ],
         });
@@ -123,9 +151,11 @@ Return ONLY valid JSON (no markdown, no explanation):
         const text = msg.content[0];
         if (text.type === "text") {
             const raw = text.text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "");
-            const parsed = JSON.parse(raw) as { searchTerms?: string[]; candidateNames?: string[] };
+            const parsed = JSON.parse(raw) as { searchTerms?: string[]; candidateNames?: string[]; structureShortNames?: string[] };
             searchTerms = Array.isArray(parsed.searchTerms) ? parsed.searchTerms.slice(0, 4) : [];
-            candidateNames = Array.isArray(parsed.candidateNames) ? parsed.candidateNames.slice(0, 2) : [];
+            candidateNames = Array.isArray(parsed.candidateNames) ? parsed.candidateNames.slice(0, 4) : [];
+            structureShortNames = Array.isArray(parsed.structureShortNames) ? parsed.structureShortNames.slice(0, 2) : [];
+            console.log("[rosetta] LLM extraction:", { searchTerms, candidateNames, structureShortNames });
         }
     } catch (err) {
         console.warn("LLM term extraction failed, falling back to direct search:", err instanceof Error ? err.message : String(err));
@@ -138,17 +168,19 @@ Return ONLY valid JSON (no markdown, no explanation):
         ...searchTerms.map((t) => ({ query: t, matchedBy: "term" as const })),
     ];
 
-    const [searchResponses, nameGuessDetails] = await Promise.all([
+    const [searchResponses, nameGuessDetails, structureElementGroups] = await Promise.all([
         Promise.all(queries.map(({ query, matchedBy }) =>
             searchNDA(query).then((r) => ({ ...r, requestedMatchedBy: matchedBy }))
         )),
         Promise.all(candidateNames.map((name) =>
             fetchElementDetail(name).then((detail) => ({ name, detail }))
         )),
+        Promise.all(structureShortNames.map((sn) => fetchStructureElements(sn))),
     ]);
 
     // Step 3: Merge and de-duplicate by element name
     const scoreMap = new Map<string, { score: number; matchedBy: "description" | "term" | "name-guess" }>();
+    const structureElementCache = new Map<string, NdaElementDetail>();
 
     for (const { results, requestedMatchedBy } of searchResponses) {
         for (const result of results) {
@@ -161,19 +193,29 @@ Return ONLY valid JSON (no markdown, no explanation):
         }
     }
 
-    // Add name-guess direct hits at the top
-    for (const { name, detail } of nameGuessDetails) {
+    // Add name-guess direct hits at the top (only when NDA confirms the element exists)
+    for (const { detail } of nameGuessDetails) {
         if (detail?.name) {
             const existing = scoreMap.get(detail.name);
-            // Name guesses get a synthetic high score to bubble up
             const score = existing ? Math.max(existing.score, 999) : 999;
             scoreMap.set(detail.name, { score, matchedBy: "name-guess" });
-        } else if (name) {
-            // Even if detail fetch failed, treat as a candidate from name guess
-            const existing = scoreMap.get(name);
-            if (!existing) {
-                scoreMap.set(name, { score: 998, matchedBy: "name-guess" });
+        }
+        // If detail is null the element doesn't exist in NDA — discard silently
+    }
+
+    // Structure-based discovery: score each element from guessed structures by word overlap
+    for (const elements of structureElementGroups) {
+        for (const el of elements) {
+            if (!el.name) continue;
+            const overlap = wordOverlapScore(description, el.description ?? "");
+            if (overlap < 0.2) continue;
+            const syntheticScore = 500 + overlap * 500;
+            const existing = scoreMap.get(el.name);
+            if (!existing || syntheticScore > existing.score) {
+                scoreMap.set(el.name, { score: syntheticScore, matchedBy: "name-guess" });
             }
+            // Cache the element detail so we don't re-fetch it later
+            structureElementCache.set(el.name, el);
         }
     }
 
@@ -203,6 +245,10 @@ Return ONLY valid JSON (no markdown, no explanation):
     for (const { name, detail } of nameGuessDetails) {
         if (detail) detailCache.set(name, detail);
         if (detail?.name) detailCache.set(detail.name, detail);
+    }
+    // Pre-populate from structure fetches
+    for (const [name, el] of structureElementCache) {
+        detailCache.set(name, el);
     }
 
     await Promise.all(
