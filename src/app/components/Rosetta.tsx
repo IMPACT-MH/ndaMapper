@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import Image from "next/image";
-import { Search, Upload, X, ChevronDown, ChevronRight, Database, Loader2 } from "lucide-react";
+import { Search, Upload, X, ChevronDown, ChevronRight, Database, Loader2, Download } from "lucide-react";
 import { parseCSV } from "@/utils/csvUtils";
 import type { RosettaResult } from "@/app/api/v1/research/rosetta/route";
 
@@ -36,12 +36,18 @@ function ResultCard({
     databaseStructures,
     onElementSearch,
     onStructureSearch,
+    selectable,
+    selected,
+    onSelect,
 }: {
     result: RosettaResult;
     databaseFilterEnabled: boolean;
     databaseStructures: string[];
     onElementSearch?: (name: string) => void;
     onStructureSearch?: (name: string) => void;
+    selectable?: boolean;
+    selected?: boolean;
+    onSelect?: () => void;
 }) {
     const conf = confidenceLabel(result.score, result.matchedBy);
     const dbStructures = databaseFilterEnabled
@@ -57,16 +63,36 @@ function ResultCard({
     const displayStructures = databaseFilterEnabled ? dbStructures : result.dataStructures;
 
     return (
-        <div className="border border-gray-200 rounded-lg p-3 hover:border-gray-300 bg-white">
+        <div
+            className={`border rounded-lg p-3 transition-colors ${
+                selectable ? "cursor-pointer" : ""
+            } ${
+                selected
+                    ? "border-indigo-400 bg-indigo-50"
+                    : "border-gray-200 bg-white hover:border-gray-300"
+            }`}
+            onClick={() => selectable && onSelect?.()}
+        >
             <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-2 flex-wrap min-w-0">
-                    <button
-                        className="font-mono font-semibold text-blue-700 hover:underline text-sm"
-                        onClick={() => onElementSearch?.(result.name)}
-                        title="Search for this element in Data Elements tab"
-                    >
-                        {result.name}
-                    </button>
+                    {selectable && (
+                        <span className={`shrink-0 text-base leading-none ${selected ? "text-indigo-600" : "text-gray-300"}`}>
+                            {selected ? "●" : "○"}
+                        </span>
+                    )}
+                    {selectable ? (
+                        <span className="font-mono font-semibold text-blue-700 text-sm">
+                            {result.name}
+                        </span>
+                    ) : (
+                        <button
+                            className="font-mono font-semibold text-blue-700 hover:underline text-sm"
+                            onClick={() => onElementSearch?.(result.name)}
+                            title="Search for this element in Data Elements tab"
+                        >
+                            {result.name}
+                        </button>
+                    )}
                     {inDatabase && (
                         <span className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded border border-blue-200">
                             <Database className="w-3 h-3" />
@@ -82,14 +108,23 @@ function ResultCard({
             {displayStructures.length > 0 && (
                 <div className="flex flex-wrap gap-1 mt-1.5">
                     {displayStructures.slice(0, 8).map((s) => (
-                        <button
-                            key={s}
-                            onClick={() => onStructureSearch?.(s)}
-                            className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded hover:bg-gray-200 hover:text-gray-800 font-mono"
-                            title="Open this structure in Data Structures tab"
-                        >
-                            {s}
-                        </button>
+                        selectable ? (
+                            <span
+                                key={s}
+                                className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded font-mono"
+                            >
+                                {s}
+                            </span>
+                        ) : (
+                            <button
+                                key={s}
+                                onClick={() => onStructureSearch?.(s)}
+                                className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded hover:bg-gray-200 hover:text-gray-800 font-mono"
+                                title="Open this structure in Data Structures tab"
+                            >
+                                {s}
+                            </button>
+                        )
                     ))}
                     {displayStructures.length > 8 && (
                         <span className="text-xs text-gray-400 self-center">
@@ -136,6 +171,7 @@ export default function Rosetta({
     const [batchState, setBatchState] = useState<Record<number, RowState>>({});
     const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
     const [batchProcessing, setBatchProcessing] = useState(false);
+    const [selections, setSelections] = useState<Record<number, RosettaResult>>({});
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const filterResults = (results: RosettaResult[]): RosettaResult[] => {
@@ -192,9 +228,48 @@ export default function Rosetta({
         reader.readAsText(file);
     };
 
+    const downloadFile = (filename: string, content: string, type: string) => {
+        const blob = new Blob([content], { type });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
+    const exportCSV = () => {
+        const header = ["input_description", "element_name", "data_structures", "nda_description", "confidence"];
+        const rows = csvRows.map((row, i) => {
+            const sel = selections[i];
+            if (!sel) return [row, "", "", "", ""];
+            return [row, sel.name, sel.dataStructures.join("|"), sel.description, confidenceLabel(sel.score, sel.matchedBy).label];
+        });
+        const escape = (v: string) => `"${v.replace(/"/g, '""')}"`;
+        const csv = [header, ...rows].map((r) => r.map(escape).join(",")).join("\n");
+        downloadFile("rosetta-mapping.csv", csv, "text/csv");
+    };
+
+    const exportJSON = () => {
+        const data = csvRows.map((row, i) => {
+            const sel = selections[i];
+            if (!sel) return { inputDescription: row, elementName: null, dataStructures: [], ndaDescription: null, confidence: null };
+            return {
+                inputDescription: row,
+                elementName: sel.name,
+                dataStructures: sel.dataStructures,
+                ndaDescription: sel.description,
+                notes: sel.notes ?? null,
+                confidence: confidenceLabel(sel.score, sel.matchedBy).label,
+            };
+        });
+        downloadFile("rosetta-mapping.json", JSON.stringify(data, null, 2), "application/json");
+    };
+
     const handleBatchProcess = async () => {
         if (csvRows.length === 0 || batchProcessing) return;
         setBatchProcessing(true);
+        setSelections({});
         // Initialize all rows to loading
         setBatchState(
             Object.fromEntries(csvRows.map((_, i) => [i, { status: "loading" as const }]))
@@ -438,6 +513,7 @@ export default function Rosetta({
                                             setCsvRows([]);
                                             setBatchState({});
                                             setExpandedRows(new Set());
+                                            setSelections({});
                                             if (fileInputRef.current) fileInputRef.current.value = "";
                                         }}
                                         className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1"
@@ -498,7 +574,11 @@ export default function Rosetta({
                                                 <span className="flex-1 text-sm text-gray-800 truncate">
                                                     {row}
                                                 </span>
-                                                {state?.status === "done" && (
+                                                {selections[i] ? (
+                                                    <span className="shrink-0 text-xs font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-700">
+                                                        ✓ {selections[i].name}
+                                                    </span>
+                                                ) : state?.status === "done" && (
                                                     <span className={`shrink-0 text-xs font-medium px-2 py-0.5 rounded-full ${
                                                         resultCount > 0
                                                             ? "bg-indigo-100 text-indigo-700"
@@ -536,8 +616,9 @@ export default function Rosetta({
                                                                     result={r}
                                                                     databaseFilterEnabled={databaseFilterEnabled}
                                                                     databaseStructures={databaseStructures}
-                                                                    onElementSearch={onElementSearch}
-                                                                    onStructureSearch={onStructureSearch}
+                                                                    selectable
+                                                                    selected={selections[i]?.name === r.name}
+                                                                    onSelect={() => setSelections((prev) => ({ ...prev, [i]: r }))}
                                                                 />
                                                             ))}
                                                         </div>
@@ -548,6 +629,33 @@ export default function Rosetta({
                                     );
                                 })}
                             </div>
+
+                            {/* Export toolbar */}
+                            {!batchProcessing && Object.keys(batchState).length > 0 && (
+                                <div className="flex items-center justify-between pt-3 border-t border-gray-200 mt-2">
+                                    <p className="text-sm text-gray-500">
+                                        {Object.keys(selections).length} of {csvRows.length} row{csvRows.length !== 1 ? "s" : ""} mapped
+                                    </p>
+                                    <div className="flex gap-2">
+                                        <button
+                                            disabled={Object.keys(selections).length === 0}
+                                            onClick={exportCSV}
+                                            className="px-3 py-1.5 text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
+                                        >
+                                            <Download className="w-3.5 h-3.5" />
+                                            Export CSV
+                                        </button>
+                                        <button
+                                            disabled={Object.keys(selections).length === 0}
+                                            onClick={exportJSON}
+                                            className="px-3 py-1.5 text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
+                                        >
+                                            <Download className="w-3.5 h-3.5" />
+                                            Export JSON
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
