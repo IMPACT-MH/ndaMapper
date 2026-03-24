@@ -7,6 +7,7 @@ import CSVHeaderAnalyzer from "./CSVHeaderAnalyzer";
 import DataElementSearch from "./DataElementSearch";
 import DataCategorySearch from "./DataCategorySearch";
 import ResearchAssistant from "./ResearchAssistant";
+import Rosetta from "./Rosetta";
 import { IMPACT_API_BASE, DATA_STRUCTURES } from "@/const";
 import type {
   DataStructure,
@@ -26,6 +27,7 @@ const Tabs = {
     ELEMENT: "data-elements",
     REVERSE_LOOKUP: "reverse-lookup",
     RESEARCH: "research-assistant",
+    ROSETTA: "rosetta",
 } as const;
 
 type TabValue = typeof Tabs[keyof typeof Tabs];
@@ -1126,6 +1128,19 @@ const HomePage = () => {
                                 >
                                     Research Assistant
                                 </button>
+                                <div className="text-gray-400 text-sm pb-4 mx-2">
+                                    |
+                                </div>
+                                <button
+                                    onClick={() => setActiveTab(Tabs.ROSETTA)}
+                                    className={`whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm ${
+                                        activeTab === Tabs.ROSETTA
+                                            ? "border-indigo-500 text-indigo-600"
+                                            : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                                    }`}
+                                >
+                                    Rosetta
+                                </button>
                             </div>
 
                             {/* NDA Logo */}
@@ -1280,6 +1295,24 @@ const HomePage = () => {
                     databaseFilterEnabled={databaseFilterEnabled}
                     databaseConnectionError={databaseConnectionError}
                     isVisible={activeTab === Tabs.RESEARCH}
+                />
+            </div>
+
+            <div className={activeTab === Tabs.ROSETTA ? "block" : "hidden"}>
+                <Rosetta
+                    databaseFilterEnabled={databaseFilterEnabled}
+                    setDatabaseFilterEnabled={setDatabaseFilterEnabled}
+                    databaseStructures={databaseStructures}
+                    loadingDatabaseStructures={loadingDatabaseStructures}
+                    databaseConnectionError={databaseConnectionError}
+                    onElementSearch={(elementName) => {
+                        setElementSearchTerm(elementName);
+                        setActiveTab(Tabs.ELEMENT);
+                    }}
+                    onStructureSearch={(shortName) => {
+                        setSearchTerm(shortName);
+                        setActiveTab(Tabs.STRUCTURE);
+                    }}
                 />
             </div>
         </div>
