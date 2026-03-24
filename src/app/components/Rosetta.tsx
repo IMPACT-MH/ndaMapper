@@ -175,18 +175,24 @@ export default function Rosetta({
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const filterResults = (results: RosettaResult[]): RosettaResult[] => {
-        if (!databaseFilterEnabled || databaseStructures.length === 0) return results;
         const dbSet = new Set(databaseStructures.map((s) => s.toLowerCase()));
-        return results.filter((r) =>
-            r.dataStructures.some((s) => dbSet.has(s.toLowerCase()))
-        );
+        const isInDb = (r: RosettaResult) =>
+            r.dataStructures.some((s) => dbSet.has(s.toLowerCase()));
+
+        const filtered =
+            databaseFilterEnabled && databaseStructures.length > 0
+                ? results.filter(isInDb)
+                : results;
+
+        // Sort DB elements to the top within the result set
+        return [...filtered.filter(isInDb), ...filtered.filter((r) => !isInDb(r))];
     };
 
     const runSearch = async (description: string) => {
         const res = await fetch("/api/v1/research/rosetta", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ description }),
+            body: JSON.stringify({ description, databaseStructures }),
         });
         if (!res.ok) throw new Error(`Search failed: ${res.status}`);
         return res.json() as Promise<{ results: RosettaResult[]; searchTerms: string[]; candidateNames: string[] }>;

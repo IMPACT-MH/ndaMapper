@@ -107,9 +107,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     let description: string;
+    let dbStructureSet: Set<string>;
     try {
-        const body = await request.json() as { description?: string };
+        const body = await request.json() as { description?: string; databaseStructures?: string[] };
         description = (body.description ?? "").trim();
+        dbStructureSet = new Set((body.databaseStructures ?? []).map((s) => s.toLowerCase()));
     } catch {
         return createErrorResponse("Invalid JSON request body", 400);
     }
@@ -128,6 +130,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         const msg = await client.messages.create({
             model: "claude-sonnet-4-6",
             max_tokens: 512,
+            temperature: 0,
             messages: [
                 {
                     role: "user",
@@ -139,11 +142,14 @@ Description: "${description}"
 Return ONLY valid JSON (no markdown, no explanation):
 {
   "searchTerms": ["2-4 concise NDA-style keyword phrases — prefer specific clinical terms over generic ones"],
-  "candidateNames": ["up to 4 guesses at the actual NDA element name in snake_case, e.g. erq_1, bdi_01, interview_age"],
+  "candidateNames": ["up to 6 guesses at the actual NDA element name in snake_case, e.g. erq_1, bdi_01, interview_age"],
   "structureShortNames": ["up to 2 guesses at the NDA data structure shortName that would contain this element, e.g. emrq01, bdi01, phq901"]
 }
 
-Tip: if the description looks like a Likert-scale item from a known questionnaire (ERQ, BDI, PHQ-9, GAD-7, PCL, etc.), identify the questionnaire and guess the element name using its conventional NDA pattern (scale_itemNumber).`,
+Tips:
+- If the description is a Likert-scale item from a known questionnaire (ERQ, BDI, PHQ-9, GAD-7, PCL, etc.), identify the questionnaire and guess the element name using its conventional NDA pattern (scale_itemNumber), e.g. erq_1, phq_01, bdi_01.
+- If the description asks about a demographic/status attribute (military service, veteran status, age, race, sex, education, etc.), the NDA element name is usually a direct compound noun: military_service, veteran, interview_age, race, sex, educat, employment_status.
+- Prefer the simplest plausible name: "serve/serving in the military" → military_service, not active_duty_status.`,
                 },
             ],
         });
@@ -153,7 +159,7 @@ Tip: if the description looks like a Likert-scale item from a known questionnair
             const raw = text.text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "");
             const parsed = JSON.parse(raw) as { searchTerms?: string[]; candidateNames?: string[]; structureShortNames?: string[] };
             searchTerms = Array.isArray(parsed.searchTerms) ? parsed.searchTerms.slice(0, 4) : [];
-            candidateNames = Array.isArray(parsed.candidateNames) ? parsed.candidateNames.slice(0, 4) : [];
+            candidateNames = Array.isArray(parsed.candidateNames) ? parsed.candidateNames.slice(0, 6) : [];
             structureShortNames = Array.isArray(parsed.structureShortNames) ? parsed.structureShortNames.slice(0, 2) : [];
             console.log("[rosetta] LLM extraction:", { searchTerms, candidateNames, structureShortNames });
         }
@@ -161,6 +167,29 @@ Tip: if the description looks like a Likert-scale item from a known questionnair
         console.warn("LLM term extraction failed, falling back to direct search:", err instanceof Error ? err.message : String(err));
         // Proceed with just the raw description
     }
+
+    // Derive bare-word candidates from the original description AND LLM search terms.
+    // Catches element names like "veteran" that appear verbatim in the query but that
+    // the LLM won't guess because it prefers compound names like "veteran_status".
+    const descriptionTokens = description
+        .toLowerCase()
+        .replace(/[^a-z\s]/g, "")
+        .split(/\s+/)
+        .filter((w) => w.length >= 4);
+
+    const termTokens = searchTerms
+        .flatMap((t) =>
+            t.toLowerCase()
+             .replace(/[^a-z\s]/g, "")
+             .split(/\s+/)
+             .filter((w) => w.length >= 4)
+        );
+
+    const derivedTokens = [...new Set([...descriptionTokens, ...termTokens])];
+
+    const allCandidateNames = [
+        ...new Set([...candidateNames, ...derivedTokens]),
+    ].slice(0, 20);
 
     // Step 2: Parallel NDA searches
     const queries: Array<{ query: string; matchedBy: "description" | "term" }> = [
@@ -172,11 +201,30 @@ Tip: if the description looks like a Likert-scale item from a known questionnair
         Promise.all(queries.map(({ query, matchedBy }) =>
             searchNDA(query).then((r) => ({ ...r, requestedMatchedBy: matchedBy }))
         )),
-        Promise.all(candidateNames.map((name) =>
+        Promise.all(allCandidateNames.map((name) =>
             fetchElementDetail(name).then((detail) => ({ name, detail }))
         )),
         Promise.all(structureShortNames.map((sn) => fetchStructureElements(sn))),
     ]);
+
+    // DB-aware structure discovery: find which DB structures appeared in ES results,
+    // then fetch their full element lists so we can overlap-score their siblings.
+    const dbStructuresInResults = new Set<string>();
+    if (dbStructureSet.size > 0) {
+        for (const { results } of searchResponses) {
+            for (const r of results) {
+                for (const ds of extractStructureNames(r.dataStructures)) {
+                    if (dbStructureSet.has(ds.toLowerCase())) {
+                        dbStructuresInResults.add(ds);
+                    }
+                }
+            }
+        }
+    }
+    const dbStructuresToFetch = [...dbStructuresInResults].slice(0, 5);
+    const dbStructureElementGroups = await Promise.all(
+        dbStructuresToFetch.map((sn) => fetchStructureElements(sn))
+    );
 
     // Step 3: Merge and de-duplicate by element name
     const scoreMap = new Map<string, { score: number; matchedBy: "description" | "term" | "name-guess" }>();
@@ -219,6 +267,22 @@ Tip: if the description looks like a Likert-scale item from a known questionnair
         }
     }
 
+    // DB structure element scoring: same overlap logic but with floor 600 (vs 500)
+    // so DB elements rank above non-DB elements with similar overlap.
+    for (const elements of dbStructureElementGroups) {
+        for (const el of elements) {
+            if (!el.name) continue;
+            const overlap = wordOverlapScore(description, el.description ?? "");
+            if (overlap < 0.2) continue;
+            const syntheticScore = 600 + overlap * 500;
+            const existing = scoreMap.get(el.name);
+            if (!existing || syntheticScore > existing.score) {
+                scoreMap.set(el.name, { score: syntheticScore, matchedBy: "name-guess" });
+            }
+            structureElementCache.set(el.name, el);
+        }
+    }
+
     // Collect unique names and all raw ES results for description lookup
     const allResults = new Map<string, NdaSearchResult>();
     for (const { results } of searchResponses) {
@@ -235,10 +299,10 @@ Tip: if the description looks like a Likert-scale item from a known questionnair
         }
     }
 
-    // Sort by score and take top 15 candidates to enrich
+    // Sort by score and take top 20 candidates to enrich
     const ranked = Array.from(scoreMap.entries())
         .sort((a, b) => b[1].score - a[1].score)
-        .slice(0, 15);
+        .slice(0, 20);
 
     // Step 4: Fetch full element details for top results (those not already loaded)
     const detailCache = new Map<string, NdaElementDetail | null>();
