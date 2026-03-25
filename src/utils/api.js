@@ -285,8 +285,8 @@ export const updateStructureTitle = async (
     apiBaseUrl = "/api/v1"
 ) => {
     return await apiCall(
-        `/data-structures/${dataStructureId}`,
-        { method: "PATCH", body: JSON.stringify({ title: newTitle }) },
+        `/data-structures/${dataStructureId}/title`,
+        { method: "PUT", body: JSON.stringify({ title: newTitle }) },
         apiBaseUrl
     );
 };
