@@ -12,7 +12,7 @@ import {
     Pencil,
 } from "lucide-react";
 import { IMPACT_API_BASE, DATA_STRUCTURES } from "@/const.js";
-import { getDataTypeTooltip } from "@/utils/dataTypeDescriptions";
+import { getDataTypeTooltip, DATA_TYPE_DESCRIPTIONS } from "@/utils/dataTypeDescriptions";
 import CategoryTagManagement from "./CategoryTagManagement";
 import AuditTrail from "./AuditTrail";
 import {
@@ -2544,12 +2544,13 @@ const DataCategorySearch = ({
                                         className="bg-white rounded-lg shadow"
                                     >
                                         <div
-                                            className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50"
+                                            className="flex items-start justify-between p-4 cursor-pointer hover:bg-gray-50"
                                             onClick={() =>
                                                 toggleGroup(groupName)
                                             }
                                         >
-                                            <div className="flex items-center space-x-2">
+                                            <div className="flex items-start gap-2">
+                                                <div className="mt-1 shrink-0">
                                                 {expandedGroups.has(
                                                     groupName,
                                                 ) ? (
@@ -2557,7 +2558,9 @@ const DataCategorySearch = ({
                                                 ) : (
                                                     <ChevronRight className="w-5 h-5 text-gray-500" />
                                                 )}
-                                                <h3 className="font-medium text-gray-900 flex items-center">
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                <h3 className="font-medium text-gray-900 flex items-center flex-wrap">
                                                     {groupName}
                                                     {(() => {
                                                         if (
@@ -2651,21 +2654,22 @@ const DataCategorySearch = ({
                                                             </div>
                                                         </div>
                                                     )}
+                                                    <span className="ml-2 text-sm font-normal text-gray-500">
+                                                        ({groupedStructures[groupName].length})
+                                                    </span>
                                                 </h3>
-                                                <span className="text-sm text-gray-500">
-                                                    (
-                                                    {
-                                                        groupedStructures[
-                                                            groupName
-                                                        ].length
-                                                    }
-                                                    )
-                                                </span>
+                                                {groupBy === "dataType" && DATA_TYPE_DESCRIPTIONS[groupName] && (
+                                                    <p className="text-xs text-gray-400 mt-1">
+                                                        {DATA_TYPE_DESCRIPTIONS[groupName]}
+                                                    </p>
+                                                )}
+                                                </div>
                                             </div>
                                         </div>
 
                                         {expandedGroups.has(groupName) && (
                                             <div className="border-t border-gray-200">
+                                                {false && null /* description now in header */}
                                                 <div className="p-4 space-y-3">
                                                     {groupedStructures[
                                                         groupName
@@ -2962,10 +2966,21 @@ const DataCategorySearch = ({
                                                                                                 structure.shortName,
                                                                                             )
                                                                                         ) {
-                                                                                            return null;
+                                                                                            return (
+                                                                                                <span
+                                                                                                    className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-gray-50 text-gray-400 hover:bg-gray-100 border border-dashed border-gray-300"
+                                                                                                    onClick={(e) => {
+                                                                                                        e.stopPropagation();
+                                                                                                        handleOpenDataTypesModal(structure);
+                                                                                                    }}
+                                                                                                    title="Add data type tag"
+                                                                                                >
+                                                                                                    + data type
+                                                                                                </span>
+                                                                                            );
                                                                                         }
                                                                                         const displayDataType = getDisplayDataType(structure.dataType);
-                                                                                        if (!displayDataType) {
+                                                                                        if (!displayDataType || structure.dataType === "Clinical Assessments") {
                                                                                             return (
                                                                                                 <span
                                                                                                     className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-gray-50 text-gray-400 hover:bg-gray-100 border border-dashed border-gray-300"
@@ -3062,10 +3077,21 @@ const DataCategorySearch = ({
                                                                                                 structure.shortName,
                                                                                             )
                                                                                         ) {
-                                                                                            return null;
+                                                                                            return (
+                                                                                                <span
+                                                                                                    className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-gray-50 text-gray-400 hover:bg-gray-100 border border-dashed border-gray-300"
+                                                                                                    onClick={(e) => {
+                                                                                                        e.stopPropagation();
+                                                                                                        handleOpenDataTypesModal(structure);
+                                                                                                    }}
+                                                                                                    title="Add data type tag"
+                                                                                                >
+                                                                                                    + data type
+                                                                                                </span>
+                                                                                            );
                                                                                         }
                                                                                         const displayDataType = getDisplayDataType(structure.dataType);
-                                                                                        if (!displayDataType) {
+                                                                                        if (!displayDataType || structure.dataType === "Clinical Assessments") {
                                                                                             return (
                                                                                                 <span
                                                                                                     className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-gray-50 text-gray-400 hover:bg-gray-100 border border-dashed border-gray-300"
@@ -4270,8 +4296,10 @@ const DataCategorySearch = ({
                                             </div>
                                         </div>
                                     )}
-
-                                    <div className="flex justify-end gap-3 p-5 border-t">
+                                </>
+                            )}
+                        </div>
+                        <div className="flex justify-end gap-3 p-5 border-t">
                                         <button
                                             onClick={() => {
                                                 setIsCategoriesModalOpen(false);
@@ -4761,9 +4789,6 @@ const DataCategorySearch = ({
                                                 : "Save Changes"}
                                         </button>
                                     </div>
-                                </>
-                            )}
-                        </div>
                     </div>
                 </div>
             )}
@@ -4997,6 +5022,7 @@ const DataCategorySearch = ({
                                                                     }
                                                                 };
                                                             restoreDataType();
+                                                            setSelectedDataTypeTags(new Set()); // Enforce mutual exclusion
                                                         } else {
                                                             // Check if this is the last visible data type
                                                             const isDataTypeCurrentlyRemoved =
@@ -5430,6 +5456,10 @@ const DataCategorySearch = ({
                                                                                                           ],
                                                                                                       ),
                                                                                                   );
+                                                                                                  // Auto-remove original NDA type when a custom tag is selected
+                                                                                                  if (modalStructure?.dataType && !isDataTypeRemoved(modalStructure.shortName)) {
+                                                                                                      removeOriginalDataType(modalStructure.shortName);
+                                                                                                  }
                                                                                               }
                                                                                           }
                                                                                       }}
@@ -5539,6 +5569,13 @@ const DataCategorySearch = ({
                                                 try {
                                                     setModalLoading(true);
                                                     setModalError(null);
+
+                                                    // Validate: at least one data type must remain
+                                                    if (isDataTypeRemoved(modalStructure.shortName) && selectedDataTypeTags.size === 0) {
+                                                        setModalError("At least one data type must remain. Select a custom data type or restore the original.");
+                                                        setModalLoading(false);
+                                                        return;
+                                                    }
 
                                                     // Get existing structure
                                                     const existingStructure =
