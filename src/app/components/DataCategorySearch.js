@@ -969,9 +969,11 @@ const DataCategorySearch = ({
                         !isCategoryRemoved(structure.shortName, category),
                 );
 
-                // Add custom tags
+                // Add custom tags (exclude sentinel REMOVED_* tags)
                 customCategoryTags.forEach((tag) => {
-                    groupKeys.push(tag.name);
+                    if (!tag.name.startsWith("REMOVED_")) {
+                        groupKeys.push(tag.name);
+                    }
                 });
 
                 // Add original categories (excluding removed ones)
@@ -985,8 +987,9 @@ const DataCategorySearch = ({
                 }
             } else if (groupBy === "dataType") {
                 // Check if structure has custom data type tags - if so, only use those
-                const customDataTypeTags =
-                    structureDataTypeTags[structure.shortName] || [];
+                const customDataTypeTags = (
+                    structureDataTypeTags[structure.shortName] || []
+                ).filter((tag) => !tag.name.startsWith("REMOVED_"));
                 if (customDataTypeTags.length > 0) {
                     // Only use custom tags, supersede original data type
                     customDataTypeTags.forEach((tag) => {
@@ -2572,64 +2575,10 @@ const DataCategorySearch = ({
                                                                 false,
                                                             );
                                                         }
-                                                        // For categories, check multiple sources
-                                                        const inStructureTags =
-                                                            Object.values(
-                                                                structureTags,
-                                                            ).some(
-                                                                (tags) =>
-                                                                    Array.isArray(
-                                                                        tags,
-                                                                    ) &&
-                                                                    tags.some(
-                                                                        (tag) =>
-                                                                            tag.name ===
-                                                                            groupName,
-                                                                    ),
-                                                            );
-                                                        const inAvailableTags =
-                                                            availableTags.some(
-                                                                (tag) =>
-                                                                    tag.name ===
-                                                                        groupName &&
-                                                                    (tag.tagType ===
-                                                                        "Category" ||
-                                                                        !tag.tagType),
-                                                            );
-                                                        const inOriginalCategories =
-                                                            availableCategories.has(
+                                                        const isCustom =
+                                                            !availableCategories.has(
                                                                 groupName,
                                                             );
-                                                        const isCustom =
-                                                            inStructureTags ||
-                                                            inAvailableTags ||
-                                                            !inOriginalCategories;
-
-                                                        // Debug for "Positive Emotions"
-                                                        if (
-                                                            groupName ===
-                                                            "Positive Emotions"
-                                                        ) {
-                                                            console.log(
-                                                                "Category star check:",
-                                                                {
-                                                                    groupName,
-                                                                    inStructureTags,
-                                                                    inAvailableTags,
-                                                                    inOriginalCategories,
-                                                                    isCustom,
-                                                                    structureTagsCount:
-                                                                        Object.keys(
-                                                                            structureTags,
-                                                                        )
-                                                                            .length,
-                                                                    availableTagsCount:
-                                                                        availableTags.length,
-                                                                    availableCategoriesSize:
-                                                                        availableCategories.size,
-                                                                },
-                                                            );
-                                                        }
 
                                                         return isCustom;
                                                     })() && (
@@ -2791,124 +2740,6 @@ const DataCategorySearch = ({
                                                                         {groupBy ===
                                                                         "category" ? (
                                                                             <>
-                                                                                {/* Category Tags - clickable to open categories modal */}
-                                                                                {(() => {
-                                                                                    const customCategoryTags =
-                                                                                        structureTags[
-                                                                                            structure
-                                                                                                .shortName
-                                                                                        ] ||
-                                                                                        [];
-                                                                                    const originalCategories =
-                                                                                        structure.categories ||
-                                                                                        [];
-
-                                                                                    return (
-                                                                                        <>
-                                                                                            {/* Show original NDA categories (excluding removed ones) */}
-                                                                                            {originalCategories
-                                                                                                .filter(
-                                                                                                    (
-                                                                                                        category,
-                                                                                                    ) =>
-                                                                                                        !isCategoryRemoved(
-                                                                                                            structure.shortName,
-                                                                                                            category,
-                                                                                                        ),
-                                                                                                )
-                                                                                                .map(
-                                                                                                    (
-                                                                                                        category,
-                                                                                                    ) => (
-                                                                                                        <span
-                                                                                                            key={
-                                                                                                                category
-                                                                                                            }
-                                                                                                            className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-blue-100 text-blue-800 hover:bg-blue-200"
-                                                                                                            title="Original NDA category (click to add custom tags)"
-                                                                                                        >
-                                                                                                            <span
-                                                                                                                onClick={(
-                                                                                                                    e,
-                                                                                                                ) => {
-                                                                                                                    e.stopPropagation();
-                                                                                                                    handleOpenCategoriesModal(
-                                                                                                                        structure,
-                                                                                                                    );
-                                                                                                                }}
-                                                                                                            >
-                                                                                                                {
-                                                                                                                    category
-                                                                                                                }
-                                                                                                            </span>
-                                                                                                        </span>
-                                                                                                    ),
-                                                                                                )}
-
-                                                                                            {/* Show custom category tags */}
-                                                                                            {customCategoryTags
-                                                                                                .filter(
-                                                                                                    (
-                                                                                                        tag,
-                                                                                                    ) =>
-                                                                                                        !tag.name.startsWith(
-                                                                                                            "REMOVED_CATEGORY:",
-                                                                                                        ) &&
-                                                                                                        !tag.name.startsWith(
-                                                                                                            "REMOVED_DATATYPE:",
-                                                                                                        ),
-                                                                                                )
-                                                                                                .map(
-                                                                                                    (
-                                                                                                        tag,
-                                                                                                    ) => {
-                                                                                                        const isNdaCategory =
-                                                                                                            availableCategories.has(
-                                                                                                                tag.name,
-                                                                                                            );
-                                                                                                        return (
-                                                                                                            <span
-                                                                                                                key={
-                                                                                                                    tag.id
-                                                                                                                }
-                                                                                                                onClick={(
-                                                                                                                    e,
-                                                                                                                ) => {
-                                                                                                                    e.stopPropagation();
-                                                                                                                    handleOpenCategoriesModal(
-                                                                                                                        structure,
-                                                                                                                    );
-                                                                                                                }}
-                                                                                                                className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-blue-100 text-blue-700 hover:bg-blue-200"
-                                                                                                                title="Custom category tag (click to modify)"
-                                                                                                            >
-                                                                                                                {
-                                                                                                                    tag.name
-                                                                                                                }
-                                                                                                                <span className="ml-1 text-orange-500 text-xs">
-                                                                                                                    ★
-                                                                                                                </span>
-                                                                                                            </span>
-                                                                                                        );
-                                                                                                    },
-                                                                                                )}
-                                                                                            {/* Fallback for structures with no categories or custom tags */}
-                                                                                            {originalCategories.length === 0 && customCategoryTags.filter(t => !t.name.startsWith("REMOVED_CATEGORY:") && !t.name.startsWith("REMOVED_DATATYPE:")).length === 0 && (
-                                                                                                <span
-                                                                                                    onClick={(e) => {
-                                                                                                        e.stopPropagation();
-                                                                                                        handleOpenCategoriesModal(structure);
-                                                                                                    }}
-                                                                                                    className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-blue-50 text-blue-400 hover:bg-blue-100 border border-dashed border-blue-300"
-                                                                                                    title="Add category tag"
-                                                                                                >
-                                                                                                    + category
-                                                                                                </span>
-                                                                                            )}
-                                                                                        </>
-                                                                                    );
-                                                                                })()}
-
                                                                                 {/* Data Type Tags - clickable to open data types modal */}
                                                                                 {(() => {
                                                                                     const hasCustomDataTypeTags =
@@ -3016,6 +2847,128 @@ const DataCategorySearch = ({
                                                                                             </span>
                                                                                         );
                                                                                     }
+                                                                                })()}
+
+                                                                                {/* Category Tags - clickable to open categories modal */}
+                                                                                {(() => {
+                                                                                    const customCategoryTags =
+                                                                                        structureTags[
+                                                                                            structure
+                                                                                                .shortName
+                                                                                        ] ||
+                                                                                        [];
+                                                                                    const originalCategories =
+                                                                                        structure.categories ||
+                                                                                        [];
+
+                                                                                    return (
+                                                                                        <>
+                                                                                            {/* Show original NDA categories (excluding removed ones) */}
+                                                                                            {originalCategories
+                                                                                                .filter(
+                                                                                                    (
+                                                                                                        category,
+                                                                                                    ) =>
+                                                                                                        !isCategoryRemoved(
+                                                                                                            structure.shortName,
+                                                                                                            category,
+                                                                                                        ),
+                                                                                                )
+                                                                                                .map(
+                                                                                                    (
+                                                                                                        category,
+                                                                                                    ) => (
+                                                                                                        <span
+                                                                                                            key={
+                                                                                                                category
+                                                                                                            }
+                                                                                                            className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-blue-100 text-blue-800 hover:bg-blue-200"
+                                                                                                            title="Original NDA category (click to add custom tags)"
+                                                                                                        >
+                                                                                                            <span
+                                                                                                                onClick={(
+                                                                                                                    e,
+                                                                                                                ) => {
+                                                                                                                    e.stopPropagation();
+                                                                                                                    handleOpenCategoriesModal(
+                                                                                                                        structure,
+                                                                                                                    );
+                                                                                                                }}
+                                                                                                            >
+                                                                                                                {
+                                                                                                                    category
+                                                                                                                }
+                                                                                                            </span>
+                                                                                                        </span>
+                                                                                                    ),
+                                                                                                )}
+
+                                                                                            {/* Show custom category tags */}
+                                                                                            {customCategoryTags
+                                                                                                .filter(
+                                                                                                    (
+                                                                                                        tag,
+                                                                                                    ) =>
+                                                                                                        !tag.name.startsWith(
+                                                                                                            "REMOVED_CATEGORY:",
+                                                                                                        ) &&
+                                                                                                        !tag.name.startsWith(
+                                                                                                            "REMOVED_DATATYPE:",
+                                                                                                        ),
+                                                                                                )
+                                                                                                .map(
+                                                                                                    (
+                                                                                                        tag,
+                                                                                                    ) => {
+                                                                                                        const isNdaCategory =
+                                                                                                            availableCategories.has(
+                                                                                                                tag.name,
+                                                                                                            );
+                                                                                                        const isNewTag =
+                                                                                                            !isNdaCategory;
+                                                                                                        return (
+                                                                                                            <span
+                                                                                                                key={
+                                                                                                                    tag.id
+                                                                                                                }
+                                                                                                                onClick={(
+                                                                                                                    e,
+                                                                                                                ) => {
+                                                                                                                    e.stopPropagation();
+                                                                                                                    handleOpenCategoriesModal(
+                                                                                                                        structure,
+                                                                                                                    );
+                                                                                                                }}
+                                                                                                                className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-blue-100 text-blue-700 hover:bg-blue-200"
+                                                                                                                title="Custom category tag (click to modify)"
+                                                                                                            >
+                                                                                                                {
+                                                                                                                    tag.name
+                                                                                                                }
+                                                                                                                {isNewTag && (
+                                                                                                                <span className="ml-1 text-orange-500 text-xs">
+                                                                                                                    ★
+                                                                                                                </span>
+                                                                                                                )}
+                                                                                                            </span>
+                                                                                                        );
+                                                                                                    },
+                                                                                                )}
+                                                                                            {/* Fallback for structures with no categories or custom tags */}
+                                                                                            {originalCategories.length === 0 && customCategoryTags.filter(t => !t.name.startsWith("REMOVED_CATEGORY:") && !t.name.startsWith("REMOVED_DATATYPE:")).length === 0 && (
+                                                                                                <span
+                                                                                                    onClick={(e) => {
+                                                                                                        e.stopPropagation();
+                                                                                                        handleOpenCategoriesModal(structure);
+                                                                                                    }}
+                                                                                                    className="text-xs px-2 py-1 rounded cursor-pointer transition-colors bg-blue-50 text-blue-400 hover:bg-blue-100 border border-dashed border-blue-300"
+                                                                                                    title="Add category tag"
+                                                                                                >
+                                                                                                    + category
+                                                                                                </span>
+                                                                                            )}
+                                                                                        </>
+                                                                                    );
                                                                                 })()}
                                                                             </>
                                                                         ) : (

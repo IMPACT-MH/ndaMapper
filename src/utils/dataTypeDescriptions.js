@@ -1,10 +1,11 @@
 export const DATA_TYPE_DESCRIPTIONS = {
     Uncategorized:
-        "NDA default category (Clinical Assessments) — structures not assigned a specific classification",
+        "Published NDA data structures not yet assigned to a specific data type",
+    Unknown: "Draft data structures not yet assigned to a specific data type",
     "Behavioral Task":
         "Performance-based measures of cognitive, emotional, social, or behavioral processes (e.g., attention, memory, decision-making, reward sensitivity)",
     "Self-report":
-        "Self-administered surveys or questionnaires capturing subjective states, feelings, thoughts, and past behaviors (e.g., BDI, STAI)",
+        "Self-administered surveys or questionnaires capturing subjective states, feelings, thoughts, and behaviors (e.g., BDI, STAI)",
     "Clinical Assessment":
         "Clinician or researcher administered measures of psychological, biological, and social factors, including structured/semi-structured interviews and psychodiagnostic tools (e.g., K-SADS, SCID)",
     "Neurocognitive Assessment":
