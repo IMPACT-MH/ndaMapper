@@ -9,14 +9,12 @@ import DataCategorySearch from "./DataCategorySearch";
 import ResearchAssistant from "./ResearchAssistant";
 import Rosetta from "./Rosetta";
 import { IMPACT_API_BASE, DATA_STRUCTURES } from "@/const";
-import type {
-  DataStructure,
-  DataElement,
-  CustomTag,
-} from "@/types";
+import type { DataStructure, DataElement, CustomTag } from "@/types";
 
 // Derive validator state types from DataStructureSearch to stay in sync with CSVValidator's local types
-type _ValidatorStateProp = NonNullable<React.ComponentProps<typeof DataStructureSearch>["validatorState"]>;
+type _ValidatorStateProp = NonNullable<
+    React.ComponentProps<typeof DataStructureSearch>["validatorState"]
+>;
 type ValidationResults = _ValidatorStateProp["validationResults"];
 type ValueError = _ValidatorStateProp["valueErrors"][number];
 type TransformationCounts = _ValidatorStateProp["transformationCounts"];
@@ -30,7 +28,7 @@ const Tabs = {
     ROSETTA: "rosetta",
 } as const;
 
-type TabValue = typeof Tabs[keyof typeof Tabs];
+type TabValue = (typeof Tabs)[keyof typeof Tabs];
 
 // Backwards compatibility for previously stored tab values
 const normalizeTab = (tab: string | null): TabValue | null => {
@@ -60,7 +58,8 @@ const HomePage = () => {
     const [totalStructureCount, setTotalStructureCount] = useState(0);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [selectedStructure, setSelectedStructure] = useState<DataStructure | null>(null);
+    const [selectedStructure, setSelectedStructure] =
+        useState<DataStructure | null>(null);
     const [dataElements, setDataElements] = useState<DataElement[]>([]);
     const [loadingElements, setLoadingElements] = useState(false);
     const [isSearchFocused, setIsSearchFocused] = useState(false);
@@ -77,7 +76,9 @@ const HomePage = () => {
     void databaseName;
 
     // Database elements state for DataElementSearch
-    const [databaseElements, setDatabaseElements] = useState<Map<string, DataElement>>(new Map());
+    const [databaseElements, setDatabaseElements] = useState<
+        Map<string, DataElement>
+    >(new Map());
     const [loadingDatabaseElements, setLoadingDatabaseElements] =
         useState(false);
 
@@ -86,11 +87,14 @@ const HomePage = () => {
         useState(false);
 
     // Database connection error state
-    const [databaseConnectionError, setDatabaseConnectionError] =
-        useState<string | null>(null);
+    const [databaseConnectionError, setDatabaseConnectionError] = useState<
+        string | null
+    >(null);
 
     // Tags state for custom tag searches
-    const [structureDataTypeTags, setStructureDataTypeTags] = useState<Record<string, CustomTag[]>>({});
+    const [structureDataTypeTags, setStructureDataTypeTags] = useState<
+        Record<string, CustomTag[]>
+    >({});
     void structureDataTypeTags;
     void setStructureDataTypeTags;
     const apiBaseUrl = "/api/v1";
@@ -113,11 +117,16 @@ const HomePage = () => {
     useEffect(() => {
         const handlePopState = (event: PopStateEvent) => {
             const state = event.state as { tab?: string } | null;
-            if (state?.tab && (Object.values(Tabs) as string[]).includes(state.tab)) {
+            if (
+                state?.tab &&
+                (Object.values(Tabs) as string[]).includes(state.tab)
+            ) {
                 setActiveTab(state.tab as TabValue);
             } else {
                 const hash = window.location.hash.replace("#", "");
-                const urlTab = (Object.values(Tabs) as string[]).find((tab) => hash === tab);
+                const urlTab = (Object.values(Tabs) as string[]).find(
+                    (tab) => hash === tab,
+                );
                 if (urlTab) {
                     setActiveTab(urlTab as TabValue);
                 } else {
@@ -173,12 +182,12 @@ const HomePage = () => {
                 `${IMPACT_API_BASE}${DATA_STRUCTURES}`,
                 {
                     signal: controller.signal,
-                }
+                },
             );
             clearTimeout(timeoutId);
 
             if (response.ok) {
-                const data = await response.json() as {
+                const data = (await response.json()) as {
                     dataStructures: Record<string, DataStructure>;
                 } | null;
 
@@ -192,8 +201,13 @@ const HomePage = () => {
 
                     const allSites = new Set<string>();
                     Object.values(data.dataStructures).forEach((structure) => {
-                        if (structure.submittedByProjects && Array.isArray(structure.submittedByProjects)) {
-                            structure.submittedByProjects.forEach(site => allSites.add(site));
+                        if (
+                            structure.submittedByProjects &&
+                            Array.isArray(structure.submittedByProjects)
+                        ) {
+                            structure.submittedByProjects.forEach((site) =>
+                                allSites.add(site),
+                            );
                         }
                     });
                     setDatabaseSites(Array.from(allSites).sort());
@@ -208,7 +222,7 @@ const HomePage = () => {
                                 if (element.name) {
                                     allElements.set(
                                         element.name.toLowerCase(),
-                                        element
+                                        element,
                                     );
                                 }
                             });
@@ -216,7 +230,7 @@ const HomePage = () => {
                     });
 
                     console.log(
-                        `Found ${allElements.size} unique database elements and ${structureNames.length} structures`
+                        `Found ${allElements.size} unique database elements and ${structureNames.length} structures`,
                     );
                     setDatabaseElements(allElements);
                     setDatabaseConnectionError(null);
@@ -230,7 +244,7 @@ const HomePage = () => {
             } else {
                 console.error(
                     "Failed to fetch database data, status:",
-                    response.status
+                    response.status,
                 );
                 setDatabaseStructures([]);
                 setDatabaseElements(new Map());
@@ -259,14 +273,18 @@ const HomePage = () => {
     void csvHeaders;
 
     // State for CSVValidator
-    const [selectedMappings, setSelectedMappings] = useState<Record<string, string>>({});
+    const [selectedMappings, setSelectedMappings] = useState<
+        Record<string, string>
+    >({});
     const [ignoredFields, setIgnoredFields] = useState<Set<string>>(new Set());
-    const [validationResults, setValidationResults] = useState<ValidationResults>(null);
+    const [validationResults, setValidationResults] =
+        useState<ValidationResults>(null);
     const [valueErrors, setValueErrors] = useState<ValueError[]>([]);
-    const [transformationCounts, setTransformationCounts] = useState<TransformationCounts>({
-        handedness: 0,
-        binary: 0,
-    });
+    const [transformationCounts, setTransformationCounts] =
+        useState<TransformationCounts>({
+            handedness: 0,
+            binary: 0,
+        });
 
     const handleElementStructureSelect = async (structureName: string) => {
         setActiveTab(Tabs.STRUCTURE);
@@ -274,12 +292,13 @@ const HomePage = () => {
 
         try {
             const response = await fetch(
-                `https://nda.nih.gov/api/datadictionary/v2/datastructure?searchTerm=${structureName}`
+                `https://nda.nih.gov/api/datadictionary/v2/datastructure?searchTerm=${structureName}`,
             );
             if (response.ok) {
-                const fetchedStructures = await response.json() as DataStructure[];
+                const fetchedStructures =
+                    (await response.json()) as DataStructure[];
                 const exactMatch = fetchedStructures.find(
-                    (s) => s.shortName === structureName
+                    (s) => s.shortName === structureName,
                 );
                 if (exactMatch) {
                     handleStructureSelect(exactMatch);
@@ -290,17 +309,20 @@ const HomePage = () => {
         }
     };
 
-    const handleElementDetailStructureSelect = async (structureName: string) => {
+    const handleElementDetailStructureSelect = async (
+        structureName: string,
+    ) => {
         setActiveTab(Tabs.STRUCTURE);
 
         try {
             const response = await fetch(
-                `https://nda.nih.gov/api/datadictionary/v2/datastructure?searchTerm=${structureName}`
+                `https://nda.nih.gov/api/datadictionary/v2/datastructure?searchTerm=${structureName}`,
             );
             if (response.ok) {
-                const fetchedStructures = await response.json() as DataStructure[];
+                const fetchedStructures =
+                    (await response.json()) as DataStructure[];
                 const exactMatch = fetchedStructures.find(
-                    (s) => s.shortName === structureName
+                    (s) => s.shortName === structureName,
                 );
                 if (exactMatch) {
                     handleStructureSelect(exactMatch);
@@ -317,12 +339,13 @@ const HomePage = () => {
 
         try {
             const response = await fetch(
-                `https://nda.nih.gov/api/datadictionary/v2/datastructure?searchTerm=${structureName}`
+                `https://nda.nih.gov/api/datadictionary/v2/datastructure?searchTerm=${structureName}`,
             );
             if (response.ok) {
-                const fetchedStructures = await response.json() as DataStructure[];
+                const fetchedStructures =
+                    (await response.json()) as DataStructure[];
                 const exactMatch = fetchedStructures.find(
-                    (s) => s.shortName === structureName
+                    (s) => s.shortName === structureName,
                 );
                 if (exactMatch) {
                     handleStructureSelect(exactMatch);
@@ -333,7 +356,11 @@ const HomePage = () => {
         }
     };
 
-    const handleCsvAnalyzerResult = (shortName: string, file: File, headers: string[]) => {
+    const handleCsvAnalyzerResult = (
+        shortName: string,
+        file: File,
+        headers: string[],
+    ) => {
         void headers;
         setSearchTerm(shortName);
         setCsvFile(file);
@@ -357,7 +384,7 @@ const HomePage = () => {
                 const dbStructureLower = dbStructure.toLowerCase();
                 const normalizedDbStructure = dbStructureLower.replace(
                     /[_-]/g,
-                    ""
+                    "",
                 );
 
                 return (
@@ -366,7 +393,7 @@ const HomePage = () => {
                     searchTerm.startsWith("category:") ||
                     searchTerm.startsWith("datatype:")
                 );
-            }
+            },
         );
 
         if (
@@ -384,15 +411,15 @@ const HomePage = () => {
         const searchValue = isCategory
             ? searchTerm.replace("category:", "")
             : isDataType
-            ? searchTerm.replace("datatype:", "")
-            : searchTerm;
+              ? searchTerm.replace("datatype:", "")
+              : searchTerm;
 
         let allData: DataStructure[] = [];
         if (isCategory || isDataType) {
             try {
                 const tagsResponse = await fetch(`${apiBaseUrl}/tags`);
                 if (tagsResponse.ok) {
-                    const allTags = await tagsResponse.json() as CustomTag[];
+                    const allTags = (await tagsResponse.json()) as CustomTag[];
                     const customTag = allTags.find((tag) => {
                         if (isCategory) {
                             return (
@@ -411,30 +438,32 @@ const HomePage = () => {
 
                     if (customTag) {
                         const dsResponse = await fetch(
-                            `${apiBaseUrl}/tags/${customTag.id}/dataStructures`
+                            `${apiBaseUrl}/tags/${customTag.id}/dataStructures`,
                         );
                         if (dsResponse.ok) {
-                            const dsData = await dsResponse.json() as { dataStructures: DataStructure[] };
+                            const dsData = (await dsResponse.json()) as {
+                                dataStructures: DataStructure[];
+                            };
                             const taggedStructures =
                                 dsData.dataStructures || [];
 
                             const taggedShortNames = new Set(
                                 taggedStructures.map((ds) =>
-                                    ds.shortName?.toLowerCase()
-                                )
+                                    ds.shortName?.toLowerCase(),
+                                ),
                             );
 
                             const allStructuresResponse = await fetch(
-                                "https://nda.nih.gov/api/datadictionary/datastructure"
+                                "https://nda.nih.gov/api/datadictionary/datastructure",
                             );
                             if (allStructuresResponse.ok) {
                                 const allStructuresData =
-                                    await allStructuresResponse.json() as DataStructure[];
+                                    (await allStructuresResponse.json()) as DataStructure[];
                                 allData = allStructuresData.filter(
                                     (structure) =>
                                         taggedShortNames.has(
-                                            structure.shortName?.toLowerCase()
-                                        )
+                                            structure.shortName?.toLowerCase(),
+                                        ),
                                 );
                             }
                         }
@@ -449,11 +478,11 @@ const HomePage = () => {
             let endpoint: string;
             if (isCategory) {
                 endpoint = `https://nda.nih.gov/api/datadictionary/datastructure?category=${encodeURIComponent(
-                    searchValue
+                    searchValue,
                 )}`;
             } else if (isDataType) {
                 endpoint = `https://nda.nih.gov/api/datadictionary/datastructure?dataType=${encodeURIComponent(
-                    searchValue
+                    searchValue,
                 )}`;
             } else {
                 endpoint = `https://nda.nih.gov/api/datadictionary/v2/datastructure?searchTerm=${searchValue}`;
@@ -468,7 +497,7 @@ const HomePage = () => {
                 }
                 throw new Error("Failed to fetch data");
             }
-            allData = await response.json() as DataStructure[];
+            allData = (await response.json()) as DataStructure[];
 
             if (
                 (isCategory || isDataType) &&
@@ -483,7 +512,7 @@ const HomePage = () => {
         const filteredData = allData.filter((structure) => {
             const structureNameLower = structure.shortName.toLowerCase();
             const databaseStructuresLower = databaseStructures.map((name) =>
-                name.toLowerCase()
+                name.toLowerCase(),
             );
             return databaseStructuresLower.includes(structureNameLower);
         });
@@ -529,14 +558,14 @@ const HomePage = () => {
         const searchValue = isCategory
             ? searchTerm.replace("category:", "")
             : isDataType
-            ? searchTerm.replace("datatype:", "")
-            : searchTerm;
+              ? searchTerm.replace("datatype:", "")
+              : searchTerm;
 
         if (isCategory || isDataType) {
             try {
                 const tagsResponse = await fetch(`${apiBaseUrl}/tags`);
                 if (tagsResponse.ok) {
-                    const allTags = await tagsResponse.json() as CustomTag[];
+                    const allTags = (await tagsResponse.json()) as CustomTag[];
                     const customTag = allTags.find((tag) => {
                         if (isCategory) {
                             return (
@@ -555,30 +584,32 @@ const HomePage = () => {
 
                     if (customTag) {
                         const dsResponse = await fetch(
-                            `${apiBaseUrl}/tags/${customTag.id}/dataStructures`
+                            `${apiBaseUrl}/tags/${customTag.id}/dataStructures`,
                         );
                         if (dsResponse.ok) {
-                            const dsData = await dsResponse.json() as { dataStructures: DataStructure[] };
+                            const dsData = (await dsResponse.json()) as {
+                                dataStructures: DataStructure[];
+                            };
                             const taggedStructures =
                                 dsData.dataStructures || [];
 
                             const taggedShortNames = new Set(
                                 taggedStructures.map((ds) =>
-                                    ds.shortName?.toLowerCase()
-                                )
+                                    ds.shortName?.toLowerCase(),
+                                ),
                             );
 
                             const allStructuresResponse = await fetch(
-                                "https://nda.nih.gov/api/datadictionary/datastructure"
+                                "https://nda.nih.gov/api/datadictionary/datastructure",
                             );
                             if (allStructuresResponse.ok) {
                                 const allStructuresData =
-                                    await allStructuresResponse.json() as DataStructure[];
+                                    (await allStructuresResponse.json()) as DataStructure[];
                                 const validStructures =
                                     allStructuresData.filter((structure) =>
                                         taggedShortNames.has(
-                                            structure.shortName?.toLowerCase()
-                                        )
+                                            structure.shortName?.toLowerCase(),
+                                        ),
                                     );
                                 setStructures(validStructures);
                                 setTotalStructureCount(validStructures.length);
@@ -595,11 +626,11 @@ const HomePage = () => {
         let endpoint: string;
         if (isCategory) {
             endpoint = `https://nda.nih.gov/api/datadictionary/datastructure?category=${encodeURIComponent(
-                searchValue
+                searchValue,
             )}`;
         } else if (isDataType) {
             endpoint = `https://nda.nih.gov/api/datadictionary/datastructure?dataType=${encodeURIComponent(
-                searchValue
+                searchValue,
             )}`;
         } else {
             endpoint = `https://nda.nih.gov/api/datadictionary/v2/datastructure?searchTerm=${searchValue}`;
@@ -614,7 +645,7 @@ const HomePage = () => {
             }
             throw new Error("Failed to fetch data");
         }
-        const data = await response.json() as DataStructure[];
+        const data = (await response.json()) as DataStructure[];
 
         if ((isCategory || isDataType) && (!data || data.length === 0)) {
             setStructures([]);
@@ -676,7 +707,7 @@ const HomePage = () => {
                         const dbStructureLower = dbStructure.toLowerCase();
                         const normalizedDbStructure = dbStructureLower.replace(
                             /[_-]/g,
-                            ""
+                            "",
                         );
 
                         return (
@@ -685,7 +716,7 @@ const HomePage = () => {
                             searchTerm.startsWith("category:") ||
                             searchTerm.startsWith("datatype:")
                         );
-                    }
+                    },
                 );
 
                 if (
@@ -704,15 +735,16 @@ const HomePage = () => {
                 const searchValue = isCategory
                     ? searchTerm.replace("category:", "")
                     : isDataType
-                    ? searchTerm.replace("datatype:", "")
-                    : searchTerm;
+                      ? searchTerm.replace("datatype:", "")
+                      : searchTerm;
 
                 let allData: DataStructure[] = [];
                 if (isCategory || isDataType) {
                     try {
                         const tagsResponse = await fetch(`${apiBaseUrl}/tags`);
                         if (tagsResponse.ok) {
-                            const allTags = await tagsResponse.json() as CustomTag[];
+                            const allTags =
+                                (await tagsResponse.json()) as CustomTag[];
                             const customTag = allTags.find((tag) => {
                                 if (isCategory) {
                                     return (
@@ -731,28 +763,31 @@ const HomePage = () => {
 
                             if (customTag) {
                                 const dsResponse = await fetch(
-                                    `${apiBaseUrl}/tags/${customTag.id}/dataStructures`
+                                    `${apiBaseUrl}/tags/${customTag.id}/dataStructures`,
                                 );
                                 if (dsResponse.ok) {
-                                    const dsData = await dsResponse.json() as { dataStructures: DataStructure[] };
+                                    const dsData =
+                                        (await dsResponse.json()) as {
+                                            dataStructures: DataStructure[];
+                                        };
                                     const taggedStructures =
                                         dsData.dataStructures || [];
                                     const taggedShortNames = new Set(
                                         taggedStructures.map((ds) =>
-                                            ds.shortName?.toLowerCase()
-                                        )
+                                            ds.shortName?.toLowerCase(),
+                                        ),
                                     );
                                     const allStructuresResponse = await fetch(
-                                        "https://nda.nih.gov/api/datadictionary/datastructure"
+                                        "https://nda.nih.gov/api/datadictionary/datastructure",
                                     );
                                     if (allStructuresResponse.ok) {
                                         const allStructuresData =
-                                            await allStructuresResponse.json() as DataStructure[];
+                                            (await allStructuresResponse.json()) as DataStructure[];
                                         allData = allStructuresData.filter(
                                             (structure) =>
                                                 taggedShortNames.has(
-                                                    structure.shortName?.toLowerCase()
-                                                )
+                                                    structure.shortName?.toLowerCase(),
+                                                ),
                                         );
                                     }
                                 }
@@ -767,11 +802,11 @@ const HomePage = () => {
                     let endpoint: string;
                     if (isCategory) {
                         endpoint = `https://nda.nih.gov/api/datadictionary/datastructure?category=${encodeURIComponent(
-                            searchValue
+                            searchValue,
                         )}`;
                     } else if (isDataType) {
                         endpoint = `https://nda.nih.gov/api/datadictionary/datastructure?dataType=${encodeURIComponent(
-                            searchValue
+                            searchValue,
                         )}`;
                     } else {
                         endpoint = `https://nda.nih.gov/api/datadictionary/v2/datastructure?searchTerm=${searchValue}`;
@@ -787,7 +822,7 @@ const HomePage = () => {
                         }
                         throw new Error("Failed to fetch data");
                     }
-                    allData = await response.json() as DataStructure[];
+                    allData = (await response.json()) as DataStructure[];
 
                     if (
                         (isCategory || isDataType) &&
@@ -804,7 +839,7 @@ const HomePage = () => {
                     const structureNameLower =
                         structure.shortName.toLowerCase();
                     const databaseStructuresLower = databaseStructures.map(
-                        (name) => name.toLowerCase()
+                        (name) => name.toLowerCase(),
                     );
                     return databaseStructuresLower.includes(structureNameLower);
                 });
@@ -849,14 +884,15 @@ const HomePage = () => {
                 const searchValue = isCategory
                     ? searchTerm.replace("category:", "")
                     : isDataType
-                    ? searchTerm.replace("datatype:", "")
-                    : searchTerm;
+                      ? searchTerm.replace("datatype:", "")
+                      : searchTerm;
 
                 if (isCategory || isDataType) {
                     try {
                         const tagsResponse = await fetch(`${apiBaseUrl}/tags`);
                         if (tagsResponse.ok) {
-                            const allTags = await tagsResponse.json() as CustomTag[];
+                            const allTags =
+                                (await tagsResponse.json()) as CustomTag[];
                             const customTag = allTags.find((tag) => {
                                 if (isCategory) {
                                     return (
@@ -875,33 +911,36 @@ const HomePage = () => {
 
                             if (customTag) {
                                 const dsResponse = await fetch(
-                                    `${apiBaseUrl}/tags/${customTag.id}/dataStructures`
+                                    `${apiBaseUrl}/tags/${customTag.id}/dataStructures`,
                                 );
                                 if (dsResponse.ok) {
-                                    const dsData = await dsResponse.json() as { dataStructures: DataStructure[] };
+                                    const dsData =
+                                        (await dsResponse.json()) as {
+                                            dataStructures: DataStructure[];
+                                        };
                                     const taggedStructures =
                                         dsData.dataStructures || [];
                                     const taggedShortNames = new Set(
                                         taggedStructures.map((ds) =>
-                                            ds.shortName?.toLowerCase()
-                                        )
+                                            ds.shortName?.toLowerCase(),
+                                        ),
                                     );
                                     const allStructuresResponse = await fetch(
-                                        "https://nda.nih.gov/api/datadictionary/datastructure"
+                                        "https://nda.nih.gov/api/datadictionary/datastructure",
                                     );
                                     if (allStructuresResponse.ok) {
                                         const allStructuresData =
-                                            await allStructuresResponse.json() as DataStructure[];
+                                            (await allStructuresResponse.json()) as DataStructure[];
                                         const validStructures =
                                             allStructuresData.filter(
                                                 (structure) =>
                                                     taggedShortNames.has(
-                                                        structure.shortName?.toLowerCase()
-                                                    )
+                                                        structure.shortName?.toLowerCase(),
+                                                    ),
                                             );
                                         setStructures(validStructures);
                                         setTotalStructureCount(
-                                            validStructures.length
+                                            validStructures.length,
                                         );
                                         setLoading(false);
                                         return;
@@ -917,11 +956,11 @@ const HomePage = () => {
                 let endpoint: string;
                 if (isCategory) {
                     endpoint = `https://nda.nih.gov/api/datadictionary/datastructure?category=${encodeURIComponent(
-                        searchValue
+                        searchValue,
                     )}`;
                 } else if (isDataType) {
                     endpoint = `https://nda.nih.gov/api/datadictionary/datastructure?dataType=${encodeURIComponent(
-                        searchValue
+                        searchValue,
                     )}`;
                 } else {
                     endpoint = `https://nda.nih.gov/api/datadictionary/v2/datastructure?searchTerm=${searchValue}`;
@@ -937,7 +976,7 @@ const HomePage = () => {
                     }
                     throw new Error("Failed to fetch data");
                 }
-                const data = await response.json() as DataStructure[];
+                const data = (await response.json()) as DataStructure[];
 
                 if (
                     (isCategory || isDataType) &&
@@ -988,7 +1027,10 @@ const HomePage = () => {
                 }
             }
         } catch (err) {
-            setError("Error fetching data: " + (err instanceof Error ? err.message : String(err)));
+            setError(
+                "Error fetching data: " +
+                    (err instanceof Error ? err.message : String(err)),
+            );
         } finally {
             setLoading(false);
         }
@@ -1009,19 +1051,24 @@ const HomePage = () => {
         setLoadingElements(true);
         try {
             const response = await fetch(
-                `https://nda.nih.gov/api/datadictionary/datastructure/${shortName}`
+                `https://nda.nih.gov/api/datadictionary/datastructure/${shortName}`,
             );
             if (!response.ok) throw new Error("Failed to fetch data elements");
-            const data = await response.json() as { dataElements: DataElement[] };
+            const data = (await response.json()) as {
+                dataElements: DataElement[];
+            };
 
             const sortedElements = data.dataElements.sort(
-                (a, b) => (a.position ?? 0) - (b.position ?? 0)
+                (a, b) => (a.position ?? 0) - (b.position ?? 0),
             );
 
             setDataElements(sortedElements);
         } catch (err) {
             console.error("Parsing error:", err);
-            setError("Error fetching data elements: " + (err instanceof Error ? err.message : String(err)));
+            setError(
+                "Error fetching data elements: " +
+                    (err instanceof Error ? err.message : String(err)),
+            );
         } finally {
             setLoadingElements(false);
         }
@@ -1043,7 +1090,10 @@ const HomePage = () => {
         setIgnoredFields(new Set());
         setValidationResults(null);
         setValueErrors([]);
-        setTransformationCounts({ handedness: 0, binary: 0 } as TransformationCounts);
+        setTransformationCounts({
+            handedness: 0,
+            binary: 0,
+        } as TransformationCounts);
     };
 
     const handleCsvFileChange = (file: File) => {
@@ -1104,20 +1154,25 @@ const HomePage = () => {
                                     |
                                 </div>
                                 <button
-                                    onClick={() =>
-                                        setActiveTab(Tabs.REVERSE_LOOKUP)
-                                    }
+                                    onClick={() => {
+                                        if (
+                                            activeTab !== Tabs.REVERSE_LOOKUP &&
+                                            activeTab !== Tabs.ROSETTA
+                                        ) {
+                                            setActiveTab(Tabs.ROSETTA);
+                                        }
+                                    }}
                                     className={`whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm ${
-                                        activeTab === Tabs.REVERSE_LOOKUP
-                                            ? "border-green-500 text-green-600"
-                                            : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                                        activeTab === Tabs.ROSETTA
+                                            ? "border-purple-500 text-purple-600"
+                                            : activeTab === Tabs.REVERSE_LOOKUP
+                                              ? "border-green-500 text-green-600"
+                                              : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                                     }`}
                                 >
-                                    Reverse Lookup by CSV
+                                    Data Mapping
                                 </button>
-                                <div className="text-gray-400 text-sm pb-4 mx-2">
-                                    |
-                                </div>
+                                {/* <div className="text-gray-400 text-sm pb-4 mx-2">|</div>
                                 <button
                                     onClick={() => setActiveTab(Tabs.RESEARCH)}
                                     className={`whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm ${
@@ -1127,20 +1182,7 @@ const HomePage = () => {
                                     }`}
                                 >
                                     Research Assistant
-                                </button>
-                                <div className="text-gray-400 text-sm pb-4 mx-2">
-                                    |
-                                </div>
-                                <button
-                                    onClick={() => setActiveTab(Tabs.ROSETTA)}
-                                    className={`whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm ${
-                                        activeTab === Tabs.ROSETTA
-                                            ? "border-indigo-500 text-indigo-600"
-                                            : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                                    }`}
-                                >
-                                    Rosetta
-                                </button>
+                                </button> */}
                             </div>
 
                             {/* NDA Logo */}
@@ -1163,6 +1205,34 @@ const HomePage = () => {
                             </div>
                         </nav>
                     </div>
+                    {/* Data Mapping sub-nav */}
+                    {(activeTab === Tabs.REVERSE_LOOKUP ||
+                        activeTab === Tabs.ROSETTA) && (
+                        <div className="flex gap-1 pt-2 pb-3 px-1">
+                            <button
+                                onClick={() => setActiveTab(Tabs.ROSETTA)}
+                                className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                                    activeTab === Tabs.ROSETTA
+                                        ? "bg-indigo-100 text-indigo-700"
+                                        : "text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+                                }`}
+                            >
+                                Rosetta AI Agent
+                            </button>
+                            <button
+                                onClick={() =>
+                                    setActiveTab(Tabs.REVERSE_LOOKUP)
+                                }
+                                className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                                    activeTab === Tabs.REVERSE_LOOKUP
+                                        ? "bg-green-100 text-green-700"
+                                        : "text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+                                }`}
+                            >
+                                Reverse Lookup
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -1245,21 +1315,25 @@ const HomePage = () => {
 
                         try {
                             const response = await fetch(
-                                `https://nda.nih.gov/api/datadictionary/v2/datastructure?searchTerm=${shortName}`
+                                `https://nda.nih.gov/api/datadictionary/v2/datastructure?searchTerm=${shortName}`,
                             );
                             if (!response.ok)
                                 throw new Error("Failed to fetch data");
-                            const data = await response.json() as DataStructure[];
+                            const data =
+                                (await response.json()) as DataStructure[];
 
                             const structure = data.find(
-                                (s) => s.shortName === shortName
+                                (s) => s.shortName === shortName,
                             );
                             if (structure) {
                                 handleStructureSelect(structure);
                             }
                         } catch (err) {
                             setError(
-                                "Error fetching structure: " + (err instanceof Error ? err.message : String(err))
+                                "Error fetching structure: " +
+                                    (err instanceof Error
+                                        ? err.message
+                                        : String(err)),
                             );
                         }
 

@@ -2,7 +2,16 @@
 
 import { useState, useRef } from "react";
 import Image from "next/image";
-import { Search, Upload, X, ChevronDown, ChevronRight, Database, Loader2, Download } from "lucide-react";
+import {
+    Search,
+    Upload,
+    X,
+    ChevronDown,
+    ChevronRight,
+    Database,
+    Loader2,
+    Download,
+} from "lucide-react";
 import { parseCSV } from "@/utils/csvUtils";
 import type { RosettaResult } from "@/app/api/v1/research/rosetta/route";
 
@@ -23,10 +32,16 @@ interface RowState {
     error?: string;
 }
 
-function confidenceLabel(score: number, matchedBy: RosettaResult["matchedBy"]): { label: string; color: string } {
-    if (matchedBy === "name-guess") return { label: "Exact", color: "text-green-700 bg-green-50" };
-    if (score >= 10) return { label: "High", color: "text-green-700 bg-green-50" };
-    if (score >= 3) return { label: "Medium", color: "text-yellow-700 bg-yellow-50" };
+function confidenceLabel(
+    score: number,
+    matchedBy: RosettaResult["matchedBy"],
+): { label: string; color: string } {
+    if (matchedBy === "name-guess")
+        return { label: "Exact", color: "text-green-700 bg-green-50" };
+    if (score >= 10)
+        return { label: "High", color: "text-green-700 bg-green-50" };
+    if (score >= 3)
+        return { label: "Medium", color: "text-yellow-700 bg-yellow-50" };
     return { label: "Low", color: "text-gray-500 bg-gray-50" };
 }
 
@@ -52,15 +67,21 @@ function ResultCard({
     const conf = confidenceLabel(result.score, result.matchedBy);
     const dbStructures = databaseFilterEnabled
         ? result.dataStructures.filter((s) =>
-              databaseStructures.map((d) => d.toLowerCase()).includes(s.toLowerCase())
+              databaseStructures
+                  .map((d) => d.toLowerCase())
+                  .includes(s.toLowerCase()),
           )
         : result.dataStructures;
     const inDatabase = databaseFilterEnabled
         ? dbStructures.length > 0
         : result.dataStructures.some((s) =>
-              databaseStructures.map((d) => d.toLowerCase()).includes(s.toLowerCase())
+              databaseStructures
+                  .map((d) => d.toLowerCase())
+                  .includes(s.toLowerCase()),
           );
-    const displayStructures = databaseFilterEnabled ? dbStructures : result.dataStructures;
+    const displayStructures = databaseFilterEnabled
+        ? dbStructures
+        : result.dataStructures;
 
     return (
         <div
@@ -76,7 +97,9 @@ function ResultCard({
             <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-2 flex-wrap min-w-0">
                     {selectable && (
-                        <span className={`shrink-0 text-base leading-none ${selected ? "text-indigo-600" : "text-gray-300"}`}>
+                        <span
+                            className={`shrink-0 text-base leading-none ${selected ? "text-indigo-600" : "text-gray-300"}`}
+                        >
                             {selected ? "●" : "○"}
                         </span>
                     )}
@@ -100,14 +123,16 @@ function ResultCard({
                         </span>
                     )}
                 </div>
-                <span className={`shrink-0 text-xs font-medium px-2 py-0.5 rounded ${conf.color}`}>
+                <span
+                    className={`shrink-0 text-xs font-medium px-2 py-0.5 rounded ${conf.color}`}
+                >
                     {conf.label}
                 </span>
             </div>
 
             {displayStructures.length > 0 && (
                 <div className="flex flex-wrap gap-1 mt-1.5">
-                    {displayStructures.slice(0, 8).map((s) => (
+                    {displayStructures.slice(0, 8).map((s) =>
                         selectable ? (
                             <span
                                 key={s}
@@ -124,8 +149,8 @@ function ResultCard({
                             >
                                 {s}
                             </button>
-                        )
-                    ))}
+                        ),
+                    )}
                     {displayStructures.length > 8 && (
                         <span className="text-xs text-gray-400 self-center">
                             +{displayStructures.length - 8} more
@@ -140,7 +165,9 @@ function ResultCard({
                 </p>
             )}
             {!result.description && (
-                <p className="text-xs text-gray-400 mt-1.5 italic">No description available</p>
+                <p className="text-xs text-gray-400 mt-1.5 italic">
+                    No description available
+                </p>
             )}
         </div>
     );
@@ -171,7 +198,9 @@ export default function Rosetta({
     const [batchState, setBatchState] = useState<Record<number, RowState>>({});
     const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
     const [batchProcessing, setBatchProcessing] = useState(false);
-    const [selections, setSelections] = useState<Record<number, RosettaResult>>({});
+    const [selections, setSelections] = useState<Record<number, RosettaResult>>(
+        {},
+    );
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const filterResults = (results: RosettaResult[]): RosettaResult[] => {
@@ -185,7 +214,10 @@ export default function Rosetta({
                 : results;
 
         // Sort DB elements to the top within the result set
-        return [...filtered.filter(isInDb), ...filtered.filter((r) => !isInDb(r))];
+        return [
+            ...filtered.filter(isInDb),
+            ...filtered.filter((r) => !isInDb(r)),
+        ];
     };
 
     const runSearch = async (description: string) => {
@@ -195,7 +227,11 @@ export default function Rosetta({
             body: JSON.stringify({ description, databaseStructures }),
         });
         if (!res.ok) throw new Error(`Search failed: ${res.status}`);
-        return res.json() as Promise<{ results: RosettaResult[]; searchTerms: string[]; candidateNames: string[] }>;
+        return res.json() as Promise<{
+            results: RosettaResult[];
+            searchTerms: string[];
+            candidateNames: string[];
+        }>;
     };
 
     const handleSearch = async () => {
@@ -211,7 +247,9 @@ export default function Rosetta({
                 searchTerms: data.searchTerms,
             });
         } catch (err) {
-            setSingleError(err instanceof Error ? err.message : "Search failed");
+            setSingleError(
+                err instanceof Error ? err.message : "Search failed",
+            );
         } finally {
             setIsSearching(false);
         }
@@ -245,21 +283,42 @@ export default function Rosetta({
     };
 
     const exportCSV = () => {
-        const header = ["input_description", "element_name", "data_structures", "nda_description", "confidence"];
+        const header = [
+            "input_description",
+            "element_name",
+            "data_structures",
+            "nda_description",
+            "confidence",
+        ];
         const rows = csvRows.map((row, i) => {
             const sel = selections[i];
             if (!sel) return [row, "", "", "", ""];
-            return [row, sel.name, sel.dataStructures.join("|"), sel.description, confidenceLabel(sel.score, sel.matchedBy).label];
+            return [
+                row,
+                sel.name,
+                sel.dataStructures.join("|"),
+                sel.description,
+                confidenceLabel(sel.score, sel.matchedBy).label,
+            ];
         });
         const escape = (v: string) => `"${v.replace(/"/g, '""')}"`;
-        const csv = [header, ...rows].map((r) => r.map(escape).join(",")).join("\n");
+        const csv = [header, ...rows]
+            .map((r) => r.map(escape).join(","))
+            .join("\n");
         downloadFile("rosetta-mapping.csv", csv, "text/csv");
     };
 
     const exportJSON = () => {
         const data = csvRows.map((row, i) => {
             const sel = selections[i];
-            if (!sel) return { inputDescription: row, elementName: null, dataStructures: [], ndaDescription: null, confidence: null };
+            if (!sel)
+                return {
+                    inputDescription: row,
+                    elementName: null,
+                    dataStructures: [],
+                    ndaDescription: null,
+                    confidence: null,
+                };
             return {
                 inputDescription: row,
                 elementName: sel.name,
@@ -269,7 +328,11 @@ export default function Rosetta({
                 confidence: confidenceLabel(sel.score, sel.matchedBy).label,
             };
         });
-        downloadFile("rosetta-mapping.json", JSON.stringify(data, null, 2), "application/json");
+        downloadFile(
+            "rosetta-mapping.json",
+            JSON.stringify(data, null, 2),
+            "application/json",
+        );
     };
 
     const handleBatchProcess = async () => {
@@ -278,7 +341,9 @@ export default function Rosetta({
         setSelections({});
         // Initialize all rows to loading
         setBatchState(
-            Object.fromEntries(csvRows.map((_, i) => [i, { status: "loading" as const }]))
+            Object.fromEntries(
+                csvRows.map((_, i) => [i, { status: "loading" as const }]),
+            ),
         );
         // Process all rows in parallel
         await Promise.all(
@@ -287,7 +352,11 @@ export default function Rosetta({
                     const data = await runSearch(row);
                     setBatchState((prev) => ({
                         ...prev,
-                        [i]: { status: "done", rawResults: data.results, searchTerms: data.searchTerms },
+                        [i]: {
+                            status: "done",
+                            rawResults: data.results,
+                            searchTerms: data.searchTerms,
+                        },
                     }));
                     // Auto-expand if results found
                     if (data.results.length > 0) {
@@ -299,7 +368,7 @@ export default function Rosetta({
                         [i]: { status: "error", error: "Search failed" },
                     }));
                 }
-            })
+            }),
         );
         setBatchProcessing(false);
     };
@@ -317,16 +386,19 @@ export default function Rosetta({
         <div className="space-y-4">
             {/* Header + Database Filter Checkbox */}
             <div className="mb-8">
-                <h1 className="text-3xl font-bold mb-4">Rosetta</h1>
+                <h1 className="text-3xl font-bold mb-4">Rosetta Agent</h1>
                 <p className="text-gray-600 -mb-7">
-                    Describe a research variable in plain language and Rosetta will find the best matching NDA data elements.
+                    Describe a data element in plain language and Rosetta will
+                    find the best matching NDA data elements using AI.
                 </p>
                 <div className="-mb-8">
                     <label className="flex items-center space-x-3 cursor-pointer">
                         <input
                             type="checkbox"
                             checked={databaseFilterEnabled}
-                            onChange={(e) => setDatabaseFilterEnabled(e.target.checked)}
+                            onChange={(e) =>
+                                setDatabaseFilterEnabled(e.target.checked)
+                            }
                             className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 flex-shrink-0 self-center"
                         />
                         <div className="flex items-center space-x-2">
@@ -348,11 +420,13 @@ export default function Rosetta({
                                 <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-500"></div>
                             )}
                         </div>
-                        {databaseFilterEnabled && databaseStructures.length > 0 && (
-                            <p className="text-xs text-gray-500 ml-2">
-                                Filtering by {databaseStructures.length} available structures
-                            </p>
-                        )}
+                        {databaseFilterEnabled &&
+                            databaseStructures.length > 0 && (
+                                <p className="text-xs text-gray-500 ml-2">
+                                    Filtering by {databaseStructures.length}{" "}
+                                    available structures
+                                </p>
+                            )}
                     </label>
                 </div>
             </div>
@@ -432,41 +506,74 @@ export default function Rosetta({
                         <div className="space-y-3">
                             {singleResult.searchTerms.length > 0 && (
                                 <div className="text-xs text-gray-500 flex flex-wrap gap-1 items-center">
-                                    <span className="font-medium text-gray-400">Terms used:</span>
+                                    <span className="font-medium text-gray-400">
+                                        Terms used:
+                                    </span>
                                     {singleResult.searchTerms.map((t) => (
-                                        <span key={t} className="px-2 py-0.5 bg-gray-100 rounded font-mono">
+                                        <span
+                                            key={t}
+                                            className="px-2 py-0.5 bg-gray-100 rounded font-mono"
+                                        >
                                             {t}
                                         </span>
                                     ))}
                                 </div>
                             )}
-                            {filterResults(singleResult.rawResults).length === 0 ? (
+                            {filterResults(singleResult.rawResults).length ===
+                            0 ? (
                                 <div className="text-center py-10 text-gray-500">
                                     <Search className="w-10 h-10 mx-auto mb-3 text-gray-300" />
-                                    <p className="font-medium">No matching elements found</p>
-                                    <p className="text-sm mt-1">Try rephrasing with more clinical or technical terms.</p>
+                                    <p className="font-medium">
+                                        No matching elements found
+                                    </p>
+                                    <p className="text-sm mt-1">
+                                        Try rephrasing with more clinical or
+                                        technical terms.
+                                    </p>
                                     {databaseFilterEnabled && (
                                         <p className="text-xs mt-2 text-gray-400">
-                                            DB filter is on — results are limited to IMPACT-MH structures.
+                                            DB filter is on — results are
+                                            limited to IMPACT-MH structures.
                                         </p>
                                     )}
                                 </div>
                             ) : (
                                 <div className="space-y-2">
                                     <p className="text-xs text-gray-500">
-                                        {filterResults(singleResult.rawResults).length} match{filterResults(singleResult.rawResults).length !== 1 ? "es" : ""}
-                                        {databaseFilterEnabled ? " (IMPACT-MH only)" : ""}
+                                        {
+                                            filterResults(
+                                                singleResult.rawResults,
+                                            ).length
+                                        }{" "}
+                                        match
+                                        {filterResults(singleResult.rawResults)
+                                            .length !== 1
+                                            ? "es"
+                                            : ""}
+                                        {databaseFilterEnabled
+                                            ? " (IMPACT-MH only)"
+                                            : ""}
                                     </p>
-                                    {filterResults(singleResult.rawResults).map((r) => (
-                                        <ResultCard
-                                            key={r.name}
-                                            result={r}
-                                            databaseFilterEnabled={databaseFilterEnabled}
-                                            databaseStructures={databaseStructures}
-                                            onElementSearch={onElementSearch}
-                                            onStructureSearch={onStructureSearch}
-                                        />
-                                    ))}
+                                    {filterResults(singleResult.rawResults).map(
+                                        (r) => (
+                                            <ResultCard
+                                                key={r.name}
+                                                result={r}
+                                                databaseFilterEnabled={
+                                                    databaseFilterEnabled
+                                                }
+                                                databaseStructures={
+                                                    databaseStructures
+                                                }
+                                                onElementSearch={
+                                                    onElementSearch
+                                                }
+                                                onStructureSearch={
+                                                    onStructureSearch
+                                                }
+                                            />
+                                        ),
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -489,9 +596,12 @@ export default function Rosetta({
                             }}
                         >
                             <Upload className="w-10 h-10 mx-auto mb-3 text-gray-400" />
-                            <p className="font-medium text-gray-700">Drop a CSV file here or click to upload</p>
+                            <p className="font-medium text-gray-700">
+                                Drop a CSV file here or click to upload
+                            </p>
                             <p className="text-sm text-gray-500 mt-1">
-                                Single column, one variable description per row. Max 100 rows.
+                                Single column, one variable description per row.
+                                Max 100 rows.
                             </p>
                             <input
                                 ref={fileInputRef}
@@ -508,9 +618,15 @@ export default function Rosetta({
                         <div className="space-y-3">
                             <div className="flex items-center justify-between">
                                 <p className="text-sm text-gray-600">
-                                    <span className="font-medium">{csvRows.length}</span> description{csvRows.length !== 1 ? "s" : ""} loaded
+                                    <span className="font-medium">
+                                        {csvRows.length}
+                                    </span>{" "}
+                                    description{csvRows.length !== 1 ? "s" : ""}{" "}
+                                    loaded
                                     {databaseFilterEnabled && (
-                                        <span className="ml-1 text-gray-400">(results filtered to IMPACT-MH)</span>
+                                        <span className="ml-1 text-gray-400">
+                                            (results filtered to IMPACT-MH)
+                                        </span>
                                     )}
                                 </p>
                                 <div className="flex gap-2">
@@ -520,7 +636,8 @@ export default function Rosetta({
                                             setBatchState({});
                                             setExpandedRows(new Set());
                                             setSelections({});
-                                            if (fileInputRef.current) fileInputRef.current.value = "";
+                                            if (fileInputRef.current)
+                                                fileInputRef.current.value = "";
                                         }}
                                         className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1"
                                     >
@@ -528,7 +645,9 @@ export default function Rosetta({
                                         Clear
                                     </button>
                                     <button
-                                        onClick={() => void handleBatchProcess()}
+                                        onClick={() =>
+                                            void handleBatchProcess()
+                                        }
                                         disabled={batchProcessing}
                                         className="px-4 py-1.5 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-2"
                                     >
@@ -552,26 +671,34 @@ export default function Rosetta({
                                 {csvRows.map((row, i) => {
                                     const state = batchState[i];
                                     const isExpanded = expandedRows.has(i);
-                                    const resultCount = filterResults(state?.rawResults ?? []).length;
+                                    const resultCount = filterResults(
+                                        state?.rawResults ?? [],
+                                    ).length;
 
                                     return (
                                         <div key={i} className="bg-white">
                                             <button
                                                 className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors"
                                                 onClick={() => {
-                                                    if (state?.status === "done") toggleRow(i);
+                                                    if (
+                                                        state?.status === "done"
+                                                    )
+                                                        toggleRow(i);
                                                 }}
                                             >
                                                 <span className="shrink-0 text-gray-400">
-                                                    {state?.status === "loading" ? (
+                                                    {state?.status ===
+                                                    "loading" ? (
                                                         <Loader2 className="w-4 h-4 animate-spin" />
-                                                    ) : state?.status === "done" ? (
+                                                    ) : state?.status ===
+                                                      "done" ? (
                                                         isExpanded ? (
                                                             <ChevronDown className="w-4 h-4 text-gray-500" />
                                                         ) : (
                                                             <ChevronRight className="w-4 h-4 text-gray-500" />
                                                         )
-                                                    ) : state?.status === "error" ? (
+                                                    ) : state?.status ===
+                                                      "error" ? (
                                                         <X className="w-4 h-4 text-red-400" />
                                                     ) : (
                                                         <ChevronRight className="w-4 h-4 text-gray-300" />
@@ -584,84 +711,151 @@ export default function Rosetta({
                                                     <span className="shrink-0 text-xs font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-700">
                                                         ✓ {selections[i].name}
                                                     </span>
-                                                ) : state?.status === "done" && (
-                                                    <span className={`shrink-0 text-xs font-medium px-2 py-0.5 rounded-full ${
-                                                        resultCount > 0
-                                                            ? "bg-indigo-100 text-indigo-700"
-                                                            : "bg-gray-100 text-gray-500"
-                                                    }`}>
-                                                        {resultCount} match{resultCount !== 1 ? "es" : ""}
-                                                    </span>
+                                                ) : (
+                                                    state?.status ===
+                                                        "done" && (
+                                                        <span
+                                                            className={`shrink-0 text-xs font-medium px-2 py-0.5 rounded-full ${
+                                                                resultCount > 0
+                                                                    ? "bg-indigo-100 text-indigo-700"
+                                                                    : "bg-gray-100 text-gray-500"
+                                                            }`}
+                                                        >
+                                                            {resultCount} match
+                                                            {resultCount !== 1
+                                                                ? "es"
+                                                                : ""}
+                                                        </span>
+                                                    )
                                                 )}
                                                 {state?.status === "error" && (
-                                                    <span className="shrink-0 text-xs text-red-500">Error</span>
+                                                    <span className="shrink-0 text-xs text-red-500">
+                                                        Error
+                                                    </span>
                                                 )}
                                             </button>
 
-                                            {isExpanded && state?.status === "done" && (
-                                                <div className="px-4 pb-4 space-y-2 bg-gray-50 border-t border-gray-100">
-                                                    {state.searchTerms && state.searchTerms.length > 0 && (
-                                                        <div className="text-xs text-gray-400 flex flex-wrap gap-1 items-center pt-3">
-                                                            <span className="font-medium">Terms:</span>
-                                                            {state.searchTerms.map((t) => (
-                                                                <span key={t} className="px-1.5 py-0.5 bg-white rounded border font-mono">
-                                                                    {t}
-                                                                </span>
-                                                            ))}
-                                                        </div>
-                                                    )}
-                                                    {filterResults(state.rawResults ?? []).length === 0 ? (
-                                                        <p className="text-sm text-gray-400 italic pt-3">
-                                                            No matching elements found. Try rephrasing.
-                                                        </p>
-                                                    ) : (
-                                                        <div className="space-y-2 pt-2">
-                                                            {filterResults(state.rawResults ?? []).map((r) => (
-                                                                <ResultCard
-                                                                    key={r.name}
-                                                                    result={r}
-                                                                    databaseFilterEnabled={databaseFilterEnabled}
-                                                                    databaseStructures={databaseStructures}
-                                                                    selectable
-                                                                    selected={selections[i]?.name === r.name}
-                                                                    onSelect={() => setSelections((prev) => ({ ...prev, [i]: r }))}
-                                                                />
-                                                            ))}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            )}
+                                            {isExpanded &&
+                                                state?.status === "done" && (
+                                                    <div className="px-4 pb-4 space-y-2 bg-gray-50 border-t border-gray-100">
+                                                        {state.searchTerms &&
+                                                            state.searchTerms
+                                                                .length > 0 && (
+                                                                <div className="text-xs text-gray-400 flex flex-wrap gap-1 items-center pt-3">
+                                                                    <span className="font-medium">
+                                                                        Terms:
+                                                                    </span>
+                                                                    {state.searchTerms.map(
+                                                                        (t) => (
+                                                                            <span
+                                                                                key={
+                                                                                    t
+                                                                                }
+                                                                                className="px-1.5 py-0.5 bg-white rounded border font-mono"
+                                                                            >
+                                                                                {
+                                                                                    t
+                                                                                }
+                                                                            </span>
+                                                                        ),
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                        {filterResults(
+                                                            state.rawResults ??
+                                                                [],
+                                                        ).length === 0 ? (
+                                                            <p className="text-sm text-gray-400 italic pt-3">
+                                                                No matching
+                                                                elements found.
+                                                                Try rephrasing.
+                                                            </p>
+                                                        ) : (
+                                                            <div className="space-y-2 pt-2">
+                                                                {filterResults(
+                                                                    state.rawResults ??
+                                                                        [],
+                                                                ).map((r) => (
+                                                                    <ResultCard
+                                                                        key={
+                                                                            r.name
+                                                                        }
+                                                                        result={
+                                                                            r
+                                                                        }
+                                                                        databaseFilterEnabled={
+                                                                            databaseFilterEnabled
+                                                                        }
+                                                                        databaseStructures={
+                                                                            databaseStructures
+                                                                        }
+                                                                        selectable
+                                                                        selected={
+                                                                            selections[
+                                                                                i
+                                                                            ]
+                                                                                ?.name ===
+                                                                            r.name
+                                                                        }
+                                                                        onSelect={() =>
+                                                                            setSelections(
+                                                                                (
+                                                                                    prev,
+                                                                                ) => ({
+                                                                                    ...prev,
+                                                                                    [i]: r,
+                                                                                }),
+                                                                            )
+                                                                        }
+                                                                    />
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
                                         </div>
                                     );
                                 })}
                             </div>
 
                             {/* Export toolbar */}
-                            {!batchProcessing && Object.keys(batchState).length > 0 && (
-                                <div className="flex items-center justify-between pt-3 border-t border-gray-200 mt-2">
-                                    <p className="text-sm text-gray-500">
-                                        {Object.keys(selections).length} of {csvRows.length} row{csvRows.length !== 1 ? "s" : ""} mapped
-                                    </p>
-                                    <div className="flex gap-2">
-                                        <button
-                                            disabled={Object.keys(selections).length === 0}
-                                            onClick={exportCSV}
-                                            className="px-3 py-1.5 text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
-                                        >
-                                            <Download className="w-3.5 h-3.5" />
-                                            Export CSV
-                                        </button>
-                                        <button
-                                            disabled={Object.keys(selections).length === 0}
-                                            onClick={exportJSON}
-                                            className="px-3 py-1.5 text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
-                                        >
-                                            <Download className="w-3.5 h-3.5" />
-                                            Export JSON
-                                        </button>
+                            {!batchProcessing &&
+                                Object.keys(batchState).length > 0 && (
+                                    <div className="flex items-center justify-between pt-3 border-t border-gray-200 mt-2">
+                                        <p className="text-sm text-gray-500">
+                                            {Object.keys(selections).length} of{" "}
+                                            {csvRows.length} row
+                                            {csvRows.length !== 1
+                                                ? "s"
+                                                : ""}{" "}
+                                            mapped
+                                        </p>
+                                        <div className="flex gap-2">
+                                            <button
+                                                disabled={
+                                                    Object.keys(selections)
+                                                        .length === 0
+                                                }
+                                                onClick={exportCSV}
+                                                className="px-3 py-1.5 text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
+                                            >
+                                                <Download className="w-3.5 h-3.5" />
+                                                Export CSV
+                                            </button>
+                                            <button
+                                                disabled={
+                                                    Object.keys(selections)
+                                                        .length === 0
+                                                }
+                                                onClick={exportJSON}
+                                                className="px-3 py-1.5 text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
+                                            >
+                                                <Download className="w-3.5 h-3.5" />
+                                                Export JSON
+                                            </button>
+                                        </div>
                                     </div>
-                                </div>
-                            )}
+                                )}
                         </div>
                     )}
                 </div>
