@@ -6,11 +6,7 @@ import {
   createSuccessResponse,
   createOptionsResponse,
 } from "@/lib/api-client";
-
-// Simple in-memory cache
-let cache: unknown = null;
-let cacheTimestamp = 0;
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+import { cache, cacheTimestamp, CACHE_DURATION, setCache } from "./cache";
 
 export async function GET(): Promise<NextResponse> {
   try {
@@ -32,8 +28,7 @@ export async function GET(): Promise<NextResponse> {
     }
 
     const data = await response.json();
-    cache = data;
-    cacheTimestamp = now;
+    setCache(data);
 
     return createSuccessResponse(data, {
       "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",

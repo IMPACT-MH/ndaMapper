@@ -235,6 +235,24 @@ export const fetchAuditLogs = async (
 };
 
 /**
+ * Update a data structure's title
+ */
+export const updateStructureTitle = async (
+  dataStructureId: string | number,
+  newTitle: string,
+  apiBaseUrl = "/api/v1"
+): Promise<void> => {
+  await apiCall(
+    `/data-structures/${dataStructureId}/title`,
+    {
+      method: "PUT",
+      body: JSON.stringify({ title: newTitle }),
+    },
+    apiBaseUrl
+  );
+};
+
+/**
  * Fetch data structures for a tag
  */
 export const fetchTagDataStructures = async (

@@ -5,7 +5,7 @@ import {
     createSuccessResponse,
     createOptionsResponse,
 } from "@/lib/api-client";
-import { clearCache } from "../../route.js";
+import { clearCache } from "../../cache";
 
 export async function PUT(request, { params }) {
     try {

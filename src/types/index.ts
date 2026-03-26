@@ -29,6 +29,8 @@ export interface DataStructure {
   dominantAlias?: string;
   submittedByProjects?: string[];
   dataElements?: DataElement[];
+  dataStructureId?: string | number;
+  error?: unknown;
 }
 
 // ---------------------------------------------------------------------------

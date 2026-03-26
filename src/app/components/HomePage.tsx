@@ -92,7 +92,7 @@ const HomePage = () => {
     >(null);
 
     // Error structures from IMPACT-MH (entries that failed NDA metadata fetch)
-    const [databaseErrorStructures, setDatabaseErrorStructures] = useState({});
+    const [databaseErrorStructures, setDatabaseErrorStructures] = useState<Record<string, { shortName: string; title: string; status: string; dataStructureId: string }>>({});
 
     // Tags state for custom tag searches
     const [structureDataTypeTags, setStructureDataTypeTags] = useState<
@@ -214,7 +214,7 @@ const HomePage = () => {
                     const errorMap: Record<string, { shortName: string; title: string; status: string; dataStructureId: string }> = {};
                     Object.entries(data.dataStructures).forEach(([key, structure]) => {
                         if (structure?.error) {
-                            errorMap[key.toLowerCase()] = { shortName: key, title: key, status: "Draft", dataStructureId: structure.dataStructureId };
+                            errorMap[key.toLowerCase()] = { shortName: key, title: key, status: "Draft", dataStructureId: String(structure.dataStructureId ?? "") };
                         }
                     });
                     setDatabaseErrorStructures(errorMap);
