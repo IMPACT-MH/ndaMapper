@@ -1374,8 +1374,6 @@ const HomePage = () => {
 
             <div className={activeTab === Tabs.ROSETTA ? "block" : "hidden"}>
                 <Rosetta
-                    databaseFilterEnabled={databaseFilterEnabled}
-                    setDatabaseFilterEnabled={setDatabaseFilterEnabled}
                     databaseStructures={databaseStructures}
                     loadingDatabaseStructures={loadingDatabaseStructures}
                     databaseConnectionError={databaseConnectionError}
@@ -1383,10 +1381,7 @@ const HomePage = () => {
                         setElementSearchTerm(elementName);
                         setActiveTab(Tabs.ELEMENT);
                     }}
-                    onStructureSearch={(shortName) => {
-                        setSearchTerm(shortName);
-                        setActiveTab(Tabs.STRUCTURE);
-                    }}
+                    onStructureSearch={handleElementDetailStructureSelect}
                 />
             </div>
         </div>

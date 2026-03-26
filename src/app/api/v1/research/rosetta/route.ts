@@ -58,11 +58,25 @@ async function fetchStructureElements(shortName: string): Promise<NdaElementDeta
     }
 }
 
+const STOPWORDS = new Set([
+    "are","you","the","is","do","did","does","was","were","have","has","had",
+    "will","would","can","could","should","may","might","shall",
+    "and","or","but","not","for","with","that","this","from","your",
+    "what","how","when","where","which","who","why","any","all","been",
+    "about","also","its","their","they","them","there","here","each",
+    "into","than","then","more","some","such","like","out","use","one",
+    "two","three","four","five","six","seven","eight","nine","ten",
+]);
+
 function wordOverlapScore(a: string, b: string): number {
     const tokenize = (s: string) =>
-        new Set(s.toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter((w) => w.length > 2));
+        new Set(
+            s.toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/)
+             .filter((w) => w.length > 2 && !STOPWORDS.has(w))
+        );
     const setA = tokenize(a);
     const setB = tokenize(b);
+    if (setA.size === 0 || setB.size === 0) return 0;
     const intersection = [...setA].filter((w) => setB.has(w)).length;
     return intersection / Math.max(setA.size, setB.size, 1);
 }
@@ -107,11 +121,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     let description: string;
-    let dbStructureSet: Set<string>;
+    let excludeSet: Set<string>;
     try {
-        const body = await request.json() as { description?: string; databaseStructures?: string[] };
+        const body = await request.json() as { description?: string; exclude?: string[] };
         description = (body.description ?? "").trim();
-        dbStructureSet = new Set((body.databaseStructures ?? []).map((s) => s.toLowerCase()));
+        excludeSet = new Set((body.exclude ?? []).map((s) => s.toLowerCase()));
     } catch {
         return createErrorResponse("Invalid JSON request body", 400);
     }
@@ -168,29 +182,6 @@ Tips:
         // Proceed with just the raw description
     }
 
-    // Derive bare-word candidates from the original description AND LLM search terms.
-    // Catches element names like "veteran" that appear verbatim in the query but that
-    // the LLM won't guess because it prefers compound names like "veteran_status".
-    const descriptionTokens = description
-        .toLowerCase()
-        .replace(/[^a-z\s]/g, "")
-        .split(/\s+/)
-        .filter((w) => w.length >= 4);
-
-    const termTokens = searchTerms
-        .flatMap((t) =>
-            t.toLowerCase()
-             .replace(/[^a-z\s]/g, "")
-             .split(/\s+/)
-             .filter((w) => w.length >= 4)
-        );
-
-    const derivedTokens = [...new Set([...descriptionTokens, ...termTokens])];
-
-    const allCandidateNames = [
-        ...new Set([...candidateNames, ...derivedTokens]),
-    ].slice(0, 20);
-
     // Step 2: Parallel NDA searches
     const queries: Array<{ query: string; matchedBy: "description" | "term" }> = [
         { query: description, matchedBy: "description" },
@@ -201,30 +192,12 @@ Tips:
         Promise.all(queries.map(({ query, matchedBy }) =>
             searchNDA(query).then((r) => ({ ...r, requestedMatchedBy: matchedBy }))
         )),
-        Promise.all(allCandidateNames.map((name) =>
+        Promise.all(candidateNames.map((name) =>
             fetchElementDetail(name).then((detail) => ({ name, detail }))
         )),
         Promise.all(structureShortNames.map((sn) => fetchStructureElements(sn))),
     ]);
 
-    // DB-aware structure discovery: find which DB structures appeared in ES results,
-    // then fetch their full element lists so we can overlap-score their siblings.
-    const dbStructuresInResults = new Set<string>();
-    if (dbStructureSet.size > 0) {
-        for (const { results } of searchResponses) {
-            for (const r of results) {
-                for (const ds of extractStructureNames(r.dataStructures)) {
-                    if (dbStructureSet.has(ds.toLowerCase())) {
-                        dbStructuresInResults.add(ds);
-                    }
-                }
-            }
-        }
-    }
-    const dbStructuresToFetch = [...dbStructuresInResults].slice(0, 5);
-    const dbStructureElementGroups = await Promise.all(
-        dbStructuresToFetch.map((sn) => fetchStructureElements(sn))
-    );
 
     // Step 3: Merge and de-duplicate by element name
     const scoreMap = new Map<string, { score: number; matchedBy: "description" | "term" | "name-guess" }>();
@@ -241,14 +214,11 @@ Tips:
         }
     }
 
-    // Add name-guess direct hits at the top (only when NDA confirms the element exists)
+    // Name-guess hits: only add to scoreMap if ES didn't already find them
     for (const { detail } of nameGuessDetails) {
-        if (detail?.name) {
-            const existing = scoreMap.get(detail.name);
-            const score = existing ? Math.max(existing.score, 999) : 999;
-            scoreMap.set(detail.name, { score, matchedBy: "name-guess" });
+        if (detail?.name && !scoreMap.has(detail.name)) {
+            scoreMap.set(detail.name, { score: 50, matchedBy: "name-guess" });
         }
-        // If detail is null the element doesn't exist in NDA — discard silently
     }
 
     // Structure-based discovery: score each element from guessed structures by word overlap
@@ -256,7 +226,7 @@ Tips:
         for (const el of elements) {
             if (!el.name) continue;
             const overlap = wordOverlapScore(description, el.description ?? "");
-            if (overlap < 0.2) continue;
+            if (overlap < 0.3) continue;
             const syntheticScore = 500 + overlap * 500;
             const existing = scoreMap.get(el.name);
             if (!existing || syntheticScore > existing.score) {
@@ -267,21 +237,6 @@ Tips:
         }
     }
 
-    // DB structure element scoring: same overlap logic but with floor 600 (vs 500)
-    // so DB elements rank above non-DB elements with similar overlap.
-    for (const elements of dbStructureElementGroups) {
-        for (const el of elements) {
-            if (!el.name) continue;
-            const overlap = wordOverlapScore(description, el.description ?? "");
-            if (overlap < 0.2) continue;
-            const syntheticScore = 600 + overlap * 500;
-            const existing = scoreMap.get(el.name);
-            if (!existing || syntheticScore > existing.score) {
-                scoreMap.set(el.name, { score: syntheticScore, matchedBy: "name-guess" });
-            }
-            structureElementCache.set(el.name, el);
-        }
-    }
 
     // Collect unique names and all raw ES results for description lookup
     const allResults = new Map<string, NdaSearchResult>();
@@ -341,7 +296,15 @@ Tips:
                 matchedBy,
             };
         })
-        .filter((r) => r.name)
+        .filter((r) => r.name && !excludeSet.has(r.name.toLowerCase()))
+        .sort((a, b) => {
+            // Demote aggregate/summary elements so item-level elements rank first
+            const aggregatePattern = /\b(total|sum|score|subscale|facet|composite|index|average|mean|aggregate)\b/i;
+            const aIsAggregate = aggregatePattern.test(a.description) && !aggregatePattern.test(a.name);
+            const bIsAggregate = aggregatePattern.test(b.description) && !aggregatePattern.test(b.name);
+            if (aIsAggregate !== bIsAggregate) return aIsAggregate ? 1 : -1;
+            return b.score - a.score;
+        })
         .slice(0, 10);
 
     return NextResponse.json(

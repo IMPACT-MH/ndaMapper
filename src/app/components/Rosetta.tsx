@@ -16,8 +16,6 @@ import { parseCSV } from "@/utils/csvUtils";
 import type { RosettaResult } from "@/app/api/v1/research/rosetta/route";
 
 interface RosettaProps {
-    databaseFilterEnabled: boolean;
-    setDatabaseFilterEnabled: (enabled: boolean) => void;
     databaseStructures: string[];
     loadingDatabaseStructures: boolean;
     databaseConnectionError: string | null;
@@ -103,18 +101,18 @@ function ResultCard({
                             {selected ? "●" : "○"}
                         </span>
                     )}
-                    {selectable ? (
-                        <span className="font-mono font-semibold text-blue-700 text-sm">
-                            {result.name}
-                        </span>
-                    ) : (
+                    {onElementSearch ? (
                         <button
                             className="font-mono font-semibold text-blue-700 hover:underline text-sm"
-                            onClick={() => onElementSearch?.(result.name)}
+                            onClick={(e) => { e.stopPropagation(); onElementSearch(result.name); }}
                             title="Search for this element in Data Elements tab"
                         >
                             {result.name}
                         </button>
+                    ) : (
+                        <span className="font-mono font-semibold text-blue-700 text-sm">
+                            {result.name}
+                        </span>
                     )}
                     {inDatabase && (
                         <span className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded border border-blue-200">
@@ -133,22 +131,22 @@ function ResultCard({
             {displayStructures.length > 0 && (
                 <div className="flex flex-wrap gap-1 mt-1.5">
                     {displayStructures.slice(0, 8).map((s) =>
-                        selectable ? (
+                        onStructureSearch ? (
+                            <button
+                                key={s}
+                                onClick={(e) => { e.stopPropagation(); onStructureSearch(s); }}
+                                className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded hover:bg-gray-200 hover:text-gray-800 font-mono"
+                                title="Open this structure in Data Structures tab"
+                            >
+                                {s}
+                            </button>
+                        ) : (
                             <span
                                 key={s}
                                 className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded font-mono"
                             >
                                 {s}
                             </span>
-                        ) : (
-                            <button
-                                key={s}
-                                onClick={() => onStructureSearch?.(s)}
-                                className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded hover:bg-gray-200 hover:text-gray-800 font-mono"
-                                title="Open this structure in Data Structures tab"
-                            >
-                                {s}
-                            </button>
                         ),
                     )}
                     {displayStructures.length > 8 && (
@@ -174,14 +172,13 @@ function ResultCard({
 }
 
 export default function Rosetta({
-    databaseFilterEnabled,
-    setDatabaseFilterEnabled,
     databaseStructures,
     loadingDatabaseStructures,
     databaseConnectionError,
     onElementSearch,
     onStructureSearch,
 }: RosettaProps) {
+    const [databaseFilterEnabled, setDatabaseFilterEnabled] = useState(false);
     const [mode, setMode] = useState<"search" | "csv">("search");
 
     // Single search state
@@ -220,11 +217,11 @@ export default function Rosetta({
         ];
     };
 
-    const runSearch = async (description: string) => {
+    const runSearch = async (description: string, exclude: string[] = []) => {
         const res = await fetch("/api/v1/research/rosetta", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ description, databaseStructures }),
+            body: JSON.stringify({ description, databaseStructures, exclude }),
         });
         if (!res.ok) throw new Error(`Search failed: ${res.status}`);
         return res.json() as Promise<{
@@ -358,8 +355,8 @@ export default function Rosetta({
                             searchTerms: data.searchTerms,
                         },
                     }));
-                    // Auto-expand if results found
-                    if (data.results.length > 0) {
+                    // Auto-expand only the first row
+                    if (i === 0 && data.results.length > 0) {
                         setExpandedRows((prev) => new Set([...prev, i]));
                     }
                 } catch {
@@ -382,6 +379,46 @@ export default function Rosetta({
         });
     };
 
+    const loadMoreRow = async (i: number) => {
+        const row = csvRows[i];
+        if (!row) return;
+        const existing = batchState[i]?.rawResults ?? [];
+        const exclude = existing.map((r) => r.name);
+        setBatchState((prev) => ({ ...prev, [i]: { ...prev[i], status: "loading" } }));
+        try {
+            const data = await runSearch(row, exclude);
+            setBatchState((prev) => ({
+                ...prev,
+                [i]: {
+                    status: "done",
+                    rawResults: [...existing, ...data.results],
+                    searchTerms: prev[i]?.searchTerms ?? data.searchTerms,
+                },
+            }));
+        } catch {
+            setBatchState((prev) => ({
+                ...prev,
+                [i]: { status: "done", rawResults: existing, searchTerms: prev[i]?.searchTerms },
+            }));
+        }
+    };
+
+    const reSearchRow = async (i: number) => {
+        const row = csvRows[i];
+        if (!row) return;
+        setBatchState((prev) => ({ ...prev, [i]: { status: "loading" } }));
+        setExpandedRows((prev) => new Set([...prev, i]));
+        try {
+            const data = await runSearch(row);
+            setBatchState((prev) => ({
+                ...prev,
+                [i]: { status: "done", rawResults: data.results, searchTerms: data.searchTerms },
+            }));
+        } catch {
+            setBatchState((prev) => ({ ...prev, [i]: { status: "error", error: "Search failed" } }));
+        }
+    };
+
     return (
         <div className="space-y-4">
             {/* Header + Database Filter Checkbox */}
@@ -391,7 +428,8 @@ export default function Rosetta({
                     Describe a data element in plain language and Rosetta will
                     find the best matching NDA data elements using AI.
                 </p>
-                <div className="-mb-8">
+                <br />
+                {/* <div className="-mb-8">
                     <label className="flex items-center space-x-3 cursor-pointer">
                         <input
                             type="checkbox"
@@ -428,7 +466,7 @@ export default function Rosetta({
                                 </p>
                             )}
                     </label>
-                </div>
+                </div> */}
             </div>
 
             {/* Mode toggle */}
@@ -671,9 +709,8 @@ export default function Rosetta({
                                 {csvRows.map((row, i) => {
                                     const state = batchState[i];
                                     const isExpanded = expandedRows.has(i);
-                                    const resultCount = filterResults(
-                                        state?.rawResults ?? [],
-                                    ).length;
+                                    const allResults = filterResults(state?.rawResults ?? []);
+                                    const resultCount = allResults.length;
 
                                     return (
                                         <div key={i} className="bg-white">
@@ -707,31 +744,36 @@ export default function Rosetta({
                                                 <span className="flex-1 text-sm text-gray-800 truncate">
                                                     {row}
                                                 </span>
-                                                {selections[i] ? (
-                                                    <span className="shrink-0 text-xs font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-700">
-                                                        ✓ {selections[i].name}
-                                                    </span>
-                                                ) : (
-                                                    state?.status ===
-                                                        "done" && (
-                                                        <span
-                                                            className={`shrink-0 text-xs font-medium px-2 py-0.5 rounded-full ${
-                                                                resultCount > 0
-                                                                    ? "bg-indigo-100 text-indigo-700"
-                                                                    : "bg-gray-100 text-gray-500"
-                                                            }`}
-                                                        >
-                                                            {resultCount} match
-                                                            {resultCount !== 1
-                                                                ? "es"
-                                                                : ""}
+                                                {state?.status === "done" && (
+                                                    <span className="shrink-0 flex items-center gap-1.5">
+                                                        {selections[i] && (
+                                                            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-700">
+                                                                ✓ {selections[i].name}
+                                                            </span>
+                                                        )}
+                                                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${resultCount > 0 ? "bg-indigo-100 text-indigo-700" : "bg-gray-100 text-gray-500"}`}>
+                                                            {resultCount} match{resultCount !== 1 ? "es" : ""}
                                                         </span>
-                                                    )
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                void loadMoreRow(i);
+                                                                setExpandedRows((prev) => new Set([...prev, i]));
+                                                            }}
+                                                            className="text-xs text-indigo-500 hover:text-indigo-700"
+                                                        >
+                                                            search more
+                                                        </button>
+                                                    </span>
                                                 )}
                                                 {state?.status === "error" && (
-                                                    <span className="shrink-0 text-xs text-red-500">
-                                                        Error
-                                                    </span>
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); void reSearchRow(i); }}
+                                                        className="shrink-0 text-xs text-red-500 hover:text-indigo-600 flex items-center gap-1"
+                                                    >
+                                                        <Search className="w-3 h-3" />
+                                                        Retry
+                                                    </button>
                                                 )}
                                             </button>
 
@@ -761,56 +803,63 @@ export default function Rosetta({
                                                                     )}
                                                                 </div>
                                                             )}
-                                                        {filterResults(
-                                                            state.rawResults ??
-                                                                [],
-                                                        ).length === 0 ? (
+                                                        {allResults.length === 0 ? (
                                                             <p className="text-sm text-gray-400 italic pt-3">
-                                                                No matching
-                                                                elements found.
-                                                                Try rephrasing.
+                                                                No matching elements found. Try rephrasing.
                                                             </p>
-                                                        ) : (
-                                                            <div className="space-y-2 pt-2">
-                                                                {filterResults(
-                                                                    state.rawResults ??
-                                                                        [],
-                                                                ).map((r) => (
-                                                                    <ResultCard
-                                                                        key={
-                                                                            r.name
-                                                                        }
-                                                                        result={
-                                                                            r
-                                                                        }
-                                                                        databaseFilterEnabled={
-                                                                            databaseFilterEnabled
-                                                                        }
-                                                                        databaseStructures={
-                                                                            databaseStructures
-                                                                        }
-                                                                        selectable
-                                                                        selected={
-                                                                            selections[
-                                                                                i
-                                                                            ]
-                                                                                ?.name ===
-                                                                            r.name
-                                                                        }
-                                                                        onSelect={() =>
-                                                                            setSelections(
-                                                                                (
-                                                                                    prev,
-                                                                                ) => ({
-                                                                                    ...prev,
-                                                                                    [i]: r,
-                                                                                }),
-                                                                            )
-                                                                        }
-                                                                    />
-                                                                ))}
-                                                            </div>
-                                                        )}
+                                                        ) : (() => {
+                                                            // Group by primary structure
+                                                            const groups: { structure: string; results: RosettaResult[] }[] = [];
+                                                            const groupIndex = new Map<string, number>();
+                                                            for (const r of allResults) {
+                                                                const key = r.dataStructures[0] ?? "Other";
+                                                                if (!groupIndex.has(key)) {
+                                                                    groupIndex.set(key, groups.length);
+                                                                    groups.push({ structure: key, results: [] });
+                                                                }
+                                                                groups[groupIndex.get(key)!].results.push(r);
+                                                            }
+                                                            return (
+                                                                <div className="space-y-3 pt-2">
+                                                                    {groups.map(({ structure, results: groupResults }) => (
+                                                                        <div key={structure}>
+                                                                            <div className="flex items-center gap-2 mb-1.5">
+                                                                                <span className="text-xs font-mono font-medium px-2 py-0.5 bg-slate-100 text-slate-600 rounded border border-slate-200">
+                                                                                    {structure}
+                                                                                </span>
+                                                                                <span className="text-xs text-gray-400">{groupResults.length} element{groupResults.length !== 1 ? "s" : ""}</span>
+                                                                            </div>
+                                                                            <div className="space-y-2">
+                                                                                {groupResults.map((r) => (
+                                                                                    <ResultCard
+                                                                                        key={r.name}
+                                                                                        result={r}
+                                                                                        databaseFilterEnabled={databaseFilterEnabled}
+                                                                                        databaseStructures={databaseStructures}
+                                                                                        onElementSearch={onElementSearch}
+                                                                                        onStructureSearch={onStructureSearch}
+                                                                                        selectable
+                                                                                        selected={selections[i]?.name === r.name}
+                                                                                        onSelect={() => {
+                                                                                            setSelections((prev) => ({ ...prev, [i]: r }));
+                                                                                            setExpandedRows((prev) => {
+                                                                                                const next = new Set(prev);
+                                                                                                next.delete(i);
+                                                                                                const nextIdx = i + 1;
+                                                                                                if (nextIdx < csvRows.length && batchState[nextIdx]?.status === "done") {
+                                                                                                    next.add(nextIdx);
+                                                                                                }
+                                                                                                return next;
+                                                                                            });
+                                                                                        }}
+                                                                                    />
+                                                                                ))}
+                                                                            </div>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            );
+                                                        })()}
                                                     </div>
                                                 )}
                                         </div>
