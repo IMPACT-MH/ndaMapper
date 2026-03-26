@@ -169,6 +169,14 @@ const HomePage = () => {
         databaseStructures.length,
     ]);
 
+    // Clear element search term when leaving the Element tab so the next
+    // navigation always changes initialSearchTerm (mirrors DataStructureSearch behavior)
+    useEffect(() => {
+        if (activeTab !== Tabs.ELEMENT) {
+            setElementSearchTerm("");
+        }
+    }, [activeTab]);
+
     // Optimized: Fetch database data once and use for both elements and structures
     const fetchDatabaseData = async () => {
         setLoadingDatabaseElements(true);
@@ -1378,6 +1386,7 @@ const HomePage = () => {
                     loadingDatabaseStructures={loadingDatabaseStructures}
                     databaseConnectionError={databaseConnectionError}
                     onElementSearch={(elementName) => {
+                        setDatabaseFilterEnabled(false);
                         setElementSearchTerm(elementName);
                         setActiveTab(Tabs.ELEMENT);
                     }}

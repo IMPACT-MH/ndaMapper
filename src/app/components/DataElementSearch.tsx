@@ -771,8 +771,10 @@ const DataElementSearch = ({
 
     // Search function that accepts a term directly (for recent searches)
     const handleSearchWithTerm = useCallback(
-        async (term: string) => {
+        async (term: string, forceExactMatch?: boolean) => {
             if (!term.trim()) return;
+
+            const useExactMatch = forceExactMatch ?? preferExactMatch;
 
             setLoading(true);
             setError(null);
@@ -782,7 +784,7 @@ const DataElementSearch = ({
 
             try {
                 if (databaseFilterEnabled && databaseElements.size > 0) {
-                    if (preferExactMatch) {
+                    if (useExactMatch) {
                         const exactDatabaseMatch = searchDatabaseElements(
                             term.trim(),
                             true
@@ -846,7 +848,7 @@ const DataElementSearch = ({
 
                 const searchQuery = term.trim();
 
-                if (preferExactMatch) {
+                if (useExactMatch) {
                     const directElement = await tryDirectElementFetch(searchQuery);
                     if (directElement) {
                         const inDb = isElementInDatabase(directElement.name);
@@ -1170,27 +1172,16 @@ const DataElementSearch = ({
 
     // Handle initial search term from parent (only once when it changes)
     useEffect(() => {
-        if (
-            initialSearchTerm &&
-            initialSearchTerm !== searchTerm &&
-            !hasProcessedInitialSearch &&
-            isVisible
-        ) {
+        if (initialSearchTerm && !hasProcessedInitialSearch && isVisible) {
             setSearchTerm(initialSearchTerm);
             setHasProcessedInitialSearch(true);
             setPreferExactMatch(true);
-            handleSearchWithTerm(initialSearchTerm);
+            handleSearchWithTerm(initialSearchTerm, true);
         } else if (!initialSearchTerm && hasProcessedInitialSearch) {
             setHasProcessedInitialSearch(false);
             setPreferExactMatch(false);
         }
-    }, [
-        initialSearchTerm,
-        searchTerm,
-        handleSearchWithTerm,
-        hasProcessedInitialSearch,
-        isVisible,
-    ]);
+    }, [initialSearchTerm, handleSearchWithTerm, hasProcessedInitialSearch, isVisible]);
 
     // Auto-search when preferExactMatch changes (if there's a search term and results)
     useEffect(() => {
@@ -1199,7 +1190,7 @@ const DataElementSearch = ({
             return;
         }
 
-        if (searchTerm.trim() && (element || matchingElements.length > 0 || isPartialSearch)) {
+        if (isVisible && searchTerm.trim() && (element || matchingElements.length > 0 || isPartialSearch)) {
             handleSearch();
         }
     }, [preferExactMatch]); // eslint-disable-line react-hooks/exhaustive-deps

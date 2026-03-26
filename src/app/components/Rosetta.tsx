@@ -705,15 +705,32 @@ export default function Rosetta({
                             </div>
 
                             {/* Accordion rows */}
-                            <div className="divide-y divide-gray-100 border border-gray-200 rounded-lg overflow-hidden">
-                                {csvRows.map((row, i) => {
-                                    const state = batchState[i];
-                                    const isExpanded = expandedRows.has(i);
-                                    const allResults = filterResults(state?.rawResults ?? []);
-                                    const resultCount = allResults.length;
-
-                                    return (
-                                        <div key={i} className="bg-white">
+                            <div className="border border-gray-200 rounded-lg overflow-hidden">
+                                {(() => {
+                                    const nodes: React.ReactNode[] = [];
+                                    let lastStructure: string | undefined;
+                                    csvRows.forEach((row, i) => {
+                                        const sel = selections[i];
+                                        const structure = sel?.dataStructures[0];
+                                        // Insert a structure header when a new structure group starts
+                                        if (sel && structure !== lastStructure) {
+                                            const countInGroup = csvRows.filter((_, j) =>
+                                                selections[j]?.dataStructures[0] === structure
+                                            ).length;
+                                            nodes.push(
+                                                <div key={`struct-header-${structure ?? "other"}-${i}`} className="px-4 py-2 bg-slate-50 border-t border-slate-200 flex items-center gap-2">
+                                                    <span className="text-xs font-mono font-medium px-2 py-0.5 bg-white text-slate-600 rounded border border-slate-200">{structure ?? "Other"}</span>
+                                                    <span className="text-xs text-gray-400">{countInGroup} element{countInGroup !== 1 ? "s" : ""}</span>
+                                                </div>
+                                            );
+                                        }
+                                        lastStructure = sel ? structure : undefined;
+                                        const state = batchState[i];
+                                        const isExpanded = expandedRows.has(i);
+                                        const allResults = filterResults(state?.rawResults ?? []);
+                                        const resultCount = allResults.length;
+                                        const rowNode = (
+                                        <div key={i} className="bg-white border-t border-gray-100 first:border-t-0">
                                             <button
                                                 className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors"
                                                 onClick={() => {
@@ -863,9 +880,13 @@ export default function Rosetta({
                                                     </div>
                                                 )}
                                         </div>
-                                    );
-                                })}
+                                        );
+                                        nodes.push(rowNode);
+                                    });
+                                    return nodes;
+                                })()}
                             </div>
+
 
                             {/* Export toolbar */}
                             {!batchProcessing &&
