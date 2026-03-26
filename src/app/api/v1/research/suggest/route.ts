@@ -173,25 +173,37 @@ ${JSON.stringify(structureSummary, null, 2)}
 ## Your Task
 Given the researcher's question, identify the ${MAX_SUGGESTIONS} most relevant instruments from the list above.
 
-Respond ONLY with valid JSON in this exact format:
-{
-  "suggestions": [
-    {
-      "shortName": "exact_shortName_from_list",
-      "title": "instrument title",
-      "relevanceReason": "2-3 sentence explanation of why this instrument is relevant",
-      "confidence": "high" | "medium" | "low",
-      "sites": ["site1", "site2"]
-    }
-  ],
-  "reasoning": "1-2 paragraph overview of your selection strategy and how these instruments work together"
-}
-
 Rules:
 - Only suggest shortNames that appear exactly in the instruments list above
 - confidence = "high" if directly measures the construct; "medium" if partially relevant; "low" if tangentially related
 - Include site information from the instruments list
 - Return at most ${MAX_SUGGESTIONS} suggestions`;
+
+  const suggestInstrumentsTool: Anthropic.Tool = {
+    name: "suggest_instruments",
+    description: "Suggest the most relevant instruments for the researcher's question",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        suggestions: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              shortName: { type: "string" },
+              title: { type: "string" },
+              relevanceReason: { type: "string" },
+              confidence: { type: "string", enum: ["high", "medium", "low"] },
+              sites: { type: "array", items: { type: "string" } },
+            },
+            required: ["shortName", "title", "relevanceReason", "confidence"],
+          },
+        },
+        reasoning: { type: "string" },
+      },
+      required: ["suggestions", "reasoning"],
+    },
+  };
 
   let suggestionsRaw: StructureSuggestion[] = [];
   let reasoning = "";
@@ -200,6 +212,8 @@ Rules:
     const message = await client.messages.create({
       model: "claude-sonnet-4-6",
       max_tokens: 2048,
+      tools: [suggestInstrumentsTool],
+      tool_choice: { type: "tool", name: "suggest_instruments" },
       system: systemPrompt,
       messages: [
         ...conversationHistory.map((m) => ({
@@ -210,13 +224,9 @@ Rules:
       ],
     });
 
-    const content = message.content[0];
-    if (content.type !== "text") throw new Error("Unexpected response type");
-
-    const raw = content.text.trim();
-    const jsonMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/) ?? [null, raw];
-    const jsonStr = jsonMatch[1] ?? raw;
-    const parsed = JSON.parse(jsonStr) as {
+    const toolBlock = message.content.find((b) => b.type === "tool_use");
+    if (!toolBlock || toolBlock.type !== "tool_use") throw new Error("Unexpected response type");
+    const parsed = toolBlock.input as {
       suggestions: StructureSuggestion[];
       reasoning: string;
     };

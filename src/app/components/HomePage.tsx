@@ -92,7 +92,17 @@ const HomePage = () => {
     >(null);
 
     // Error structures from IMPACT-MH (entries that failed NDA metadata fetch)
-    const [databaseErrorStructures, setDatabaseErrorStructures] = useState<Record<string, { shortName: string; title: string; status: string; dataStructureId: string }>>({});
+    const [databaseErrorStructures, setDatabaseErrorStructures] = useState<
+        Record<
+            string,
+            {
+                shortName: string;
+                title: string;
+                status: string;
+                dataStructureId: string;
+            }
+        >
+    >({});
 
     // Tags state for custom tag searches
     const [structureDataTypeTags, setStructureDataTypeTags] = useState<
@@ -211,12 +221,29 @@ const HomePage = () => {
                     setDatabaseStructures(structureNames);
 
                     // Extract error entries (structures that failed NDA metadata fetch)
-                    const errorMap: Record<string, { shortName: string; title: string; status: string; dataStructureId: string }> = {};
-                    Object.entries(data.dataStructures).forEach(([key, structure]) => {
-                        if (structure?.error) {
-                            errorMap[key.toLowerCase()] = { shortName: key, title: key, status: "Draft", dataStructureId: String(structure.dataStructureId ?? "") };
+                    const errorMap: Record<
+                        string,
+                        {
+                            shortName: string;
+                            title: string;
+                            status: string;
+                            dataStructureId: string;
                         }
-                    });
+                    > = {};
+                    Object.entries(data.dataStructures).forEach(
+                        ([key, structure]) => {
+                            if (structure?.error) {
+                                errorMap[key.toLowerCase()] = {
+                                    shortName: key,
+                                    title: key,
+                                    status: "Draft",
+                                    dataStructureId: String(
+                                        structure.dataStructureId ?? "",
+                                    ),
+                                };
+                            }
+                        },
+                    );
                     setDatabaseErrorStructures(errorMap);
 
                     // Extract all unique sites from submittedByProjects
@@ -866,12 +893,25 @@ const HomePage = () => {
                 });
 
                 // Inject error structures missing from NDA results (plain text search only)
-                if (!isCategory && !isDataType && Object.keys(databaseErrorStructures).length > 0) {
-                    const filteredLower = new Set(filteredData.map(s => s.shortName.toLowerCase()));
-                    const injected = Object.values(databaseErrorStructures).filter(s => {
+                if (
+                    !isCategory &&
+                    !isDataType &&
+                    Object.keys(databaseErrorStructures).length > 0
+                ) {
+                    const filteredLower = new Set(
+                        filteredData.map((s) => s.shortName.toLowerCase()),
+                    );
+                    const injected = Object.values(
+                        databaseErrorStructures,
+                    ).filter((s) => {
                         const nameLower = s.shortName.toLowerCase();
-                        return !filteredLower.has(nameLower) &&
-                            (nameLower.includes(searchLower) || nameLower.replace(/[_-]/g, "").includes(normalizedSearch));
+                        return (
+                            !filteredLower.has(nameLower) &&
+                            (nameLower.includes(searchLower) ||
+                                nameLower
+                                    .replace(/[_-]/g, "")
+                                    .includes(normalizedSearch))
+                        );
                     });
                     if (injected.length > 0) {
                         filteredData.push(...injected);
@@ -1068,7 +1108,13 @@ const HomePage = () => {
         } finally {
             setLoading(false);
         }
-    }, [databaseFilterEnabled, databaseStructures, databaseErrorStructures, searchTerm, apiBaseUrl]);
+    }, [
+        databaseFilterEnabled,
+        databaseStructures,
+        databaseErrorStructures,
+        searchTerm,
+        apiBaseUrl,
+    ]);
 
     useEffect(() => {
         if (searchTerm) {
@@ -1206,7 +1252,9 @@ const HomePage = () => {
                                 >
                                     Data Mapping
                                 </button>
-                                {/* <div className="text-gray-400 text-sm pb-4 mx-2">|</div>
+                                {/* <div className="text-gray-400 text-sm pb-4 mx-2">
+                                    |
+                                </div> */}
                                 <button
                                     onClick={() => setActiveTab(Tabs.RESEARCH)}
                                     className={`whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm ${
@@ -1216,7 +1264,7 @@ const HomePage = () => {
                                     }`}
                                 >
                                     Research Assistant
-                                </button> */}
+                                </button>
                             </div>
 
                             {/* NDA Logo */}
