@@ -24,6 +24,7 @@ import type {
     HarmonizationResult,
     HarmonizeResponse,
     ConstructGroup,
+    ElementHarmonizeResponse,
 } from "@/types";
 
 // ---------------------------------------------------------------------------
@@ -37,6 +38,7 @@ type Phase =
     | "generating"
     | "analyzing"
     | "harmonizing"
+    | "element-harmonizing"
     | "complete"
     | "error";
 
@@ -52,7 +54,8 @@ type ChatMsg =
     | { id: string; type: "mock-ready"; datasets: MockDataset[] }
     | { id: string; type: "analysis"; text: string; charts: ChartConfig[] }
     | { id: string; type: "hint"; text: string }
-    | { id: string; type: "harmonize"; result: HarmonizationResult };
+    | { id: string; type: "harmonize"; result: HarmonizationResult }
+    | { id: string; type: "element-harmonize"; result: ElementHarmonizeResponse };
 
 interface MergedDataset {
     id: string;
@@ -576,6 +579,7 @@ interface SuggestionsMessageProps {
     isGenerating: boolean;
     onLoadMore: () => void;
     isLoadingMore: boolean;
+    onFindElements: () => void;
     confidenceColor: Record<string, string>;
 }
 
@@ -589,6 +593,7 @@ function SuggestionsMessage({
     isGenerating,
     onLoadMore,
     isLoadingMore,
+    onFindElements,
     confidenceColor,
 }: SuggestionsMessageProps) {
     return (
@@ -706,6 +711,13 @@ function SuggestionsMessage({
                         {selectedShortNames.size > 0
                             ? ` (${selectedShortNames.size} instrument${selectedShortNames.size > 1 ? "s" : ""})`
                             : ""}
+                    </button>
+                    <button
+                        onClick={onFindElements}
+                        disabled={isGenerating}
+                        className="px-4 py-2 text-sm border border-indigo-300 text-indigo-700 rounded-lg hover:bg-indigo-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                        Find Element Relations
                     </button>
                     <button
                         onClick={onLoadMore}
@@ -930,6 +942,7 @@ interface MockReadyMessageProps {
     onRemoveMerged: (id: string) => void;
     onRemoveDataset?: (shortName: string) => void;
     onHarmonize?: () => void;
+    onFindSharedElements?: () => void;
 }
 
 function MockReadyMessage({
@@ -941,6 +954,7 @@ function MockReadyMessage({
     onRemoveMerged,
     onRemoveDataset,
     onHarmonize,
+    onFindSharedElements,
 }: MockReadyMessageProps) {
     const [expanded, setExpanded] = useState(false);
     const [dragging, setDragging] = useState<string | null>(null);
@@ -966,6 +980,14 @@ function MockReadyMessage({
                     </span>
                 </button>
                 <div className="flex items-center gap-2">
+                    {onFindSharedElements && (
+                        <button
+                            onClick={(e) => { e.stopPropagation(); onFindSharedElements(); }}
+                            className="flex items-center gap-1.5 px-2.5 py-1 text-xs border border-indigo-300 text-indigo-700 rounded hover:bg-indigo-50 transition-colors whitespace-nowrap"
+                        >
+                            Find Shared Elements
+                        </button>
+                    )}
                     {onHarmonize && datasets.length > 1 && (
                         <button
                             onClick={(e) => { e.stopPropagation(); onHarmonize(); }}
@@ -1222,6 +1244,7 @@ function LoadingBubble({
                     : "Analyzing your research question…")}
             {phase === "generating" && "Generating synthetic dataset…"}
             {phase === "harmonizing" && "Building element crosswalk…"}
+            {phase === "element-harmonizing" && "Searching NDA elements for harmonization…"}
         </div>
     );
 }
@@ -1382,6 +1405,152 @@ function HarmonizeMessage({ result }: { result: HarmonizationResult }) {
             </div>
         </div>
     );
+}
+
+// ---------------------------------------------------------------------------
+// ElementHarmonizeMessage
+// ---------------------------------------------------------------------------
+
+function ElementHarmonizeMessage({ result }: { result: ElementHarmonizeResponse }) {
+    const structs = result.structures;
+
+    // Group constructs by domain (same pattern as HarmonizeMessage)
+    const domainOrder: string[] = [];
+    const byDomain = new Map<string, ConstructGroup[]>();
+    for (const c of result.constructs) {
+        if (!byDomain.has(c.domain)) { byDomain.set(c.domain, []); domainOrder.push(c.domain); }
+        byDomain.get(c.domain)!.push(c);
+    }
+
+    const downloadCSV = (filename: string, csvContent: string) => {
+        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url; a.download = filename; a.click();
+        URL.revokeObjectURL(url);
+    };
+
+    const handleMatrixCSV = () => {
+        const headers = ["construct", "domain", ...structs.map((s) => s.shortName)];
+        const rows = result.constructs.map((c) => {
+            const cells = [c.constructName, c.domain, ...structs.map((s) => {
+                const m = c.mappings.find((x) => x.shortName === s.shortName);
+                return m ? `${m.elementName} (${m.mappingConfidence})` : "";
+            })];
+            return cells.map((v) => (String(v).includes(",") ? `"${v}"` : v)).join(",");
+        });
+        downloadCSV("element_relations.csv", [headers.join(","), ...rows].join("\n"));
+    };
+
+    const nonLinkageCount = result.constructs.filter((c) => c.domain !== "linkage").length;
+
+    return (
+        <div className="border border-indigo-200 rounded-lg overflow-hidden">
+            <div className="bg-indigo-50 px-4 py-3 flex items-start justify-between gap-3">
+                <div>
+                    <p className="text-sm font-semibold text-indigo-900">
+                        Element Relations — {nonLinkageCount} construct{nonLinkageCount !== 1 ? "s" : ""} across {structs.length} instrument{structs.length !== 1 ? "s" : ""}
+                    </p>
+                    <p className="text-xs text-indigo-700 mt-0.5">{result.summary}</p>
+                </div>
+                <button
+                    onClick={handleMatrixCSV}
+                    className="px-2.5 py-1 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors whitespace-nowrap shrink-0"
+                >
+                    Matrix CSV
+                </button>
+            </div>
+
+            {result.constructs.length === 0 ? (
+                <p className="px-4 py-3 text-sm text-gray-500">{result.summary || "No shared elements found. Try asking about specific instruments first."}</p>
+            ) : (
+                <>
+                    <div className="overflow-x-auto">
+                        <table className="min-w-full text-xs border-collapse">
+                            <thead>
+                                <tr className="bg-gray-50">
+                                    <th className="px-3 py-2 text-left text-gray-600 font-medium border-b border-gray-200 w-44">Construct</th>
+                                    {structs.map((s) => (
+                                        <th key={s.shortName} className="px-3 py-2 text-left border-b border-gray-200 whitespace-nowrap">
+                                            <div className="font-mono text-indigo-700 font-semibold">{s.shortName}</div>
+                                            <div className="flex flex-wrap gap-0.5 mt-1">
+                                                {s.sites.slice(0, 3).map((site) => (
+                                                    <span key={site} className="text-xs bg-emerald-50 text-emerald-700 px-1 py-0.5 rounded border border-emerald-200">
+                                                        {site}
+                                                    </span>
+                                                ))}
+                                                {s.sites.length > 3 && (
+                                                    <span className="text-xs text-gray-400">+{s.sites.length - 3}</span>
+                                                )}
+                                            </div>
+                                        </th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {domainOrder.map((domain) => (
+                                    <React.Fragment key={domain}>
+                                        <tr className="bg-gray-100">
+                                            <td colSpan={structs.length + 1}
+                                                className="px-3 py-1 text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-200">
+                                                {domain}
+                                            </td>
+                                        </tr>
+                                        {(byDomain.get(domain) ?? []).map((construct) => (
+                                            <tr key={construct.constructName} className="border-b border-gray-100 hover:bg-gray-50">
+                                                <td className="px-3 py-2 text-gray-800 font-medium whitespace-nowrap">{construct.constructName}</td>
+                                                {structs.map((s) => {
+                                                    const m = construct.mappings.find((x) => x.shortName === s.shortName);
+                                                    if (!m) return <td key={s.shortName} className="px-3 py-2 text-gray-300 text-center">—</td>;
+                                                    const conf = CONF_COLORS[m.mappingConfidence] ?? CONF_COLORS.proxy;
+                                                    return (
+                                                        <td key={s.shortName} className="px-3 py-2" title={m.description ?? ""}>
+                                                            <span className="flex items-center gap-1.5">
+                                                                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${conf.dot}`} title={m.mappingConfidence} />
+                                                                <code className={`font-mono ${conf.text}`}>{m.elementName}</code>
+                                                            </span>
+                                                        </td>
+                                                    );
+                                                })}
+                                            </tr>
+                                        ))}
+                                    </React.Fragment>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div className="px-4 py-2 bg-gray-50 border-t border-gray-100 flex items-center gap-4 flex-wrap">
+                        <div className="flex items-center gap-3 text-xs text-gray-500">
+                            {(["direct", "partial", "proxy"] as const).map((c) => (
+                                <span key={c} className="flex items-center gap-1">
+                                    <span className={`w-2 h-2 rounded-full ${CONF_COLORS[c].dot}`} />
+                                    {c}
+                                </span>
+                            ))}
+                        </div>
+                        {result.reasoning && (
+                            <details className="text-xs text-gray-500 ml-auto">
+                                <summary className="cursor-pointer hover:text-gray-700 list-none">▶ Reasoning</summary>
+                                <p className="mt-1 text-gray-600 leading-relaxed max-w-2xl">{result.reasoning}</p>
+                            </details>
+                        )}
+                    </div>
+                </>
+            )}
+        </div>
+    );
+}
+
+// Intent detection: "elements" if the question is about specific elements/harmonization,
+// "structures" if it's about finding instruments.
+function detectIntent(q: string): "structures" | "elements" {
+    const lower = q.toLowerCase();
+    const elementSignals = [
+        "element", "variable", "item", "field",
+        "harmoniz", "across site", "which site", "shared element",
+        "crosswalk", "overlap", "element relation",
+    ];
+    return elementSignals.some((s) => lower.includes(s)) ? "elements" : "structures";
 }
 
 // ---------------------------------------------------------------------------
@@ -1898,21 +2067,101 @@ export default function ResearchAssistant({
     }, [mockDatasets, chatMessages]);
 
     // ---------------------------------------------------------------------------
-    // Unified submit
+    // handleElementSearch
+    // ---------------------------------------------------------------------------
+
+    const handleElementSearch = useCallback(async (question: string) => {
+        setPhase("element-harmonizing");
+        setErrorMsg(null);
+        setChatMessages((prev) => [
+            ...prev,
+            { id: crypto.randomUUID(), type: "user" as const, text: question },
+        ]);
+
+        // Use the most recent suggestions from the conversation as instrument context
+        const latestSuggestions = [...chatMessages]
+            .reverse()
+            .find((m) => m.type === "suggestions");
+
+        let suggestions = latestSuggestions?.type === "suggestions"
+            ? latestSuggestions.suggestions.map((s) => ({
+                shortName: s.shortName,
+                title: s.title,
+                sites: s.sites ?? [],
+            }))
+            : [];
+
+        // No prior instrument context — auto-discover relevant instruments first,
+        // show them in the chat, then run element crosswalk on the multi-site ones.
+        if (suggestions.length === 0) {
+            try {
+                const suggestRes = await fetch("/api/v1/research/suggest", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        question,
+                        databaseStructures,
+                        conversationHistory: [],
+                    }),
+                });
+                if (suggestRes.ok) {
+                    const suggestData = (await suggestRes.json()) as SuggestResponse;
+                    suggestions = suggestData.suggestions.map((s) => ({
+                        shortName: s.shortName,
+                        title: s.title,
+                        sites: s.sites ?? [],
+                    }));
+                    // Show the discovered instruments in chat so the user can see the context
+                    setChatMessages((prev) => [
+                        ...prev,
+                        {
+                            id: crypto.randomUUID(),
+                            type: "suggestions" as const,
+                            suggestions: suggestData.suggestions,
+                            reasoning: suggestData.reasoning,
+                            networkGraph: suggestData.networkGraph,
+                        },
+                    ]);
+                }
+            } catch {
+                // Proceed with empty suggestions; route will return a clear empty state
+            }
+        }
+
+        try {
+            const res = await fetch("/api/v1/research/element-harmonize", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ question, suggestions }),
+            });
+            if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
+            const data = (await res.json()) as ElementHarmonizeResponse;
+            setChatMessages((prev) => [
+                ...prev,
+                { id: crypto.randomUUID(), type: "element-harmonize" as const, result: data },
+            ]);
+            setPhase("complete");
+        } catch (err) {
+            setErrorMsg(err instanceof Error ? err.message : String(err));
+            setPhase("error");
+        }
+    }, [chatMessages, databaseStructures]);
+
+    // ---------------------------------------------------------------------------
+    // Unified submit — intent-based routing from any phase
     // ---------------------------------------------------------------------------
 
     const handleSubmit = () => {
         const text = inputText.trim();
         if (!text || isLoading) return;
         setInputText("");
-        const script = rScriptOpen ? rScript : undefined;
 
-        if (phase === "idle" || phase === "error") {
-            void handleSuggest(text, false);
-        } else if (phase === "selecting") {
-            void handleSuggest(text, true);
-        } else if (phase === "complete") {
-            void handleAnalyze(text, script);
+        if (detectIntent(text) === "elements") {
+            void handleElementSearch(text);
+        } else {
+            // Structure question: refine if already in conversation, fresh otherwise
+            const hasHistory = phase === "selecting" || phase === "complete";
+            void handleSuggest(text, hasHistory);
         }
     };
 
@@ -1938,7 +2187,8 @@ export default function ResearchAssistant({
         phase === "suggesting" ||
         phase === "generating" ||
         phase === "analyzing" ||
-        phase === "harmonizing";
+        phase === "harmonizing" ||
+        phase === "element-harmonizing";
 
     const latestSuggestionsIdx = chatMessages.reduce(
         (acc, m, i) => (m.type === "suggestions" ? i : acc),
@@ -1949,24 +2199,11 @@ export default function ResearchAssistant({
 
     const inputPlaceholder = isLoading
         ? "Please wait…"
-        : phase === "idle" || phase === "error"
-          ? "Describe your research question…"
-          : phase === "selecting"
-            ? "Refine the suggestions, or select instruments and click Generate…"
-            : phase === "complete"
-              ? hasAnalysis
-                  ? "Ask a follow-up question…"
-                  : "Ask Claude to analyze the mock data…"
-              : "Describe your research question…";
+        : "Ask about instruments, elements, or harmonization…";
 
-    const contextLine =
-        phase === "idle" || phase === "error" || phase === "suggesting"
-            ? `Searching ${databaseFilterEnabled ? databaseStructures.length + " IMPACT-MH" : "all NDA"} instruments · Enter to submit`
-            : phase === "selecting"
-              ? `${selectedShortNames.size} selected · Refine or generate mock data`
-              : phase === "complete" || phase === "analyzing"
-                ? "Enter to send · Paste an R/Python script above to include in analysis"
-                : "";
+    const contextLine = isLoading
+        ? ""
+        : `Searching ${databaseFilterEnabled ? databaseStructures.length + " IMPACT-MH" : "all NDA"} instruments · Enter to submit`;
 
     const showScriptPanel = phase === "complete" || phase === "analyzing";
 
@@ -2037,6 +2274,7 @@ export default function ResearchAssistant({
                                 isGenerating={phase === "generating"}
                                 onLoadMore={() => void handleLoadMore()}
                                 isLoadingMore={isLoadingMore}
+                                onFindElements={() => void handleElementSearch("Which elements can I harmonize across these instruments?")}
                                 confidenceColor={confidenceColor}
                             />
                         );
@@ -2095,6 +2333,9 @@ export default function ResearchAssistant({
                     }
                     if (msg.type === "harmonize") {
                         return <HarmonizeMessage key={msg.id} result={msg.result} />;
+                    }
+                    if (msg.type === "element-harmonize") {
+                        return <ElementHarmonizeMessage key={msg.id} result={msg.result} />;
                     }
                     return null;
                 })}

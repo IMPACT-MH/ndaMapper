@@ -314,3 +314,20 @@ export interface HarmonizeResponse {
   reasoning: string;
   harmonizedDataset: MockDataset;
 }
+
+// ---------------------------------------------------------------------------
+// Element-level harmonization
+// ---------------------------------------------------------------------------
+
+export interface ElementHarmonizeSite {
+  shortName: string;
+  title: string;
+  sites: string[];
+}
+
+export interface ElementHarmonizeResponse {
+  structures: ElementHarmonizeSite[];
+  constructs: ConstructGroup[];
+  summary: string;
+  reasoning: string;
+}
