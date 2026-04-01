@@ -895,7 +895,6 @@ const DataCategorySearch = ({
 
         setFilteredStructures(filtered);
     }, [
-        allStructures,
         augmentedStructures,
         searchTerm,
         selectedFilters,
@@ -903,7 +902,6 @@ const DataCategorySearch = ({
         structureDataTypeTags,
         databaseFilterEnabled,
         databaseStructures,
-        databaseSites,
         dataStructuresMap,
         isCategoryRemoved,
         isDataTypeRemoved,

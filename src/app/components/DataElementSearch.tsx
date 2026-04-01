@@ -1150,7 +1150,6 @@ const DataElementSearch = ({
             pushHistoryState,
             isElementInDatabase,
             searchDatabaseElementsWithTerm,
-            dataStructuresMap,
             getStructuresContainingElement,
             tryDirectElementFetch,
             getBoostedScore,
@@ -1226,7 +1225,7 @@ const DataElementSearch = ({
                 setTotalElementCount(0);
             }
         }
-    }, [searchTerm, initialSearchTerm]);
+    }, [searchTerm, initialSearchTerm, element, error, matchingElements]);
 
     const handleRecentSearch = async (term: string) => {
         setSearchTerm(term);
