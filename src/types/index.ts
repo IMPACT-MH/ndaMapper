@@ -282,6 +282,7 @@ export interface ElementMapping {
   shortName: string;
   elementName: string;
   description?: string;
+  valueRange?: string;
   mappingConfidence: "direct" | "partial" | "proxy";
 }
 

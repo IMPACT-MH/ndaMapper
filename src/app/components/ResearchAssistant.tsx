@@ -71,6 +71,8 @@ interface Props {
     databaseFilterEnabled: boolean;
     databaseConnectionError: string | null;
     isVisible: boolean;
+    onElementSearch?: (elementName: string) => void;
+    onStructureSearch?: (shortName: string) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -1411,7 +1413,11 @@ function HarmonizeMessage({ result }: { result: HarmonizationResult }) {
 // ElementHarmonizeMessage
 // ---------------------------------------------------------------------------
 
-function ElementHarmonizeMessage({ result }: { result: ElementHarmonizeResponse }) {
+function ElementHarmonizeMessage({ result, onElementSearch, onStructureSearch }: {
+    result: ElementHarmonizeResponse;
+    onElementSearch?: (elementName: string) => void;
+    onStructureSearch?: (shortName: string) => void;
+}) {
     const structs = result.structures;
 
     // Group constructs by domain (same pattern as HarmonizeMessage)
@@ -1472,7 +1478,13 @@ function ElementHarmonizeMessage({ result }: { result: ElementHarmonizeResponse 
                                     <th className="px-3 py-2 text-left text-gray-600 font-medium border-b border-gray-200 w-44">Construct</th>
                                     {structs.map((s) => (
                                         <th key={s.shortName} className="px-3 py-2 text-left border-b border-gray-200 whitespace-nowrap">
-                                            <div className="font-mono text-indigo-700 font-semibold">{s.shortName}</div>
+                                            <div
+                                                className={`font-mono text-indigo-700 font-semibold ${onStructureSearch ? "cursor-pointer hover:underline" : ""}`}
+                                                onClick={() => onStructureSearch?.(s.shortName)}
+                                                title={onStructureSearch ? `Open ${s.shortName} in Data Structures` : undefined}
+                                            >
+                                                {s.shortName}
+                                            </div>
                                             <div className="flex flex-wrap gap-0.5 mt-1">
                                                 {s.sites.slice(0, 3).map((site) => (
                                                     <span key={site} className="text-xs bg-emerald-50 text-emerald-700 px-1 py-0.5 rounded border border-emerald-200">
@@ -1503,11 +1515,20 @@ function ElementHarmonizeMessage({ result }: { result: ElementHarmonizeResponse 
                                                     const m = construct.mappings.find((x) => x.shortName === s.shortName);
                                                     if (!m) return <td key={s.shortName} className="px-3 py-2 text-gray-300 text-center">—</td>;
                                                     const conf = CONF_COLORS[m.mappingConfidence] ?? CONF_COLORS.proxy;
+                                                    const tooltip = [
+                                                        m.description,
+                                                        m.valueRange ? `Range: ${m.valueRange}` : "",
+                                                    ].filter(Boolean).join("\n") || undefined;
                                                     return (
-                                                        <td key={s.shortName} className="px-3 py-2" title={m.description ?? ""}>
+                                                        <td key={s.shortName} className="px-3 py-2" title={tooltip}>
                                                             <span className="flex items-center gap-1.5">
                                                                 <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${conf.dot}`} title={m.mappingConfidence} />
-                                                                <code className={`font-mono ${conf.text}`}>{m.elementName}</code>
+                                                                <code
+                                                                    className={`font-mono ${conf.text} ${onElementSearch ? "cursor-pointer hover:underline" : ""}`}
+                                                                    onClick={() => onElementSearch?.(m.elementName)}
+                                                                >
+                                                                    {m.elementName}
+                                                                </code>
                                                             </span>
                                                         </td>
                                                     );
@@ -1563,6 +1584,8 @@ export default function ResearchAssistant({
     databaseFilterEnabled,
     databaseConnectionError,
     isVisible: _isVisible,
+    onElementSearch,
+    onStructureSearch,
 }: Props) {
     void _databaseSites;
     void _isVisible;
@@ -2335,7 +2358,7 @@ export default function ResearchAssistant({
                         return <HarmonizeMessage key={msg.id} result={msg.result} />;
                     }
                     if (msg.type === "element-harmonize") {
-                        return <ElementHarmonizeMessage key={msg.id} result={msg.result} />;
+                        return <ElementHarmonizeMessage key={msg.id} result={msg.result} onElementSearch={onElementSearch} onStructureSearch={onStructureSearch} />;
                     }
                     return null;
                 })}

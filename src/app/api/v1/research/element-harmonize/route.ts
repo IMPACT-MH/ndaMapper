@@ -282,6 +282,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         },
     };
 
+    // Build value range lookup keyed by "shortName::elementName"
+    const elementValueRangeMap = new Map<string, string>();
+    for (const s of structuresWithElements) {
+        for (const el of s.dataElements) {
+            if (el.valueRange) {
+                elementValueRangeMap.set(`${s.shortName}::${el.name}`, String(el.valueRange));
+            }
+        }
+    }
+
     const clusterSummary = multiInstrumentClusters.map((cluster, i) => ({
         clusterIndex: i,
         elements: cluster.map((m) => ({
@@ -350,6 +360,7 @@ ${JSON.stringify(clusterSummary, null, 2)}`,
                     description: clusterSummary[named.clusterIndex]?.elements
                         .find((e) => e.shortName === m.shortName && e.elementName === m.elementName)
                         ?.description,
+                    valueRange: elementValueRangeMap.get(`${m.shortName}::${m.elementName}`),
                     mappingConfidence: (["direct", "partial", "proxy"].includes(m.mappingConfidence)
                         ? m.mappingConfidence
                         : confidenceFromScore(
@@ -378,6 +389,7 @@ ${JSON.stringify(clusterSummary, null, 2)}`,
                 shortName: m.shortName,
                 elementName: m.elementName,
                 description: m.description,
+                valueRange: elementValueRangeMap.get(`${m.shortName}::${m.elementName}`),
                 mappingConfidence: confidenceFromScore(m.score),
             })),
         }));

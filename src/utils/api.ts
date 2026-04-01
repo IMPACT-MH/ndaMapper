@@ -166,14 +166,14 @@ export const deleteTag = async (
  */
 export const assignTag = async (
   tagId: string,
-  structureShortName: string,
+  dataStructureId: string | number,
   apiBaseUrl = "/api/v1"
 ): Promise<void> => {
   await apiCall(
     "/tags/assign",
     {
       method: "POST",
-      body: JSON.stringify({ tagId, dataStructureShortName: structureShortName }),
+      body: JSON.stringify({ tagId, DataStructureID: dataStructureId }),
     },
     apiBaseUrl
   );

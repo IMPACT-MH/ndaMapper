@@ -1451,6 +1451,12 @@ const HomePage = () => {
                     databaseFilterEnabled={databaseFilterEnabled}
                     databaseConnectionError={databaseConnectionError}
                     isVisible={activeTab === Tabs.RESEARCH}
+                    onElementSearch={(elementName) => {
+                        setDatabaseFilterEnabled(false);
+                        setElementSearchTerm(elementName);
+                        setActiveTab(Tabs.ELEMENT);
+                    }}
+                    onStructureSearch={handleElementDetailStructureSelect}
                 />
             </div>
 

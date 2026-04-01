@@ -249,14 +249,16 @@ const AuditTrail = ({
       };
 
       finalLogs.sort((a, b) => {
-        const timeA = new Date(a.timestamp).getTime();
-        const timeB = new Date(b.timestamp).getTime();
+        // Round to the nearest second so create+assign within the same second
+        // fall through to the action-priority tie-breaker.
+        const timeA = Math.floor(new Date(a.timestamp).getTime() / 1000);
+        const timeB = Math.floor(new Date(b.timestamp).getTime() / 1000);
 
         if (timeB !== timeA) return timeB - timeA;
 
         const priorityA = actionPriority[a.action] ?? 99;
         const priorityB = actionPriority[b.action] ?? 99;
-        return priorityA - priorityB;
+        return priorityB - priorityA;
       });
 
       setLogs(finalLogs.slice(0, 100));

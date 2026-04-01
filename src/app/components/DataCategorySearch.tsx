@@ -1237,13 +1237,8 @@ const DataCategorySearch = ({
 
                                 if (createResponse.ok) {
                                     const newTag = await createResponse.json();
-                                    // Assign tag to the structure
-                                    const existingStructure =
-                                        dataStructuresMap[structureShortName];
-                                    const dataStructureId =
-                                        existingStructure?.dataStructureId ||
-                                        existingStructure?.id ||
-                                        existingStructure?.DataStructureID;
+                                    const existingStructure = dataStructuresMap[structureShortName];
+                                    const dataStructureId = existingStructure?.dataStructureId || existingStructure?.id || existingStructure?.DataStructureID;
                                     await apiAssignTag(
                                         newTag.id,
                                         dataStructureId,
@@ -1407,13 +1402,8 @@ const DataCategorySearch = ({
 
                                 if (createResponse.ok) {
                                     const newTag = await createResponse.json();
-                                    // Assign tag to the structure
-                                    const existingStructure =
-                                        dataStructuresMap[structureShortName];
-                                    const dataStructureId =
-                                        existingStructure?.dataStructureId ||
-                                        existingStructure?.id ||
-                                        existingStructure?.DataStructureID;
+                                    const existingStructure = dataStructuresMap[structureShortName];
+                                    const dataStructureId = existingStructure?.dataStructureId || existingStructure?.id || existingStructure?.DataStructureID;
                                     await apiAssignTag(
                                         newTag.id,
                                         dataStructureId,
