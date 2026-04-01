@@ -104,7 +104,10 @@ function ResultCard({
                     {onElementSearch ? (
                         <button
                             className="font-mono font-semibold text-blue-700 hover:underline text-sm"
-                            onClick={(e) => { e.stopPropagation(); onElementSearch(result.name); }}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onElementSearch(result.name);
+                            }}
                             title="Search for this element in Data Elements tab"
                         >
                             {result.name}
@@ -134,7 +137,10 @@ function ResultCard({
                         onStructureSearch ? (
                             <button
                                 key={s}
-                                onClick={(e) => { e.stopPropagation(); onStructureSearch(s); }}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onStructureSearch(s);
+                                }}
                                 className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded hover:bg-gray-200 hover:text-gray-800 font-mono"
                                 title="Open this structure in Data Structures tab"
                             >
@@ -384,7 +390,10 @@ export default function Rosetta({
         if (!row) return;
         const existing = batchState[i]?.rawResults ?? [];
         const exclude = existing.map((r) => r.name);
-        setBatchState((prev) => ({ ...prev, [i]: { ...prev[i], status: "loading" } }));
+        setBatchState((prev) => ({
+            ...prev,
+            [i]: { ...prev[i], status: "loading" },
+        }));
         try {
             const data = await runSearch(row, exclude);
             setBatchState((prev) => ({
@@ -398,7 +407,11 @@ export default function Rosetta({
         } catch {
             setBatchState((prev) => ({
                 ...prev,
-                [i]: { status: "done", rawResults: existing, searchTerms: prev[i]?.searchTerms },
+                [i]: {
+                    status: "done",
+                    rawResults: existing,
+                    searchTerms: prev[i]?.searchTerms,
+                },
             }));
         }
     };
@@ -412,10 +425,17 @@ export default function Rosetta({
             const data = await runSearch(row);
             setBatchState((prev) => ({
                 ...prev,
-                [i]: { status: "done", rawResults: data.results, searchTerms: data.searchTerms },
+                [i]: {
+                    status: "done",
+                    rawResults: data.results,
+                    searchTerms: data.searchTerms,
+                },
             }));
         } catch {
-            setBatchState((prev) => ({ ...prev, [i]: { status: "error", error: "Search failed" } }));
+            setBatchState((prev) => ({
+                ...prev,
+                [i]: { status: "error", error: "Search failed" },
+            }));
         }
     };
 
@@ -423,7 +443,12 @@ export default function Rosetta({
         <div className="space-y-4">
             {/* Header + Database Filter Checkbox */}
             <div className="mb-8">
-                <h1 className="text-3xl font-bold mb-4">Rosetta Agent <span className="ml-1 px-2 py-0.5 text-sm font-semibold bg-indigo-100 text-indigo-600 rounded-full align-middle">beta</span></h1>
+                <h1 className="text-3xl font-bold mb-4">
+                    Rosetta Mapper
+                    <span className="ml-1 px-2 py-0.5 text-sm font-semibold bg-indigo-100 text-indigo-600 rounded-full align-middle">
+                        beta
+                    </span>
+                </h1>
                 <p className="text-gray-600 -mb-7">
                     Describe a data element in plain language and Rosetta will
                     find the best matching NDA data elements using AI.
@@ -711,182 +736,351 @@ export default function Rosetta({
                                     let lastStructure: string | undefined;
                                     csvRows.forEach((row, i) => {
                                         const sel = selections[i];
-                                        const structure = sel?.dataStructures[0];
+                                        const structure =
+                                            sel?.dataStructures[0];
                                         // Insert a structure header when a new structure group starts
-                                        if (sel && structure !== lastStructure) {
-                                            const countInGroup = csvRows.filter((_, j) =>
-                                                selections[j]?.dataStructures[0] === structure
+                                        if (
+                                            sel &&
+                                            structure !== lastStructure
+                                        ) {
+                                            const countInGroup = csvRows.filter(
+                                                (_, j) =>
+                                                    selections[j]
+                                                        ?.dataStructures[0] ===
+                                                    structure,
                                             ).length;
                                             nodes.push(
-                                                <div key={`struct-header-${structure ?? "other"}-${i}`} className="px-4 py-2 bg-slate-50 border-t border-slate-200 flex items-center gap-2">
-                                                    <span className="text-xs font-mono font-medium px-2 py-0.5 bg-white text-slate-600 rounded border border-slate-200">{structure ?? "Other"}</span>
-                                                    <span className="text-xs text-gray-400">{countInGroup} element{countInGroup !== 1 ? "s" : ""}</span>
-                                                </div>
+                                                <div
+                                                    key={`struct-header-${structure ?? "other"}-${i}`}
+                                                    className="px-4 py-2 bg-slate-50 border-t border-slate-200 flex items-center gap-2"
+                                                >
+                                                    <span className="text-xs font-mono font-medium px-2 py-0.5 bg-white text-slate-600 rounded border border-slate-200">
+                                                        {structure ?? "Other"}
+                                                    </span>
+                                                    <span className="text-xs text-gray-400">
+                                                        {countInGroup} element
+                                                        {countInGroup !== 1
+                                                            ? "s"
+                                                            : ""}
+                                                    </span>
+                                                </div>,
                                             );
                                         }
-                                        lastStructure = sel ? structure : undefined;
+                                        lastStructure = sel
+                                            ? structure
+                                            : undefined;
                                         const state = batchState[i];
                                         const isExpanded = expandedRows.has(i);
-                                        const allResults = filterResults(state?.rawResults ?? []);
+                                        const allResults = filterResults(
+                                            state?.rawResults ?? [],
+                                        );
                                         const resultCount = allResults.length;
                                         const rowNode = (
-                                        <div key={i} className="bg-white border-t border-gray-100 first:border-t-0">
-                                            <button
-                                                className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors"
-                                                onClick={() => {
-                                                    if (
-                                                        state?.status === "done"
-                                                    )
-                                                        toggleRow(i);
-                                                }}
+                                            <div
+                                                key={i}
+                                                className="bg-white border-t border-gray-100 first:border-t-0"
                                             >
-                                                <span className="shrink-0 text-gray-400">
-                                                    {state?.status ===
-                                                    "loading" ? (
-                                                        <Loader2 className="w-4 h-4 animate-spin" />
-                                                    ) : state?.status ===
-                                                      "done" ? (
-                                                        isExpanded ? (
-                                                            <ChevronDown className="w-4 h-4 text-gray-500" />
-                                                        ) : (
-                                                            <ChevronRight className="w-4 h-4 text-gray-500" />
+                                                <button
+                                                    className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors"
+                                                    onClick={() => {
+                                                        if (
+                                                            state?.status ===
+                                                            "done"
                                                         )
-                                                    ) : state?.status ===
-                                                      "error" ? (
-                                                        <X className="w-4 h-4 text-red-400" />
-                                                    ) : (
-                                                        <ChevronRight className="w-4 h-4 text-gray-300" />
-                                                    )}
-                                                </span>
-                                                <span className="flex-1 text-sm text-gray-800 truncate">
-                                                    {row}
-                                                </span>
-                                                {state?.status === "done" && (
-                                                    <span className="shrink-0 flex items-center gap-1.5">
-                                                        {selections[i] && (
-                                                            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-700">
-                                                                ✓ {selections[i].name}
-                                                            </span>
+                                                            toggleRow(i);
+                                                    }}
+                                                >
+                                                    <span className="shrink-0 text-gray-400">
+                                                        {state?.status ===
+                                                        "loading" ? (
+                                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                                        ) : state?.status ===
+                                                          "done" ? (
+                                                            isExpanded ? (
+                                                                <ChevronDown className="w-4 h-4 text-gray-500" />
+                                                            ) : (
+                                                                <ChevronRight className="w-4 h-4 text-gray-500" />
+                                                            )
+                                                        ) : state?.status ===
+                                                          "error" ? (
+                                                            <X className="w-4 h-4 text-red-400" />
+                                                        ) : (
+                                                            <ChevronRight className="w-4 h-4 text-gray-300" />
                                                         )}
-                                                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${resultCount > 0 ? "bg-indigo-100 text-indigo-700" : "bg-gray-100 text-gray-500"}`}>
-                                                            {resultCount} match{resultCount !== 1 ? "es" : ""}
+                                                    </span>
+                                                    <span className="flex-1 text-sm text-gray-800 truncate">
+                                                        {row}
+                                                    </span>
+                                                    {state?.status ===
+                                                        "done" && (
+                                                        <span className="shrink-0 flex items-center gap-1.5">
+                                                            {selections[i] && (
+                                                                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-700">
+                                                                    ✓{" "}
+                                                                    {
+                                                                        selections[
+                                                                            i
+                                                                        ].name
+                                                                    }
+                                                                </span>
+                                                            )}
+                                                            <span
+                                                                className={`text-xs font-medium px-2 py-0.5 rounded-full ${resultCount > 0 ? "bg-indigo-100 text-indigo-700" : "bg-gray-100 text-gray-500"}`}
+                                                            >
+                                                                {resultCount}{" "}
+                                                                match
+                                                                {resultCount !==
+                                                                1
+                                                                    ? "es"
+                                                                    : ""}
+                                                            </span>
+                                                            <button
+                                                                onClick={(
+                                                                    e,
+                                                                ) => {
+                                                                    e.stopPropagation();
+                                                                    void loadMoreRow(
+                                                                        i,
+                                                                    );
+                                                                    setExpandedRows(
+                                                                        (
+                                                                            prev,
+                                                                        ) =>
+                                                                            new Set(
+                                                                                [
+                                                                                    ...prev,
+                                                                                    i,
+                                                                                ],
+                                                                            ),
+                                                                    );
+                                                                }}
+                                                                className="text-xs text-indigo-500 hover:text-indigo-700"
+                                                            >
+                                                                search more
+                                                            </button>
                                                         </span>
+                                                    )}
+                                                    {state?.status ===
+                                                        "error" && (
                                                         <button
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
-                                                                void loadMoreRow(i);
-                                                                setExpandedRows((prev) => new Set([...prev, i]));
+                                                                void reSearchRow(
+                                                                    i,
+                                                                );
                                                             }}
-                                                            className="text-xs text-indigo-500 hover:text-indigo-700"
+                                                            className="shrink-0 text-xs text-red-500 hover:text-indigo-600 flex items-center gap-1"
                                                         >
-                                                            search more
+                                                            <Search className="w-3 h-3" />
+                                                            Retry
                                                         </button>
-                                                    </span>
-                                                )}
-                                                {state?.status === "error" && (
-                                                    <button
-                                                        onClick={(e) => { e.stopPropagation(); void reSearchRow(i); }}
-                                                        className="shrink-0 text-xs text-red-500 hover:text-indigo-600 flex items-center gap-1"
-                                                    >
-                                                        <Search className="w-3 h-3" />
-                                                        Retry
-                                                    </button>
-                                                )}
-                                            </button>
+                                                    )}
+                                                </button>
 
-                                            {isExpanded &&
-                                                state?.status === "done" && (
-                                                    <div className="px-4 pb-4 space-y-2 bg-gray-50 border-t border-gray-100">
-                                                        {state.searchTerms &&
-                                                            state.searchTerms
-                                                                .length > 0 && (
-                                                                <div className="text-xs text-gray-400 flex flex-wrap gap-1 items-center pt-3">
-                                                                    <span className="font-medium">
-                                                                        Terms:
-                                                                    </span>
-                                                                    {state.searchTerms.map(
-                                                                        (t) => (
-                                                                            <span
-                                                                                key={
-                                                                                    t
-                                                                                }
-                                                                                className="px-1.5 py-0.5 bg-white rounded border font-mono"
-                                                                            >
-                                                                                {
-                                                                                    t
-                                                                                }
-                                                                            </span>
-                                                                        ),
-                                                                    )}
-                                                                </div>
-                                                            )}
-                                                        {allResults.length === 0 ? (
-                                                            <p className="text-sm text-gray-400 italic pt-3">
-                                                                No matching elements found. Try rephrasing.
-                                                            </p>
-                                                        ) : (() => {
-                                                            // Group by primary structure
-                                                            const groups: { structure: string; results: RosettaResult[] }[] = [];
-                                                            const groupIndex = new Map<string, number>();
-                                                            for (const r of allResults) {
-                                                                const key = r.dataStructures[0] ?? "Other";
-                                                                if (!groupIndex.has(key)) {
-                                                                    groupIndex.set(key, groups.length);
-                                                                    groups.push({ structure: key, results: [] });
-                                                                }
-                                                                groups[groupIndex.get(key)!].results.push(r);
-                                                            }
-                                                            return (
-                                                                <div className="space-y-3 pt-2">
-                                                                    {groups.map(({ structure, results: groupResults }) => (
-                                                                        <div key={structure}>
-                                                                            <div className="flex items-center gap-2 mb-1.5">
-                                                                                <span className="text-xs font-mono font-medium px-2 py-0.5 bg-slate-100 text-slate-600 rounded border border-slate-200">
-                                                                                    {structure}
+                                                {isExpanded &&
+                                                    state?.status ===
+                                                        "done" && (
+                                                        <div className="px-4 pb-4 space-y-2 bg-gray-50 border-t border-gray-100">
+                                                            {state.searchTerms &&
+                                                                state
+                                                                    .searchTerms
+                                                                    .length >
+                                                                    0 && (
+                                                                    <div className="text-xs text-gray-400 flex flex-wrap gap-1 items-center pt-3">
+                                                                        <span className="font-medium">
+                                                                            Terms:
+                                                                        </span>
+                                                                        {state.searchTerms.map(
+                                                                            (
+                                                                                t,
+                                                                            ) => (
+                                                                                <span
+                                                                                    key={
+                                                                                        t
+                                                                                    }
+                                                                                    className="px-1.5 py-0.5 bg-white rounded border font-mono"
+                                                                                >
+                                                                                    {
+                                                                                        t
+                                                                                    }
                                                                                 </span>
-                                                                                <span className="text-xs text-gray-400">{groupResults.length} element{groupResults.length !== 1 ? "s" : ""}</span>
-                                                                            </div>
-                                                                            <div className="space-y-2">
-                                                                                {groupResults.map((r) => (
-                                                                                    <ResultCard
-                                                                                        key={r.name}
-                                                                                        result={r}
-                                                                                        databaseFilterEnabled={databaseFilterEnabled}
-                                                                                        databaseStructures={databaseStructures}
-                                                                                        onElementSearch={onElementSearch}
-                                                                                        onStructureSearch={onStructureSearch}
-                                                                                        selectable
-                                                                                        selected={selections[i]?.name === r.name}
-                                                                                        onSelect={() => {
-                                                                                            setSelections((prev) => ({ ...prev, [i]: r }));
-                                                                                            setExpandedRows((prev) => {
-                                                                                                const next = new Set(prev);
-                                                                                                next.delete(i);
-                                                                                                const nextIdx = i + 1;
-                                                                                                if (nextIdx < csvRows.length && batchState[nextIdx]?.status === "done") {
-                                                                                                    next.add(nextIdx);
+                                                                            ),
+                                                                        )}
+                                                                    </div>
+                                                                )}
+                                                            {allResults.length ===
+                                                            0 ? (
+                                                                <p className="text-sm text-gray-400 italic pt-3">
+                                                                    No matching
+                                                                    elements
+                                                                    found. Try
+                                                                    rephrasing.
+                                                                </p>
+                                                            ) : (
+                                                                (() => {
+                                                                    // Group by primary structure
+                                                                    const groups: {
+                                                                        structure: string;
+                                                                        results: RosettaResult[];
+                                                                    }[] = [];
+                                                                    const groupIndex =
+                                                                        new Map<
+                                                                            string,
+                                                                            number
+                                                                        >();
+                                                                    for (const r of allResults) {
+                                                                        const key =
+                                                                            r
+                                                                                .dataStructures[0] ??
+                                                                            "Other";
+                                                                        if (
+                                                                            !groupIndex.has(
+                                                                                key,
+                                                                            )
+                                                                        ) {
+                                                                            groupIndex.set(
+                                                                                key,
+                                                                                groups.length,
+                                                                            );
+                                                                            groups.push(
+                                                                                {
+                                                                                    structure:
+                                                                                        key,
+                                                                                    results:
+                                                                                        [],
+                                                                                },
+                                                                            );
+                                                                        }
+                                                                        groups[
+                                                                            groupIndex.get(
+                                                                                key,
+                                                                            )!
+                                                                        ].results.push(
+                                                                            r,
+                                                                        );
+                                                                    }
+                                                                    return (
+                                                                        <div className="space-y-3 pt-2">
+                                                                            {groups.map(
+                                                                                ({
+                                                                                    structure,
+                                                                                    results:
+                                                                                        groupResults,
+                                                                                }) => (
+                                                                                    <div
+                                                                                        key={
+                                                                                            structure
+                                                                                        }
+                                                                                    >
+                                                                                        <div className="flex items-center gap-2 mb-1.5">
+                                                                                            <span className="text-xs font-mono font-medium px-2 py-0.5 bg-slate-100 text-slate-600 rounded border border-slate-200">
+                                                                                                {
+                                                                                                    structure
                                                                                                 }
-                                                                                                return next;
-                                                                                            });
-                                                                                        }}
-                                                                                    />
-                                                                                ))}
-                                                                            </div>
+                                                                                            </span>
+                                                                                            <span className="text-xs text-gray-400">
+                                                                                                {
+                                                                                                    groupResults.length
+                                                                                                }{" "}
+                                                                                                element
+                                                                                                {groupResults.length !==
+                                                                                                1
+                                                                                                    ? "s"
+                                                                                                    : ""}
+                                                                                            </span>
+                                                                                        </div>
+                                                                                        <div className="space-y-2">
+                                                                                            {groupResults.map(
+                                                                                                (
+                                                                                                    r,
+                                                                                                ) => (
+                                                                                                    <ResultCard
+                                                                                                        key={
+                                                                                                            r.name
+                                                                                                        }
+                                                                                                        result={
+                                                                                                            r
+                                                                                                        }
+                                                                                                        databaseFilterEnabled={
+                                                                                                            databaseFilterEnabled
+                                                                                                        }
+                                                                                                        databaseStructures={
+                                                                                                            databaseStructures
+                                                                                                        }
+                                                                                                        onElementSearch={
+                                                                                                            onElementSearch
+                                                                                                        }
+                                                                                                        onStructureSearch={
+                                                                                                            onStructureSearch
+                                                                                                        }
+                                                                                                        selectable
+                                                                                                        selected={
+                                                                                                            selections[
+                                                                                                                i
+                                                                                                            ]
+                                                                                                                ?.name ===
+                                                                                                            r.name
+                                                                                                        }
+                                                                                                        onSelect={() => {
+                                                                                                            setSelections(
+                                                                                                                (
+                                                                                                                    prev,
+                                                                                                                ) => ({
+                                                                                                                    ...prev,
+                                                                                                                    [i]: r,
+                                                                                                                }),
+                                                                                                            );
+                                                                                                            setExpandedRows(
+                                                                                                                (
+                                                                                                                    prev,
+                                                                                                                ) => {
+                                                                                                                    const next =
+                                                                                                                        new Set(
+                                                                                                                            prev,
+                                                                                                                        );
+                                                                                                                    next.delete(
+                                                                                                                        i,
+                                                                                                                    );
+                                                                                                                    const nextIdx =
+                                                                                                                        i +
+                                                                                                                        1;
+                                                                                                                    if (
+                                                                                                                        nextIdx <
+                                                                                                                            csvRows.length &&
+                                                                                                                        batchState[
+                                                                                                                            nextIdx
+                                                                                                                        ]
+                                                                                                                            ?.status ===
+                                                                                                                            "done"
+                                                                                                                    ) {
+                                                                                                                        next.add(
+                                                                                                                            nextIdx,
+                                                                                                                        );
+                                                                                                                    }
+                                                                                                                    return next;
+                                                                                                                },
+                                                                                                            );
+                                                                                                        }}
+                                                                                                    />
+                                                                                                ),
+                                                                                            )}
+                                                                                        </div>
+                                                                                    </div>
+                                                                                ),
+                                                                            )}
                                                                         </div>
-                                                                    ))}
-                                                                </div>
-                                                            );
-                                                        })()}
-                                                    </div>
-                                                )}
-                                        </div>
+                                                                    );
+                                                                })()
+                                                            )}
+                                                        </div>
+                                                    )}
+                                            </div>
                                         );
                                         nodes.push(rowNode);
                                     });
                                     return nodes;
                                 })()}
                             </div>
-
 
                             {/* Export toolbar */}
                             {!batchProcessing &&
