@@ -2220,7 +2220,7 @@ export default function ResearchAssistant({
             <div className="shrink-0 pb-3 space-y-2">
                 <div>
                     <h1 className="text-3xl font-bold text-gray-900 mb-0.5">
-                        Research Assistant
+                        Research Assistant <span className="ml-1 px-2 py-0.5 text-sm font-semibold bg-purple-100 text-purple-600 rounded-full align-middle">beta</span>
                     </h1>
                     <p className="text-gray-500 text-sm">
                         Explore IMPACT-MH instruments, generate mock datasets,

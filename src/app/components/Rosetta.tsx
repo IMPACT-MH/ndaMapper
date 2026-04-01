@@ -423,7 +423,7 @@ export default function Rosetta({
         <div className="space-y-4">
             {/* Header + Database Filter Checkbox */}
             <div className="mb-8">
-                <h1 className="text-3xl font-bold mb-4">Rosetta Agent</h1>
+                <h1 className="text-3xl font-bold mb-4">Rosetta Agent <span className="ml-1 px-2 py-0.5 text-sm font-semibold bg-indigo-100 text-indigo-600 rounded-full align-middle">beta</span></h1>
                 <p className="text-gray-600 -mb-7">
                     Describe a data element in plain language and Rosetta will
                     find the best matching NDA data elements using AI.
