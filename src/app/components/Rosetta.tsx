@@ -33,10 +33,11 @@ interface RowState {
 function confidenceLabel(
     score: number,
     matchedBy: RosettaResult["matchedBy"],
+    descriptionOverlap: number,
 ): { label: string; color: string } {
-    if (matchedBy === "name-guess")
-        return { label: "Exact", color: "text-green-700 bg-green-50" };
-    if (score >= 10)
+    if (descriptionOverlap >= 0.85)
+        return { label: "Exact", color: "text-amber-700 bg-amber-100 border border-amber-400" };
+    if (score >= 10 || descriptionOverlap >= 0.4)
         return { label: "High", color: "text-green-700 bg-green-50" };
     if (score >= 3)
         return { label: "Medium", color: "text-yellow-700 bg-yellow-50" };
@@ -62,7 +63,7 @@ function ResultCard({
     selected?: boolean;
     onSelect?: () => void;
 }) {
-    const conf = confidenceLabel(result.score, result.matchedBy);
+    const conf = confidenceLabel(result.score, result.matchedBy, result.descriptionOverlap);
     const dbStructures = databaseFilterEnabled
         ? result.dataStructures.filter((s) =>
               databaseStructures
@@ -312,7 +313,7 @@ export default function Rosetta({
                 sel.name,
                 sel.dataStructures.join("|"),
                 sel.description,
-                confidenceLabel(sel.score, sel.matchedBy).label,
+                confidenceLabel(sel.score, sel.matchedBy, sel.descriptionOverlap).label,
             ];
         });
         const escape = (v: string) => `"${v.replace(/"/g, '""')}"`;
@@ -339,7 +340,7 @@ export default function Rosetta({
                 dataStructures: sel.dataStructures,
                 ndaDescription: sel.description,
                 notes: sel.notes ?? null,
-                confidence: confidenceLabel(sel.score, sel.matchedBy).label,
+                confidence: confidenceLabel(sel.score, sel.matchedBy, sel.descriptionOverlap).label,
             };
         });
         downloadFile(

@@ -32,6 +32,7 @@ export interface RosettaResult {
     dataStructures: string[];
     score: number;
     matchedBy: "description" | "term" | "name-guess";
+    descriptionOverlap: number;
 }
 
 export interface RosettaSearchResponse {
@@ -280,10 +281,15 @@ Tips:
                 dataStructures,
                 score,
                 matchedBy,
+                descriptionOverlap: wordOverlapScore(description, desc),
             };
         })
         .filter((r) => r.name && !excludeSet.has(r.name.toLowerCase()))
         .sort((a, b) => {
+            const aOverlap = wordOverlapScore(description, a.description);
+            const bOverlap = wordOverlapScore(description, b.description);
+            // If one result's description meaningfully better matches the query, it wins
+            if (Math.abs(aOverlap - bOverlap) > 0.25) return bOverlap - aOverlap;
             const aggregatePattern = /\b(total|sum|score|subscale|facet|composite|index|average|mean|aggregate)\b/i;
             const aIsAggregate = aggregatePattern.test(a.description) && !aggregatePattern.test(a.name);
             const bIsAggregate = aggregatePattern.test(b.description) && !aggregatePattern.test(b.name);
