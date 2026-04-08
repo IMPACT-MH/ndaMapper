@@ -17,6 +17,7 @@ import type { RosettaResult } from "@/app/api/v1/research/rosetta/route";
 
 interface RosettaProps {
     databaseStructures: string[];
+    databaseElementNames: Set<string>;
     loadingDatabaseStructures: boolean;
     databaseConnectionError: string | null;
     onElementSearch?: (elementName: string) => void;
@@ -36,7 +37,7 @@ function confidenceLabel(
     descriptionOverlap: number,
 ): { label: string; color: string } {
     if (descriptionOverlap >= 0.85)
-        return { label: "Exact", color: "text-amber-700 bg-amber-100 border border-amber-400" };
+        return { label: "Exact", color: "text-indigo-600 bg-indigo-100" };
     if (score >= 10 || descriptionOverlap >= 0.4)
         return { label: "High", color: "text-green-700 bg-green-50" };
     if (score >= 3)
@@ -48,6 +49,7 @@ function ResultCard({
     result,
     databaseFilterEnabled,
     databaseStructures,
+    databaseElementNames,
     onElementSearch,
     onStructureSearch,
     selectable,
@@ -57,6 +59,7 @@ function ResultCard({
     result: RosettaResult;
     databaseFilterEnabled: boolean;
     databaseStructures: string[];
+    databaseElementNames: Set<string>;
     onElementSearch?: (name: string) => void;
     onStructureSearch?: (name: string) => void;
     selectable?: boolean;
@@ -71,13 +74,7 @@ function ResultCard({
                   .includes(s.toLowerCase()),
           )
         : result.dataStructures;
-    const inDatabase = databaseFilterEnabled
-        ? dbStructures.length > 0
-        : result.dataStructures.some((s) =>
-              databaseStructures
-                  .map((d) => d.toLowerCase())
-                  .includes(s.toLowerCase()),
-          );
+    const inDatabase = databaseElementNames.has(result.name.toLowerCase());
     const displayStructures = databaseFilterEnabled
         ? dbStructures
         : result.dataStructures;
@@ -140,7 +137,7 @@ function ResultCard({
                             return 0;
                         });
                         return sortedStructures;
-                    })().slice(0, 8).map((s) => {
+                    })().map((s) => {
                         const sInDb = databaseStructures
                             .map((d) => d.toLowerCase())
                             .includes(s.toLowerCase());
@@ -167,11 +164,6 @@ function ResultCard({
                             </span>
                         );
                     })}
-                    {displayStructures.length > 8 && (
-                        <span className="text-xs text-gray-400 self-center">
-                            +{displayStructures.length - 8} more
-                        </span>
-                    )}
                 </div>
             )}
 
@@ -191,6 +183,7 @@ function ResultCard({
 
 export default function Rosetta({
     databaseStructures,
+    databaseElementNames,
     loadingDatabaseStructures,
     databaseConnectionError,
     onElementSearch,
@@ -640,6 +633,9 @@ export default function Rosetta({
                                                 databaseStructures={
                                                     databaseStructures
                                                 }
+                                                databaseElementNames={
+                                                    databaseElementNames
+                                                }
                                                 onElementSearch={
                                                     onElementSearch
                                                 }
@@ -1018,6 +1014,9 @@ export default function Rosetta({
                                                                                                         }
                                                                                                         databaseStructures={
                                                                                                             databaseStructures
+                                                                                                        }
+                                                                                                        databaseElementNames={
+                                                                                                            databaseElementNames
                                                                                                         }
                                                                                                         onElementSearch={
                                                                                                             onElementSearch

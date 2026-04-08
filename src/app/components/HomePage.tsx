@@ -1463,6 +1463,7 @@ const HomePage = () => {
             <div className={activeTab === Tabs.ROSETTA ? "block" : "hidden"}>
                 <Rosetta
                     databaseStructures={databaseStructures}
+                    databaseElementNames={new Set(databaseElements.keys())}
                     loadingDatabaseStructures={loadingDatabaseStructures}
                     databaseConnectionError={databaseConnectionError}
                     onElementSearch={(elementName) => {

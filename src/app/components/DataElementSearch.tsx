@@ -1712,16 +1712,18 @@ const DataElementSearch = ({
                                                 const sTitle = typeof structure === "string"
                                                     ? undefined
                                                     : structure.title;
+                                                const sInDb = !!(dataStructuresMap[sName] || dataStructuresMap[sName?.toLowerCase()]);
                                                 return (
                                                     <span
                                                         key={idx}
-                                                        className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-700 cursor-pointer hover:bg-gray-200 group relative"
+                                                        className="inline-flex items-center gap-1 text-xs bg-gray-100 px-2 py-1 rounded text-gray-700 cursor-pointer hover:bg-gray-200 group relative"
                                                         onClick={(e) => {
                                                             e.stopPropagation();
                                                             onStructureSelect(sName);
                                                         }}
                                                     >
                                                         {sName}
+                                                        {sInDb && <Database className="w-3 h-3 text-blue-500 shrink-0" />}
                                                         {sTitle && (
                                                             <div className="absolute hidden group-hover:block bg-gray-800 text-white p-2 rounded shadow-lg text-xs -top-8 left-1/2 transform -translate-x-1/2 whitespace-nowrap z-10">
                                                                 {sTitle}
@@ -1918,10 +1920,18 @@ const DataElementSearch = ({
                                                 }
                                             );
                                     }
+                                    structuresToShow = [...structuresToShow].sort((a, b) => {
+                                        const aName = typeof a === "string" ? a : a.shortName;
+                                        const bName = typeof b === "string" ? b : b.shortName;
+                                        const aInDb = !!(dataStructuresMap[aName] || dataStructuresMap[aName?.toLowerCase()]);
+                                        const bInDb = !!(dataStructuresMap[bName] || dataStructuresMap[bName?.toLowerCase()]);
+                                        if (aInDb !== bInDb) return aInDb ? -1 : 1;
+                                        return 0;
+                                    });
 
                                     return structuresToShow.length > 0 ? (
                                         <div className="bg-gray-50 p-3 rounded max-h-64 overflow-y-auto">
-                                            <ul className="space-y-1">
+                                            <div className="flex flex-wrap gap-1.5">
                                                 {structuresToShow.map(
                                                     (structure, index) => {
                                                         const structureName =
@@ -1929,10 +1939,11 @@ const DataElementSearch = ({
                                                             "string"
                                                                 ? structure
                                                                 : structure.shortName;
+                                                        const structureInDb = !!(dataStructuresMap[structureName] || dataStructuresMap[structureName?.toLowerCase()]);
                                                         return (
-                                                            <li
+                                                            <button
                                                                 key={index}
-                                                                className="font-mono text-sm hover:bg-blue-50 p-1 rounded cursor-pointer text-blue-600 hover:text-blue-800 transition-colors"
+                                                                className="inline-flex items-center gap-1 font-mono text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 hover:text-gray-900 transition-colors"
                                                                 onClick={() =>
                                                                     onElementDetailStructureSelect(
                                                                         structureName
@@ -1940,11 +1951,12 @@ const DataElementSearch = ({
                                                                 }
                                                             >
                                                                 {structureName}
-                                                            </li>
+                                                                {structureInDb && <Database className="w-3 h-3 text-blue-500 shrink-0" />}
+                                                            </button>
                                                         );
                                                     }
                                                 )}
-                                            </ul>
+                                            </div>
                                         </div>
                                     ) : (
                                         <p className="text-gray-500 italic">
