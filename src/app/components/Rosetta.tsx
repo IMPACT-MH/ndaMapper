@@ -130,7 +130,16 @@ function ResultCard({
 
             {displayStructures.length > 0 && (
                 <div className="flex flex-wrap gap-1 mt-1.5">
-                    {displayStructures.slice(0, 8).map((s) => {
+                    {(() => {
+                        const dbSet = new Set(databaseStructures.map((d) => d.toLowerCase()));
+                        const sortedStructures = [...displayStructures].sort((a, b) => {
+                            const aInDb = dbSet.has(a.toLowerCase());
+                            const bInDb = dbSet.has(b.toLowerCase());
+                            if (aInDb !== bInDb) return aInDb ? -1 : 1;
+                            return 0;
+                        });
+                        return sortedStructures;
+                    })().slice(0, 8).map((s) => {
                         const sInDb = databaseStructures
                             .map((d) => d.toLowerCase())
                             .includes(s.toLowerCase());
