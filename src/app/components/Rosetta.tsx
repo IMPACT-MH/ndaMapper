@@ -118,10 +118,7 @@ function ResultCard({
                         </span>
                     )}
                     {inDatabase && (
-                        <span className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded border border-blue-200">
-                            <Database className="w-3 h-3" />
-                            DB
-                        </span>
+                        <Database className="w-3.5 h-3.5 text-blue-500" />
                     )}
                 </div>
                 <span
@@ -133,28 +130,33 @@ function ResultCard({
 
             {displayStructures.length > 0 && (
                 <div className="flex flex-wrap gap-1 mt-1.5">
-                    {displayStructures.slice(0, 8).map((s) =>
-                        onStructureSearch ? (
+                    {displayStructures.slice(0, 8).map((s) => {
+                        const sInDb = databaseStructures
+                            .map((d) => d.toLowerCase())
+                            .includes(s.toLowerCase());
+                        return onStructureSearch ? (
                             <button
                                 key={s}
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     onStructureSearch(s);
                                 }}
-                                className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded hover:bg-gray-200 hover:text-gray-800 font-mono"
+                                className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded hover:bg-gray-200 hover:text-gray-800 font-mono"
                                 title="Open this structure in Data Structures tab"
                             >
                                 {s}
+                                {sInDb && <Database className="w-3 h-3 text-blue-500" />}
                             </button>
                         ) : (
                             <span
                                 key={s}
-                                className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded font-mono"
+                                className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded font-mono"
                             >
                                 {s}
+                                {sInDb && <Database className="w-3 h-3 text-blue-500" />}
                             </span>
-                        ),
-                    )}
+                        );
+                    })}
                     {displayStructures.length > 8 && (
                         <span className="text-xs text-gray-400 self-center">
                             +{displayStructures.length - 8} more
