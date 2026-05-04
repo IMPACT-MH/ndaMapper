@@ -22,12 +22,10 @@ interface ElementRef {
     conceptLabel?: string;
 }
 
-// Standard NDA administrative/linkage fields — excluded from element relations entirely
-// (present in every structure via ndar_subject01, not meaningful as cross-instrument constructs)
-const ADMIN_FIELDS = new Set([
-    "subjectkey", "src_subject_id", "interview_age", "interview_date", "sex",
-    "visit", "visit_number", "version_form", "interview_type", "site",
-    "respondent", "comqother", "fneill", "translation_language",
+// Fields present in many instruments but NOT in ndar_subject01 — supplemental exclusion list
+const SUPPLEMENTAL_ADMIN_FIELDS = new Set([
+    "interview_type", "respondent", "comqother", "fneill",
+    "translation_language", "visit_number",
     "data_file1", "data_file1_type", "data_file2", "data_file2_type",
 ]);
 
@@ -114,16 +112,31 @@ async function normalizeConcepts(
                 temperature: 0,
                 messages: [{
                     role: "user",
-                    content: `You are harmonizing NDA data elements for a research study.
+                    content: `You are a clinical research data harmonization expert working with the NIMH Data Archive (NDA).
 Research question: "${question}"
 
-Assign each element a SHORT canonical psychological/clinical construct label in snake_case.
-Use the SAME label for elements that measure the same underlying concept, even if phrasing differs.
-Rules:
-- Use specific constructs: prefer "anhedonia" over "depression_symptom"
-- Keep labels to ≤4 words: "depressed_mood", "sleep_onset_latency", "anhedonia"
-- Imputed/computed versions of an item → same label as the source item
-- If you cannot identify the construct, use "unknown"
+Assign each element a SHORT canonical symptom-level construct label in snake_case.
+Use the SAME label for elements measuring the SAME SPECIFIC SYMPTOM, even across different scales or phrasings.
+
+CRITICAL: Labels must be SYMPTOM-SPECIFIC, never disorder-level.
+  BAD: "depression_symptom", "bdi_item", "phq_item", "depression", "mood"
+  GOOD: "anhedonia", "depressed_mood", "sleep_disturbance", "fatigue_energy"
+
+Common psychiatric symptom mappings — use these exact labels when you see these constructs:
+- "little interest or pleasure" / "loss of pleasure" / "loss of interest" / "enjoyment" → anhedonia
+- "feeling down / depressed / hopeless" / "sadness" / "dysphoria" → depressed_mood
+- "sleep problems" / "insomnia" / "hypersomnia" / "trouble sleeping" → sleep_disturbance
+- "tired / little energy" / "loss of energy" / "fatigue" / "anergia" → fatigue_energy
+- "appetite change" / "weight change" / "poor appetite" / "overeating" → appetite_change
+- "worthlessness" / "guilt" / "feeling like a failure" / "self-dislike" → worthlessness_guilt
+- "trouble concentrating" / "indecisiveness" / "concentration difficulty" → concentration
+- "moving slowly / speaking slowly" / "restless / fidgety" / "psychomotor" → psychomotor_change
+- "thoughts of death / suicide / self-harm" → suicidal_ideation
+- "anxiety" / "worry" / "nervousness" → anxiety
+- "irritability" / "agitation" / "anger" → irritability
+Total/summary scores → prefix with "total_": total_phq9, total_bdi
+Imputed/computed versions → same label as source item
+If construct is unidentifiable → unknown
 
 Elements (index: [instrument] elementName — description):
 ${elementList}
@@ -192,15 +205,19 @@ export async function POST(request: NextRequest): Promise<Response> {
                 // Step 1: Fetch element schemas from NDA in parallel, reporting each as it resolves
                 enqueue({ type: "status", text: "Fetching element schemas from NDA…" });
 
-                const elementResults = await Promise.all(
-                    suggestions.map((s, i) =>
+                const [ndarSubjectElements, ...elementResults] = await Promise.all([
+                    fetchStructureElements("ndar_subject01"),
+                    ...suggestions.map((s, i) =>
                         fetchStructureElements(s.shortName).then((els) => {
                             enqueue({ type: "progress", current: i + 1, total: suggestions.length, shortName: s.shortName });
                             console.log(`[element-harmonize] ${s.shortName}: ${els.length} elements fetched`);
                             return els;
                         })
-                    )
-                );
+                    ),
+                ]);
+
+                const ndarSubjectFieldNames = new Set(ndarSubjectElements.map((el) => el.name.toLowerCase()));
+                console.log(`[element-harmonize] ndar_subject01: ${ndarSubjectElements.length} fields loaded`);
 
                 const structuresWithElements = suggestions.map((s, i) => ({
                     shortName: s.shortName,
@@ -212,7 +229,12 @@ export async function POST(request: NextRequest): Promise<Response> {
                 // Step 2: Collect clinical elements (exclude admin/linkage fields)
                 const allElements: ElementRef[] = structuresWithElements.flatMap((s) =>
                     s.dataElements
-                        .filter((el) => !ADMIN_FIELDS.has(el.name.toLowerCase()) && (el.description ?? "").length > 5)
+                        .filter((el) => {
+                            const name = el.name.toLowerCase();
+                            return !ndarSubjectFieldNames.has(name)
+                                && !SUPPLEMENTAL_ADMIN_FIELDS.has(name)
+                                && (el.description ?? "").length > 5;
+                        })
                         .map((el) => ({
                             shortName: s.shortName,
                             elementName: el.name,
@@ -232,6 +254,12 @@ export async function POST(request: NextRequest): Promise<Response> {
                     el.conceptLabel = conceptMap.get(`${el.shortName}::${el.elementName}`);
                 }
                 console.log(`[element-harmonize] concept labels assigned to ${conceptMap.size}/${allElements.length} elements`);
+                const labelsByConstruct = new Map<string, string[]>();
+                for (const [key, label] of conceptMap) {
+                    if (!labelsByConstruct.has(label)) labelsByConstruct.set(label, []);
+                    labelsByConstruct.get(label)!.push(key);
+                }
+                console.log("[element-harmonize] concept label groups:", JSON.stringify(Object.fromEntries(labelsByConstruct), null, 2));
 
                 // Step 4: Build pairs — semantic first, then lexical
                 const OVERLAP_THRESHOLD = overlapThreshold;
