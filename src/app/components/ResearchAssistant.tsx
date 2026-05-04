@@ -25,7 +25,9 @@ import type {
     HarmonizeResponse,
     ConstructGroup,
     ElementHarmonizeResponse,
+    ElementRelationGraph,
 } from "@/types";
+import { buildElementRelationGraph } from "@/lib/elementRelationGraph";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -476,6 +478,352 @@ function NetworkDiagram({ graph }: { graph: NetworkGraph }) {
                                                 className="px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 text-xs font-mono border border-violet-200"
                                             >
                                                 {name}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                );
+            })()}
+        </div>
+    );
+}
+
+// ---------------------------------------------------------------------------
+// ElementRelationDiagram
+// ---------------------------------------------------------------------------
+
+const CONF_EDGE_COLOR: Record<string, string> = {
+    direct:  "#10b981",
+    partial: "#f59e0b",
+    proxy:   "#f97316",
+};
+
+interface ERSVGNode {
+    id: string;
+    label: string;
+    constructCount: number;
+    x: number;
+    y: number;
+    vx: number;
+    vy: number;
+}
+
+function ElementRelationDiagram({ graph }: { graph: ElementRelationGraph }) {
+    const [positions, setPositions] = useState<ERSVGNode[]>([]);
+    const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+    const [clickedNodeId, setClickedNodeId] = useState<string | null>(null);
+    const [clickedEdgeIdx, setClickedEdgeIdx] = useState<number | null>(null);
+    const animRef = useRef<number | null>(null);
+    const WIDTH = 600;
+    const HEIGHT = 380;
+
+    useEffect(() => {
+        if (graph.nodes.length === 0) { setPositions([]); return; }
+
+        const nodes: ERSVGNode[] = graph.nodes.map((n, i) => {
+            const angle = (2 * Math.PI * i) / graph.nodes.length;
+            const r = Math.min(WIDTH, HEIGHT) * 0.35;
+            return { ...n, x: WIDTH / 2 + r * Math.cos(angle), y: HEIGHT / 2 + r * Math.sin(angle), vx: 0, vy: 0 };
+        });
+
+        let step = 0;
+        const MAX_STEPS = 150;
+
+        function simulate() {
+            if (step >= MAX_STEPS) { setPositions([...nodes]); return; }
+            step++;
+            const alpha = 1 - step / MAX_STEPS;
+
+            for (let i = 0; i < nodes.length; i++) {
+                for (let j = i + 1; j < nodes.length; j++) {
+                    const dx = nodes[j].x - nodes[i].x;
+                    const dy = nodes[j].y - nodes[i].y;
+                    const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+                    const force = (900 / (dist * dist)) * alpha;
+                    nodes[i].vx -= (dx / dist) * force;
+                    nodes[i].vy -= (dy / dist) * force;
+                    nodes[j].vx += (dx / dist) * force;
+                    nodes[j].vy += (dy / dist) * force;
+                }
+            }
+
+            for (const edge of graph.edges) {
+                const src = nodes.find((n) => n.id === edge.source);
+                const tgt = nodes.find((n) => n.id === edge.target);
+                if (!src || !tgt) continue;
+                const dx = tgt.x - src.x;
+                const dy = tgt.y - src.y;
+                const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+                const ideal = 130;
+                const force = ((dist - ideal) / dist) * 0.3 * alpha;
+                src.vx += dx * force; src.vy += dy * force;
+                tgt.vx -= dx * force; tgt.vy -= dy * force;
+            }
+
+            for (const node of nodes) {
+                node.vx += (WIDTH / 2 - node.x) * 0.01 * alpha;
+                node.vy += (HEIGHT / 2 - node.y) * 0.01 * alpha;
+                node.vx *= 0.8; node.vy *= 0.8;
+                node.x = Math.max(44, Math.min(WIDTH - 44, node.x + node.vx));
+                node.y = Math.max(24, Math.min(HEIGHT - 24, node.y + node.vy));
+            }
+
+            setPositions([...nodes]);
+            animRef.current = requestAnimationFrame(simulate);
+        }
+
+        if (animRef.current) cancelAnimationFrame(animRef.current);
+        animRef.current = requestAnimationFrame(simulate);
+        return () => { if (animRef.current) cancelAnimationFrame(animRef.current); };
+    }, [graph]);
+
+    const connectedNodeIds = useMemo(() => {
+        if (!hoveredNodeId) return new Set<string>();
+        const set = new Set<string>();
+        for (const e of graph.edges) {
+            if (e.source === hoveredNodeId) set.add(e.target);
+            if (e.target === hoveredNodeId) set.add(e.source);
+        }
+        return set;
+    }, [hoveredNodeId, graph.edges]);
+
+    const connectedEdgeIndices = useMemo(() => {
+        if (!hoveredNodeId) return new Set<number>();
+        const set = new Set<number>();
+        graph.edges.forEach((e, i) => {
+            if (e.source === hoveredNodeId || e.target === hoveredNodeId) set.add(i);
+        });
+        return set;
+    }, [hoveredNodeId, graph.edges]);
+
+    const isHovering = hoveredNodeId !== null;
+    const posMap = new Map(positions.map((n) => [n.id, n]));
+
+    if (graph.nodes.length === 0) return null;
+
+    return (
+        <div className="overflow-auto">
+            <svg
+                width={WIDTH}
+                height={HEIGHT}
+                className="border rounded bg-gray-50 mx-auto block"
+                onClick={() => { setClickedNodeId(null); setClickedEdgeIdx(null); }}
+            >
+                <defs>
+                    <filter id="er-node-glow" x="-60%" y="-60%" width="220%" height="220%">
+                        <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur" />
+                        <feMerge>
+                            <feMergeNode in="blur" />
+                            <feMergeNode in="SourceGraphic" />
+                        </feMerge>
+                    </filter>
+                </defs>
+
+                {/* Edges */}
+                {graph.edges.map((edge, i) => {
+                    const src = posMap.get(edge.source);
+                    const tgt = posMap.get(edge.target);
+                    if (!src || !tgt) return null;
+                    const active = connectedEdgeIndices.has(i);
+                    const isClicked = clickedEdgeIdx === i;
+                    const color = CONF_EDGE_COLOR[edge.dominantConfidence] ?? "#94a3b8";
+                    const strokeW = Math.min(1 + edge.sharedConstructs.length, 8);
+                    const mx = (src.x + tgt.x) / 2;
+                    const my = (src.y + tgt.y) / 2;
+                    const label = `${edge.sharedConstructs.length} construct${edge.sharedConstructs.length !== 1 ? "s" : ""}`;
+                    return (
+                        <g key={i}>
+                            <line
+                                x1={src.x} y1={src.y} x2={tgt.x} y2={tgt.y}
+                                stroke={isClicked ? "#4f46e5" : active ? color : "#cbd5e1"}
+                                strokeWidth={isClicked ? strokeW + 1 : strokeW}
+                                strokeOpacity={isHovering ? (active ? 1 : 0.08) : 0.65}
+                                style={{ transition: "stroke-opacity 0.18s" }}
+                            />
+                            {/* Wide transparent hit target */}
+                            <line
+                                x1={src.x} y1={src.y} x2={tgt.x} y2={tgt.y}
+                                stroke="transparent"
+                                strokeWidth={14}
+                                style={{ cursor: "pointer" }}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setClickedNodeId(null);
+                                    setClickedEdgeIdx(isClicked ? null : i);
+                                }}
+                            />
+                            {(active || isClicked) && (
+                                <g>
+                                    <rect
+                                        x={mx - (label.length * 3.2 + 8)}
+                                        y={my - 9}
+                                        width={label.length * 6.4 + 16}
+                                        height={15}
+                                        rx={4}
+                                        fill={isClicked ? "#4f46e5" : "white"}
+                                        stroke={isClicked ? "#4f46e5" : color}
+                                        strokeWidth={0.8}
+                                        fillOpacity={0.95}
+                                    />
+                                    <text x={mx} y={my + 2} textAnchor="middle" fontSize={8}
+                                        fill={isClicked ? "white" : color} fontWeight="600">
+                                        {label}
+                                    </text>
+                                </g>
+                            )}
+                        </g>
+                    );
+                })}
+
+                {/* Nodes */}
+                {positions.map((node) => {
+                    const baseRadius = 9 + Math.min(node.constructCount * 1.5, 13);
+                    const isHovered = node.id === hoveredNodeId;
+                    const isConnected = connectedNodeIds.has(node.id);
+                    const isClicked = node.id === clickedNodeId;
+                    const radius = isHovered ? baseRadius * 1.35 : baseRadius;
+                    const fullLabel = node.label;
+                    const shortLabel = fullLabel.length > 14 ? fullLabel.slice(0, 13) + "…" : fullLabel;
+                    const tooltipWidth = Math.min(Math.max(fullLabel.length * 7 + 16, 60), 200);
+
+                    return (
+                        <g
+                            key={node.id}
+                            style={{
+                                cursor: "pointer",
+                                opacity: isHovering ? (isHovered || isConnected ? 1 : 0.15) : 1,
+                                transition: "opacity 0.18s",
+                            }}
+                            onMouseEnter={() => setHoveredNodeId(node.id)}
+                            onMouseLeave={() => setHoveredNodeId(null)}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setClickedEdgeIdx(null);
+                                setClickedNodeId(isClicked ? null : node.id);
+                            }}
+                        >
+                            {isHovered && (
+                                <circle cx={node.x} cy={node.y} r={radius + 9}
+                                    fill="#7c3aed" fillOpacity={0.25} filter="url(#er-node-glow)" />
+                            )}
+                            <circle
+                                cx={node.x} cy={node.y} r={radius}
+                                fill="#7c3aed"
+                                fillOpacity={isHovered ? 1 : 0.85}
+                                stroke={isClicked ? "#4f46e5" : "white"}
+                                strokeWidth={isClicked ? 3 : isHovered ? 3 : 2}
+                            />
+                            <text x={node.x} y={node.y + radius + 11} textAnchor="middle" fontSize={9}
+                                fill={isHovering ? (isHovered || isConnected ? "#111827" : "#9ca3af") : "#374151"}
+                                fontWeight="bold" style={{ transition: "fill 0.18s" }}>
+                                {shortLabel}
+                            </text>
+                            {isHovered && fullLabel !== shortLabel && (
+                                <g>
+                                    <rect x={node.x - tooltipWidth / 2} y={node.y - radius - 24}
+                                        width={tooltipWidth} height={17} rx={5}
+                                        fill="#1f2937" fillOpacity={0.92} />
+                                    <text x={node.x} y={node.y - radius - 12} textAnchor="middle"
+                                        fontSize={10} fill="white" fontWeight="500">{fullLabel}</text>
+                                </g>
+                            )}
+                        </g>
+                    );
+                })}
+            </svg>
+
+            {/* Legend */}
+            <div className="flex flex-wrap gap-4 mt-2 justify-center text-xs text-gray-500">
+                {(["direct", "partial", "proxy"] as const).map((c) => (
+                    <span key={c} className="flex items-center gap-1">
+                        <span className="w-3 h-1.5 rounded-full inline-block" style={{ background: CONF_EDGE_COLOR[c] }} />
+                        {c}
+                    </span>
+                ))}
+                <span className="text-gray-400">· node size = construct count · edge width = shared constructs</span>
+            </div>
+
+            {/* Edge click panel */}
+            {clickedEdgeIdx !== null && (() => {
+                const edge = graph.edges[clickedEdgeIdx];
+                if (!edge) return null;
+                const domainOrder: string[] = [];
+                const byDomain = new Map<string, typeof edge.sharedConstructs>();
+                for (const sc of edge.sharedConstructs) {
+                    if (!byDomain.has(sc.domain)) { byDomain.set(sc.domain, []); domainOrder.push(sc.domain); }
+                    byDomain.get(sc.domain)!.push(sc);
+                }
+                return (
+                    <div className="mt-3 border border-violet-200 rounded-lg bg-violet-50 p-3 text-sm max-w-[600px] mx-auto">
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="font-semibold text-violet-800">
+                                {edge.source} &amp; {edge.target} — {edge.sharedConstructs.length} shared construct{edge.sharedConstructs.length !== 1 ? "s" : ""}
+                            </span>
+                            <button className="text-violet-400 hover:text-violet-600 text-xs"
+                                onClick={() => setClickedEdgeIdx(null)}>dismiss</button>
+                        </div>
+                        <div className="space-y-2">
+                            {domainOrder.map((domain) => (
+                                <div key={domain}>
+                                    <div className="text-xs text-gray-500 font-semibold uppercase tracking-wide mb-1">{domain}</div>
+                                    <div className="space-y-1">
+                                        {(byDomain.get(domain) ?? []).map((sc) => (
+                                            <div key={sc.constructName} className="flex items-center gap-2 text-xs">
+                                                <span className="font-medium text-violet-800">{sc.constructName}</span>
+                                                <span className="text-gray-400">·</span>
+                                                <span style={{ color: CONF_EDGE_COLOR[sc.confidenceA] }}>{edge.source}: {sc.confidenceA}</span>
+                                                <span style={{ color: CONF_EDGE_COLOR[sc.confidenceB] }}>{edge.target}: {sc.confidenceB}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                );
+            })()}
+
+            {/* Node click panel */}
+            {clickedNodeId && (() => {
+                const nodeConstructs: Array<{ constructName: string; domain: string; confidence: string }> = [];
+                const domainOrder: string[] = [];
+                const byDomain = new Map<string, typeof nodeConstructs>();
+                for (const edge of graph.edges) {
+                    if (edge.source !== clickedNodeId && edge.target !== clickedNodeId) continue;
+                    for (const sc of edge.sharedConstructs) {
+                        const conf = edge.source === clickedNodeId ? sc.confidenceA : sc.confidenceB;
+                        if (!byDomain.has(sc.domain)) { byDomain.set(sc.domain, []); domainOrder.push(sc.domain); }
+                        const existing = byDomain.get(sc.domain)!;
+                        if (!existing.find((x) => x.constructName === sc.constructName)) {
+                            existing.push({ constructName: sc.constructName, domain: sc.domain, confidence: conf });
+                        }
+                    }
+                }
+                if (domainOrder.length === 0) return null;
+                return (
+                    <div className="mt-3 border border-violet-200 rounded-lg bg-violet-50 p-3 text-sm max-w-[600px] mx-auto">
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="font-semibold text-violet-800">{clickedNodeId} — constructs</span>
+                            <button className="text-violet-400 hover:text-violet-600 text-xs"
+                                onClick={() => setClickedNodeId(null)}>dismiss</button>
+                        </div>
+                        <div className="space-y-2">
+                            {domainOrder.map((domain) => (
+                                <div key={domain}>
+                                    <div className="text-xs text-gray-500 font-semibold uppercase tracking-wide mb-1">{domain}</div>
+                                    <div className="flex flex-wrap gap-1">
+                                        {(byDomain.get(domain) ?? []).map((c) => (
+                                            <span key={c.constructName}
+                                                className="px-2 py-0.5 rounded-full text-xs font-medium border"
+                                                style={{
+                                                    background: `${CONF_EDGE_COLOR[c.confidence]}18`,
+                                                    borderColor: `${CONF_EDGE_COLOR[c.confidence]}60`,
+                                                    color: CONF_EDGE_COLOR[c.confidence],
+                                                }}>
+                                                {c.constructName}
                                             </span>
                                         ))}
                                     </div>
@@ -1659,6 +2007,10 @@ function ElementHarmonizeMessage({ result, onElementSearch, onStructureSearch }:
     onStructureSearch?: (shortName: string) => void;
 }) {
     const structs = result.structures;
+    const relGraph = useMemo(
+        () => buildElementRelationGraph(structs, result.constructs),
+        [structs, result.constructs]
+    );
 
     // Group constructs by domain (same pattern as HarmonizeMessage)
     const domainOrder: string[] = [];
@@ -1709,6 +2061,11 @@ function ElementHarmonizeMessage({ result, onElementSearch, onStructureSearch }:
                 <p className="px-4 py-3 text-sm text-gray-500">{result.summary || "No shared elements found. Try asking about specific instruments first."}</p>
             ) : (
                 <>
+                    {relGraph.nodes.length >= 2 && (
+                        <div className="px-4 py-3 border-b border-indigo-100">
+                            <ElementRelationDiagram graph={relGraph} />
+                        </div>
+                    )}
                     <div className="overflow-x-auto">
                         <table className="min-w-full text-xs border-collapse">
                             <thead>

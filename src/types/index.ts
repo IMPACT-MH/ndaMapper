@@ -248,6 +248,31 @@ export interface NetworkGraph {
   edges: NetworkEdge[];
 }
 
+export interface SharedConstruct {
+  constructName: string;
+  domain: string;
+  confidenceA: "direct" | "partial" | "proxy";
+  confidenceB: "direct" | "partial" | "proxy";
+}
+
+export interface ElementRelationNode {
+  id: string;
+  label: string;
+  constructCount: number;
+}
+
+export interface ElementRelationEdge {
+  source: string;
+  target: string;
+  sharedConstructs: SharedConstruct[];
+  dominantConfidence: "direct" | "partial" | "proxy";
+}
+
+export interface ElementRelationGraph {
+  nodes: ElementRelationNode[];
+  edges: ElementRelationEdge[];
+}
+
 export interface MockDataset {
   rows: Record<string, unknown>[];
   schema: DataElement[];

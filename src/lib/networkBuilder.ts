@@ -91,3 +91,5 @@ export function buildNetworkGraph(structures: DataStructure[]): NetworkGraph {
 
   return { nodes, edges };
 }
+
+
