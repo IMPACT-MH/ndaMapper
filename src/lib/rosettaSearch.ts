@@ -87,6 +87,22 @@ export function wordOverlapScore(a: string, b: string): number {
     return intersection / Math.max(setA.size, setB.size, 1);
 }
 
+export function preprocessMatchText(elementName: string, description: string, notes?: string): string {
+    let text = description
+        .replace(/Imputation Rule\s*:[\s\S]*$/i, "")
+        .replace(/\(Imputed\s*Version\)/gi, "")
+        .replace(/\(Computed\)/gi, "")
+        .trim();
+    if (notes && notes.length < 300) text = `${text} ${notes}`;
+    const expanded = elementName
+        .replace(/_/g, " ")
+        .replace(/([a-z])([A-Z])/g, "$1 $2")
+        .replace(/([A-Za-z])(\d)/g, "$1 $2")
+        .replace(/(\d)([A-Za-z])/g, "$1 $2")
+        .toLowerCase();
+    return `${text} ${expanded}`.trim();
+}
+
 async function searchNDA(query: string): Promise<{ results: NdaSearchResult[]; matchedBy: "description" | "term" }> {
     try {
         const res = await fetch(NDA_SEARCH_URL, {

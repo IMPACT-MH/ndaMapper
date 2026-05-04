@@ -157,6 +157,9 @@ export function ElementHarmonizeMessage({
                                                                     >
                                                                         {m.elementName}
                                                                     </code>
+                                                                    {m.matchSource === "semantic" && (
+                                                                        <span className="text-xs text-violet-500 font-medium" title="Matched by concept normalization">≈</span>
+                                                                    )}
                                                                 </span>
                                                             </td>
                                                         );
@@ -177,6 +180,9 @@ export function ElementHarmonizeMessage({
                                     {c}
                                 </span>
                             ))}
+                            <span className="flex items-center gap-1 text-violet-500">
+                                <span className="font-mono">≈</span> semantic
+                            </span>
                         </div>
                         {result.reasoning && (
                             <details className="text-xs text-gray-500 ml-auto">

@@ -60,9 +60,11 @@ export function UserBubble({ text }: { text: string }) {
 export function LoadingBubble({
     phase,
     suggestHistory,
+    elementProgress,
 }: {
     phase: Phase;
     suggestHistory: Array<{ role: "user" | "assistant"; content: string }>;
+    elementProgress?: string;
 }) {
     return (
         <div className="flex items-center gap-2 text-sm text-purple-600 py-2 pl-1">
@@ -73,7 +75,7 @@ export function LoadingBubble({
             {phase === "suggesting" && (suggestHistory.length > 0 ? "Refining suggestions…" : "Analyzing your research question…")}
             {phase === "generating" && "Generating synthetic dataset…"}
             {phase === "harmonizing" && "Building element crosswalk…"}
-            {phase === "element-harmonizing" && "Searching NDA elements for harmonization…"}
+            {phase === "element-harmonizing" && (elementProgress || "Searching NDA elements for harmonization…")}
         </div>
     );
 }

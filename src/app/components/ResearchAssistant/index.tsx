@@ -75,13 +75,16 @@ export default function ResearchAssistant({
     void _isVisible;
 
     // Chat state — initialised from localStorage if available
-    const [chatMessages, setChatMessages] = useState<ChatMsg[]>(() => loadSession()?.chatMessages ?? []);
+    const [chatMessages, setChatMessages] = useState<ChatMsg[]>([]);
     const [inputText, setInputText] = useState("");
     const [rScript, setRScript] = useState("");
     const [rScriptOpen, setRScriptOpen] = useState(false);
     const [scriptLang, setScriptLang] = useState<"r" | "python" | null>(null);
     const [isDraggingFile, setIsDraggingFile] = useState(false);
     const chatEndRef = useRef<HTMLDivElement>(null);
+
+    // Tracks whether we've completed the first client-side render
+    const [mounted, setMounted] = useState(false);
 
     // Phase & error
     const [phase, dispatch] = useReducer(phaseReducer, "idle");
@@ -102,7 +105,8 @@ export default function ResearchAssistant({
     const [suggestHistory, setSuggestHistory] = useState<Array<{ role: "user" | "assistant"; content: string }>>([]);
 
     const [showClearModal, setShowClearModal] = useState(false);
-    const [overlapThreshold, setOverlapThreshold] = useState<number>(() => loadSession()?.overlapThreshold ?? 0.25);
+    const [overlapThreshold, setOverlapThreshold] = useState<number>(0.25);
+    const [elementProgress, setElementProgress] = useState<string>("");
 
     const clearChat = useCallback(() => {
         setChatMessages([]);
@@ -124,10 +128,15 @@ export default function ResearchAssistant({
         try { localStorage.removeItem(STORAGE_KEY); } catch { /* SSR */ }
     }, []);
 
-    // Restore live state from stored chat messages on first mount
+    // Restore all localStorage-backed state on first client mount.
+    // Runs once after hydration — keeps server and client initial renders identical.
     useEffect(() => {
-        const msgs = chatMessages;
-        if (msgs.length === 0) return;
+        setMounted(true);
+        const session = loadSession();
+        if (!session) return;
+        const msgs = session.chatMessages;
+        if (msgs.length > 0) setChatMessages(msgs);
+        if (session.overlapThreshold !== 0.25) setOverlapThreshold(session.overlapThreshold);
         const mockMsg = [...msgs].reverse().find((m) => m.type === "mock-ready");
         if (mockMsg?.type === "mock-ready") {
             setMockDatasets(mockMsg.datasets);
@@ -136,8 +145,7 @@ export default function ResearchAssistant({
         } else if (msgs.some((m) => m.type === "suggestions")) {
             dispatch({ type: "SUGGEST_DONE" });
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []); // mount-only: restore once from the lazy-initialised chatMessages
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Persist to localStorage whenever chat or threshold changes
     useEffect(() => {
@@ -516,13 +524,37 @@ export default function ResearchAssistant({
                 body: JSON.stringify({ question, suggestions, overlapThreshold }),
             });
             if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
-            const data = (await res.json()) as ElementHarmonizeResponse;
-            setChatMessages((prev) => [
-                ...prev,
-                { id: crypto.randomUUID(), type: "element-harmonize" as const, result: data, overlapThreshold },
-            ]);
-            dispatch({ type: "ELEMENT_HARMONIZE_DONE" });
+
+            const reader = res.body!.getReader();
+            const decoder = new TextDecoder();
+            let buffer = "";
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split("\n");
+                buffer = lines.pop()!;
+                for (const line of lines) {
+                    if (!line.trim()) continue;
+                    const event = JSON.parse(line) as { type: string; [k: string]: unknown };
+                    if (event.type === "status") setElementProgress(event.text as string);
+                    if (event.type === "progress") {
+                        setElementProgress(`Fetching ${String(event.shortName)} (${String(event.current)}/${String(event.total)})…`);
+                    }
+                    if (event.type === "error") throw new Error(event.message as string);
+                    if (event.type === "result") {
+                        const data = event as unknown as ElementHarmonizeResponse;
+                        setChatMessages((prev) => [
+                            ...prev,
+                            { id: crypto.randomUUID(), type: "element-harmonize" as const, result: data, overlapThreshold },
+                        ]);
+                        dispatch({ type: "ELEMENT_HARMONIZE_DONE" });
+                    }
+                }
+            }
+            setElementProgress("");
         } catch (err) {
+            setElementProgress("");
             setErrorMsg(err instanceof Error ? err.message : String(err));
             dispatch({ type: "ERROR" });
         }
@@ -560,10 +592,23 @@ export default function ResearchAssistant({
     const latestSuggestionsIdx = chatMessages.reduce((acc, m, i) => (m.type === "suggestions" ? i : acc), -1);
     const showScriptPanel = phase === "complete" || phase === "analyzing";
 
-    const inputPlaceholder = isLoading ? "Please wait…" : "Ask about instruments, elements, or harmonization…";
+    const lastSuggestQuery = (() => {
+        if (latestSuggestionsIdx <= 0) return null;
+        const prior = chatMessages[latestSuggestionsIdx - 1];
+        return prior?.type === "user" ? prior.text : null;
+    })();
+    const isRefineMode = mounted && latestSuggestionsIdx >= 0 && !isLoading;
+
+    const inputPlaceholder = isLoading
+        ? "Please wait…"
+        : isRefineMode
+          ? "Narrow down, or start a completely new search…"
+          : "Ask about instruments, elements, or harmonization…";
     const contextLine = isLoading
         ? ""
-        : `Searching ${databaseFilterEnabled ? databaseStructures.length + " IMPACT-MH" : "all NDA"} instruments · Enter to submit`;
+        : isRefineMode && lastSuggestQuery
+          ? `↩ Continuing from "${lastSuggestQuery.length > 40 ? lastSuggestQuery.slice(0, 40) + "…" : lastSuggestQuery}"`
+          : `Searching ${databaseFilterEnabled ? databaseStructures.length + " IMPACT-MH" : "all NDA"} instruments · Enter to submit`;
 
     // ---------------------------------------------------------------------------
     // Render
@@ -695,7 +740,7 @@ export default function ResearchAssistant({
                     return null;
                 })}
 
-                {isLoading && <LoadingBubble phase={phase} suggestHistory={suggestHistory} />}
+                {isLoading && <LoadingBubble phase={phase} suggestHistory={suggestHistory} elementProgress={elementProgress} />}
                 {phase === "error" && errorMsg && (
                     <ErrorBubble msg={errorMsg} onDismiss={() => dispatch({ type: "DISMISS_ERROR" })} />
                 )}
@@ -779,6 +824,15 @@ export default function ResearchAssistant({
                             className="px-3 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 disabled:opacity-50 whitespace-nowrap transition-colors"
                         >
                             Generate ({selectedShortNames.size})
+                        </button>
+                    )}
+                    {isRefineMode && (
+                        <button
+                            onClick={() => setShowClearModal(true)}
+                            className="shrink-0 text-xs text-gray-400 hover:text-gray-600 border border-gray-200 rounded px-2 py-1 transition-colors"
+                            title="Start a fresh search"
+                        >
+                            New search
                         </button>
                     )}
                     <button

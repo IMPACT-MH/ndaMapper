@@ -310,6 +310,7 @@ export interface ElementMapping {
   description?: string;
   valueRange?: string;
   mappingConfidence: "direct" | "partial" | "proxy";
+  matchSource?: "semantic" | "lexical";
 }
 
 export interface ConstructGroup {
