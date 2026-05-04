@@ -697,6 +697,13 @@ export default function ResearchAssistant({
                             },
                         ]);
                         dispatch({ type: "SUGGEST_DONE" });
+                        setSuggestHistory([
+                            { role: "user" as const, content: question },
+                            { role: "assistant" as const, content: JSON.stringify({
+                                suggestions: suggestData.suggestions,
+                                reasoning: suggestData.reasoning,
+                            }) },
+                        ]);
                         return;
                     }
                 } catch {
@@ -754,6 +761,11 @@ export default function ResearchAssistant({
                                 },
                             ]);
                             dispatch({ type: "ELEMENT_HARMONIZE_DONE" });
+                            setSuggestHistory((prev) => [
+                                ...prev,
+                                { role: "user" as const, content: question },
+                                { role: "assistant" as const, content: `Performed element harmonization across ${data.structures?.length ?? 0} instruments, finding ${data.constructs?.length ?? 0} shared construct groups.` },
+                            ]);
                         }
                     }
                 }
