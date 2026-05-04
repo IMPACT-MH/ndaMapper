@@ -12,20 +12,38 @@ import type {
 } from "@/types";
 import type { Phase, ChatMsg, MergedDataset, Props } from "./types";
 import { phaseReducer } from "./types";
-import { Phase2Banner, EmptyState, UserBubble, LoadingBubble, ErrorBubble, AnalysisMessage } from "./MessageComponents";
+import {
+    Phase2Banner,
+    EmptyState,
+    UserBubble,
+    LoadingBubble,
+    ErrorBubble,
+    AnalysisMessage,
+} from "./MessageComponents";
 import { SuggestionsMessage } from "./SuggestionsMessage";
 import { MockReadyMessage } from "./MockReadyMessage";
 import { HarmonizeMessage } from "./HarmonizeMessage";
 import { ElementHarmonizeMessage } from "./ElementHarmonizeMessage";
+import { Trash2 } from "lucide-react";
 
 function detectIntent(q: string): "structures" | "elements" {
     const lower = q.toLowerCase();
     const elementSignals = [
-        "element", "variable", "item", "field",
-        "harmoniz", "across site", "which site", "shared element",
-        "crosswalk", "overlap", "element relation",
+        "element",
+        "variable",
+        "item",
+        "field",
+        "harmoniz",
+        "across site",
+        "which site",
+        "shared element",
+        "crosswalk",
+        "overlap",
+        "element relation",
     ];
-    return elementSignals.some((s) => lower.includes(s)) ? "elements" : "structures";
+    return elementSignals.some((s) => lower.includes(s))
+        ? "elements"
+        : "structures";
 }
 
 // ---------------------------------------------------------------------------
@@ -91,18 +109,28 @@ export default function ResearchAssistant({
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
     // Selection / data state
-    const [selectedShortNames, setSelectedShortNames] = useState<Set<string>>(new Set());
+    const [selectedShortNames, setSelectedShortNames] = useState<Set<string>>(
+        new Set(),
+    );
     const selectedShortNamesRef = useRef<Set<string>>(new Set());
-    useEffect(() => { selectedShortNamesRef.current = selectedShortNames; }, [selectedShortNames]);
-    const [selectedStructures, setSelectedStructures] = useState<DataStructure[]>([]);
+    useEffect(() => {
+        selectedShortNamesRef.current = selectedShortNames;
+    }, [selectedShortNames]);
+    const [selectedStructures, setSelectedStructures] = useState<
+        DataStructure[]
+    >([]);
     const [mockDatasets, setMockDatasets] = useState<MockDataset[]>([]);
     const [mergedDatasets, setMergedDatasets] = useState<MergedDataset[]>([]);
 
     const [analysisText, setAnalysisText] = useState("");
     const [isLoadingMore, setIsLoadingMore] = useState(false);
 
-    const [conversationHistory, setConversationHistory] = useState<ConversationMessage[]>([]);
-    const [suggestHistory, setSuggestHistory] = useState<Array<{ role: "user" | "assistant"; content: string }>>([]);
+    const [conversationHistory, setConversationHistory] = useState<
+        ConversationMessage[]
+    >([]);
+    const [suggestHistory, setSuggestHistory] = useState<
+        Array<{ role: "user" | "assistant"; content: string }>
+    >([]);
 
     const [showClearModal, setShowClearModal] = useState(false);
     const [overlapThreshold, setOverlapThreshold] = useState<number>(0.25);
@@ -125,7 +153,11 @@ export default function ResearchAssistant({
         setConversationHistory([]);
         setSuggestHistory([]);
         setShowClearModal(false);
-        try { localStorage.removeItem(STORAGE_KEY); } catch { /* SSR */ }
+        try {
+            localStorage.removeItem(STORAGE_KEY);
+        } catch {
+            /* SSR */
+        }
     }, []);
 
     // Restore all localStorage-backed state on first client mount.
@@ -136,8 +168,11 @@ export default function ResearchAssistant({
         if (!session) return;
         const msgs = session.chatMessages;
         if (msgs.length > 0) setChatMessages(msgs);
-        if (session.overlapThreshold !== 0.25) setOverlapThreshold(session.overlapThreshold);
-        const mockMsg = [...msgs].reverse().find((m) => m.type === "mock-ready");
+        if (session.overlapThreshold !== 0.25)
+            setOverlapThreshold(session.overlapThreshold);
+        const mockMsg = [...msgs]
+            .reverse()
+            .find((m) => m.type === "mock-ready");
         if (mockMsg?.type === "mock-ready") {
             setMockDatasets(mockMsg.datasets);
             setSelectedStructures(mockMsg.datasets.map((d) => d.structure));
@@ -149,7 +184,8 @@ export default function ResearchAssistant({
 
     // Persist to localStorage whenever chat or threshold changes
     useEffect(() => {
-        if (chatMessages.length > 0) saveSession(chatMessages, overlapThreshold);
+        if (chatMessages.length > 0)
+            saveSession(chatMessages, overlapThreshold);
     }, [chatMessages, overlapThreshold]);
 
     useEffect(() => {
@@ -161,8 +197,10 @@ export default function ResearchAssistant({
     // ---------------------------------------------------------------------------
 
     const handleMerge = useCallback((a: MockDataset, b: MockDataset) => {
-        const defaultName = `df_${a.structure.shortName}_${b.structure.shortName}`
-            .toLowerCase().replace(/[^a-z0-9_]/g, "_");
+        const defaultName =
+            `df_${a.structure.shortName}_${b.structure.shortName}`
+                .toLowerCase()
+                .replace(/[^a-z0-9_]/g, "_");
         const schemaMap = new Map<string, DataElement>();
         for (const e of [...a.schema, ...b.schema]) {
             if (!schemaMap.has(e.name)) schemaMap.set(e.name, e);
@@ -187,28 +225,40 @@ export default function ResearchAssistant({
     // handleAddToMerge
     // ---------------------------------------------------------------------------
 
-    const handleAddToMerge = useCallback((source: MockDataset, mergedId: string) => {
-        setMergedDatasets((prev) =>
-            prev.map((m) => {
-                if (m.id !== mergedId) return m;
-                if (m.sourceNames.includes(source.structure.shortName)) return m;
-                const schemaMap = new Map<string, DataElement>();
-                for (const e of [...m.schema, ...source.schema]) {
-                    if (!schemaMap.has(e.name)) schemaMap.set(e.name, e);
-                }
-                const mergedSchema = [...schemaMap.values()];
-                const allKeys = mergedSchema.map((e) => e.name);
-                const padRow = (row: Record<string, unknown>) =>
-                    Object.fromEntries(allKeys.map((k) => [k, row[k] ?? null]));
-                return {
-                    ...m,
-                    sourceNames: [...m.sourceNames, source.structure.shortName],
-                    rows: [...m.rows.map(padRow), ...source.rows.map(padRow)],
-                    schema: mergedSchema,
-                };
-            }),
-        );
-    }, []);
+    const handleAddToMerge = useCallback(
+        (source: MockDataset, mergedId: string) => {
+            setMergedDatasets((prev) =>
+                prev.map((m) => {
+                    if (m.id !== mergedId) return m;
+                    if (m.sourceNames.includes(source.structure.shortName))
+                        return m;
+                    const schemaMap = new Map<string, DataElement>();
+                    for (const e of [...m.schema, ...source.schema]) {
+                        if (!schemaMap.has(e.name)) schemaMap.set(e.name, e);
+                    }
+                    const mergedSchema = [...schemaMap.values()];
+                    const allKeys = mergedSchema.map((e) => e.name);
+                    const padRow = (row: Record<string, unknown>) =>
+                        Object.fromEntries(
+                            allKeys.map((k) => [k, row[k] ?? null]),
+                        );
+                    return {
+                        ...m,
+                        sourceNames: [
+                            ...m.sourceNames,
+                            source.structure.shortName,
+                        ],
+                        rows: [
+                            ...m.rows.map(padRow),
+                            ...source.rows.map(padRow),
+                        ],
+                        schema: mergedSchema,
+                    };
+                }),
+            );
+        },
+        [],
+    );
 
     // ---------------------------------------------------------------------------
     // handleSuggest
@@ -221,7 +271,9 @@ export default function ResearchAssistant({
         setErrorMsg(null);
 
         if (!isRefinement) {
-            setChatMessages([{ id: crypto.randomUUID(), type: "user", text: q }]);
+            setChatMessages([
+                { id: crypto.randomUUID(), type: "user", text: q },
+            ]);
             setSelectedShortNames(new Set());
             setSelectedStructures([]);
             setMockDatasets([]);
@@ -230,7 +282,10 @@ export default function ResearchAssistant({
             setConversationHistory([]);
             setSuggestHistory([]);
         } else {
-            setChatMessages((prev) => [...prev, { id: crypto.randomUUID(), type: "user", text: q }]);
+            setChatMessages((prev) => [
+                ...prev,
+                { id: crypto.randomUUID(), type: "user", text: q },
+            ]);
         }
 
         try {
@@ -239,20 +294,32 @@ export default function ResearchAssistant({
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     question: q,
-                    databaseStructures: databaseFilterEnabled ? databaseStructures : [],
+                    databaseStructures: databaseFilterEnabled
+                        ? databaseStructures
+                        : [],
                     conversationHistory: historyToSend,
                 }),
             });
-            if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
+            if (!res.ok)
+                throw new Error((await res.text()) || `HTTP ${res.status}`);
             const data = (await res.json()) as SuggestResponse;
 
             setChatMessages((prev) => [
                 ...prev,
-                { id: crypto.randomUUID(), type: "suggestions", suggestions: data.suggestions, reasoning: data.reasoning, networkGraph: data.networkGraph },
+                {
+                    id: crypto.randomUUID(),
+                    type: "suggestions",
+                    suggestions: data.suggestions,
+                    reasoning: data.reasoning,
+                    networkGraph: data.networkGraph,
+                },
             ]);
             dispatch({ type: "SUGGEST_DONE" });
 
-            const assistantContent = JSON.stringify({ suggestions: data.suggestions, reasoning: data.reasoning });
+            const assistantContent = JSON.stringify({
+                suggestions: data.suggestions,
+                reasoning: data.reasoning,
+            });
             setSuggestHistory([
                 ...historyToSend,
                 { role: "user" as const, content: q },
@@ -283,15 +350,26 @@ export default function ResearchAssistant({
     const handleLoadMore = useCallback(async () => {
         const latestSugMsg = [...chatMessages]
             .reverse()
-            .find((m): m is Extract<ChatMsg, { type: "suggestions" }> => m.type === "suggestions");
+            .find(
+                (m): m is Extract<ChatMsg, { type: "suggestions" }> =>
+                    m.type === "suggestions",
+            );
         if (!latestSugMsg) return;
 
-        const excludeShortNames = latestSugMsg.suggestions.map((s) => s.shortName);
-        const latestSugIdx = chatMessages.findIndex((m) => m.id === latestSugMsg.id);
-        const lastUserMsg = chatMessages
-            .slice(0, latestSugIdx)
-            .filter((m): m is Extract<ChatMsg, { type: "user" }> => m.type === "user")
-            .at(-1)?.text ?? "";
+        const excludeShortNames = latestSugMsg.suggestions.map(
+            (s) => s.shortName,
+        );
+        const latestSugIdx = chatMessages.findIndex(
+            (m) => m.id === latestSugMsg.id,
+        );
+        const lastUserMsg =
+            chatMessages
+                .slice(0, latestSugIdx)
+                .filter(
+                    (m): m is Extract<ChatMsg, { type: "user" }> =>
+                        m.type === "user",
+                )
+                .at(-1)?.text ?? "";
 
         setIsLoadingMore(true);
         setErrorMsg(null);
@@ -301,19 +379,29 @@ export default function ResearchAssistant({
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    question: lastUserMsg || "Show me more relevant instruments",
-                    databaseStructures: databaseFilterEnabled ? databaseStructures : [],
+                    question:
+                        lastUserMsg || "Show me more relevant instruments",
+                    databaseStructures: databaseFilterEnabled
+                        ? databaseStructures
+                        : [],
                     conversationHistory: suggestHistory,
                     excludeShortNames,
                 }),
             });
-            if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
+            if (!res.ok)
+                throw new Error((await res.text()) || `HTTP ${res.status}`);
             const data = (await res.json()) as SuggestResponse;
 
             setChatMessages((prev) =>
                 prev.map((m) =>
                     m.id === latestSugMsg.id && m.type === "suggestions"
-                        ? { ...m, suggestions: [...m.suggestions, ...data.suggestions] }
+                        ? {
+                              ...m,
+                              suggestions: [
+                                  ...m.suggestions,
+                                  ...data.suggestions,
+                              ],
+                          }
                         : m,
                 ),
             );
@@ -322,7 +410,12 @@ export default function ResearchAssistant({
         } finally {
             setIsLoadingMore(false);
         }
-    }, [chatMessages, databaseFilterEnabled, databaseStructures, suggestHistory]);
+    }, [
+        chatMessages,
+        databaseFilterEnabled,
+        databaseStructures,
+        suggestHistory,
+    ]);
 
     // ---------------------------------------------------------------------------
     // handleGenerateMock
@@ -337,9 +430,12 @@ export default function ResearchAssistant({
             const res = await fetch("/api/v1/research/mock", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ selectedStructures: [...selectedShortNames] }),
+                body: JSON.stringify({
+                    selectedStructures: [...selectedShortNames],
+                }),
             });
-            if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
+            if (!res.ok)
+                throw new Error((await res.text()) || `HTTP ${res.status}`);
             const datasets = (await res.json()) as MockDataset[];
             setMockDatasets(datasets);
             setSelectedStructures(datasets.map((d) => d.structure));
@@ -364,79 +460,134 @@ export default function ResearchAssistant({
     // handleAnalyze
     // ---------------------------------------------------------------------------
 
-    const handleAnalyze = useCallback(async (q: string, script?: string) => {
-        if (!q.trim() || mockDatasets.length === 0) return;
+    const handleAnalyze = useCallback(
+        async (q: string, script?: string) => {
+            if (!q.trim() || mockDatasets.length === 0) return;
 
-        const mergedContext = mergedDatasets.length > 0
-            ? `\n\nMerged datasets available for analysis:\n` +
-              mergedDatasets.map((m) => `- ${m.name}: ${m.rows.length} rows (merged from ${m.sourceNames.join(" + ")})`).join("\n")
-            : "";
+            const mergedContext =
+                mergedDatasets.length > 0
+                    ? `\n\nMerged datasets available for analysis:\n` +
+                      mergedDatasets
+                          .map(
+                              (m) =>
+                                  `- ${m.name}: ${m.rows.length} rows (merged from ${m.sourceNames.join(" + ")})`,
+                          )
+                          .join("\n")
+                    : "";
 
-        const fullQuestion = script?.trim()
-            ? `${q}${mergedContext}\n\nR/Python script to adapt:\n\`\`\`${scriptLang ?? "r"}\n${script}\n\`\`\``
-            : `${q}${mergedContext}`;
+            const fullQuestion = script?.trim()
+                ? `${q}${mergedContext}\n\nR/Python script to adapt:\n\`\`\`${scriptLang ?? "r"}\n${script}\n\`\`\``
+                : `${q}${mergedContext}`;
 
-        dispatch({ type: "ANALYZE_START" });
-        setAnalysisText("");
+            dispatch({ type: "ANALYZE_START" });
+            setAnalysisText("");
 
-        const analysisId = crypto.randomUUID();
-        setChatMessages((prev) => [
-            ...prev,
-            { id: crypto.randomUUID(), type: "user", text: q + (script ? ` [+ ${scriptLang === "python" ? "Python" : "R"} script]` : "") },
-            { id: analysisId, type: "analysis", text: "", charts: [] },
-        ]);
+            const analysisId = crypto.randomUUID();
+            setChatMessages((prev) => [
+                ...prev,
+                {
+                    id: crypto.randomUUID(),
+                    type: "user",
+                    text:
+                        q +
+                        (script
+                            ? ` [+ ${scriptLang === "python" ? "Python" : "R"} script]`
+                            : ""),
+                },
+                { id: analysisId, type: "analysis", text: "", charts: [] },
+            ]);
 
-        try {
-            const res = await fetch("/api/v1/research/analyze", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ question: fullQuestion, selectedStructures, mockDatasets, conversationHistory }),
-            });
-            if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
+            try {
+                const res = await fetch("/api/v1/research/analyze", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        question: fullQuestion,
+                        selectedStructures,
+                        mockDatasets,
+                        conversationHistory,
+                    }),
+                });
+                if (!res.ok)
+                    throw new Error((await res.text()) || `HTTP ${res.status}`);
 
-            const reader = res.body?.getReader();
-            if (!reader) throw new Error("No response stream");
+                const reader = res.body?.getReader();
+                if (!reader) throw new Error("No response stream");
 
-            const decoder = new TextDecoder();
-            let fullText = "";
+                const decoder = new TextDecoder();
+                let fullText = "";
 
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-                fullText += decoder.decode(value, { stream: true });
-                setAnalysisText(fullText);
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    fullText += decoder.decode(value, { stream: true });
+                    setAnalysisText(fullText);
+                    setChatMessages((prev) =>
+                        prev.map((m) =>
+                            m.id === analysisId && m.type === "analysis"
+                                ? { ...m, text: fullText }
+                                : m,
+                        ),
+                    );
+                }
+
+                const chartsMatch = fullText.match(
+                    /<charts>([\s\S]*?)<\/charts>/,
+                );
+                const cleanText = fullText
+                    .replace(/<charts>[\s\S]*?<\/charts>/, "")
+                    .trim();
+                setAnalysisText(cleanText);
+
+                let parsedCharts: import("@/types").ChartConfig[] = [];
+                if (chartsMatch) {
+                    try {
+                        parsedCharts = JSON.parse(
+                            chartsMatch[1],
+                        ) as import("@/types").ChartConfig[];
+                    } catch {
+                        /* malformed */
+                    }
+                }
+
                 setChatMessages((prev) =>
-                    prev.map((m) => m.id === analysisId && m.type === "analysis" ? { ...m, text: fullText } : m),
+                    prev.map((m) =>
+                        m.id === analysisId && m.type === "analysis"
+                            ? { ...m, text: cleanText, charts: parsedCharts }
+                            : m,
+                    ),
+                );
+                setConversationHistory((prev) => [
+                    ...prev,
+                    { role: "user", content: q, timestamp: Date.now() },
+                    {
+                        role: "assistant",
+                        content: cleanText,
+                        timestamp: Date.now(),
+                    },
+                ]);
+                dispatch({ type: "ANALYZE_DONE" });
+            } catch (err) {
+                const msg = err instanceof Error ? err.message : String(err);
+                setErrorMsg(msg);
+                dispatch({ type: "ERROR" });
+                setChatMessages((prev) =>
+                    prev.map((m) =>
+                        m.id === analysisId && m.type === "analysis"
+                            ? { ...m, text: `[Analysis failed: ${msg}]` }
+                            : m,
+                    ),
                 );
             }
-
-            const chartsMatch = fullText.match(/<charts>([\s\S]*?)<\/charts>/);
-            const cleanText = fullText.replace(/<charts>[\s\S]*?<\/charts>/, "").trim();
-            setAnalysisText(cleanText);
-
-            let parsedCharts: import("@/types").ChartConfig[] = [];
-            if (chartsMatch) {
-                try { parsedCharts = JSON.parse(chartsMatch[1]) as import("@/types").ChartConfig[]; } catch { /* malformed */ }
-            }
-
-            setChatMessages((prev) =>
-                prev.map((m) => m.id === analysisId && m.type === "analysis" ? { ...m, text: cleanText, charts: parsedCharts } : m),
-            );
-            setConversationHistory((prev) => [
-                ...prev,
-                { role: "user", content: q, timestamp: Date.now() },
-                { role: "assistant", content: cleanText, timestamp: Date.now() },
-            ]);
-            dispatch({ type: "ANALYZE_DONE" });
-        } catch (err) {
-            const msg = err instanceof Error ? err.message : String(err);
-            setErrorMsg(msg);
-            dispatch({ type: "ERROR" });
-            setChatMessages((prev) =>
-                prev.map((m) => m.id === analysisId && m.type === "analysis" ? { ...m, text: `[Analysis failed: ${msg}]` } : m),
-            );
-        }
-    }, [mockDatasets, selectedStructures, conversationHistory, mergedDatasets, scriptLang]);
+        },
+        [
+            mockDatasets,
+            selectedStructures,
+            conversationHistory,
+            mergedDatasets,
+            scriptLang,
+        ],
+    );
 
     // ---------------------------------------------------------------------------
     // handleHarmonize
@@ -447,7 +598,9 @@ export default function ResearchAssistant({
         dispatch({ type: "HARMONIZE_START" });
         setErrorMsg(null);
 
-        const lastQ = [...chatMessages].reverse().find((m) => m.type === "user")?.text ?? "";
+        const lastQ =
+            [...chatMessages].reverse().find((m) => m.type === "user")?.text ??
+            "";
         const structuresWithElements = mockDatasets.map((ds) => ({
             shortName: ds.structure.shortName,
             title: ds.structure.title,
@@ -459,14 +612,22 @@ export default function ResearchAssistant({
             const res = await fetch("/api/v1/research/harmonize", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ question: lastQ, structures: structuresWithElements }),
+                body: JSON.stringify({
+                    question: lastQ,
+                    structures: structuresWithElements,
+                }),
             });
-            if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
+            if (!res.ok)
+                throw new Error((await res.text()) || `HTTP ${res.status}`);
             const data = (await res.json()) as HarmonizeResponse;
 
             setChatMessages((prev) => [
                 ...prev,
-                { id: crypto.randomUUID(), type: "harmonize" as const, result: { ...data } },
+                {
+                    id: crypto.randomUUID(),
+                    type: "harmonize" as const,
+                    result: { ...data },
+                },
             ]);
             dispatch({ type: "HARMONIZE_DONE" });
         } catch (err) {
@@ -479,86 +640,130 @@ export default function ResearchAssistant({
     // handleElementSearch
     // ---------------------------------------------------------------------------
 
-    const handleElementSearch = useCallback(async (question: string) => {
-        dispatch({ type: "ELEMENT_HARMONIZE_START" });
-        setErrorMsg(null);
-        setChatMessages((prev) => [...prev, { id: crypto.randomUUID(), type: "user" as const, text: question }]);
+    const handleElementSearch = useCallback(
+        async (question: string) => {
+            dispatch({ type: "ELEMENT_HARMONIZE_START" });
+            setErrorMsg(null);
+            setChatMessages((prev) => [
+                ...prev,
+                {
+                    id: crypto.randomUUID(),
+                    type: "user" as const,
+                    text: question,
+                },
+            ]);
 
-        const latestSuggestions = [...chatMessages].reverse().find((m) => m.type === "suggestions");
+            const latestSuggestions = [...chatMessages]
+                .reverse()
+                .find((m) => m.type === "suggestions");
 
-        let suggestions = latestSuggestions?.type === "suggestions"
-            ? latestSuggestions.suggestions
-                .filter((s) => selectedShortNamesRef.current.has(s.shortName))
-                .map((s) => ({ shortName: s.shortName, title: s.title, sites: s.sites ?? [] }))
-            : [];
+            let suggestions =
+                latestSuggestions?.type === "suggestions"
+                    ? latestSuggestions.suggestions
+                          .filter((s) =>
+                              selectedShortNamesRef.current.has(s.shortName),
+                          )
+                          .map((s) => ({
+                              shortName: s.shortName,
+                              title: s.title,
+                              sites: s.sites ?? [],
+                          }))
+                    : [];
 
-        if (suggestions.length === 0) {
-            try {
-                const suggestRes = await fetch("/api/v1/research/suggest", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ question, databaseStructures, conversationHistory: [] }),
-                });
-                if (suggestRes.ok) {
-                    const suggestData = (await suggestRes.json()) as SuggestResponse;
-                    setChatMessages((prev) => [
-                        ...prev,
-                        {
-                            id: crypto.randomUUID(),
-                            type: "suggestions" as const,
-                            suggestions: suggestData.suggestions,
-                            reasoning: suggestData.reasoning,
-                            networkGraph: suggestData.networkGraph,
-                        },
-                    ]);
-                    dispatch({ type: "SUGGEST_DONE" });
-                    return;
-                }
-            } catch { /* proceed with empty */ }
-        }
-
-        try {
-            const res = await fetch("/api/v1/research/element-harmonize", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ question, suggestions, overlapThreshold }),
-            });
-            if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
-
-            const reader = res.body!.getReader();
-            const decoder = new TextDecoder();
-            let buffer = "";
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-                buffer += decoder.decode(value, { stream: true });
-                const lines = buffer.split("\n");
-                buffer = lines.pop()!;
-                for (const line of lines) {
-                    if (!line.trim()) continue;
-                    const event = JSON.parse(line) as { type: string; [k: string]: unknown };
-                    if (event.type === "status") setElementProgress(event.text as string);
-                    if (event.type === "progress") {
-                        setElementProgress(`Fetching ${String(event.shortName)} (${String(event.current)}/${String(event.total)})…`);
-                    }
-                    if (event.type === "error") throw new Error(event.message as string);
-                    if (event.type === "result") {
-                        const data = event as unknown as ElementHarmonizeResponse;
+            if (suggestions.length === 0) {
+                try {
+                    const suggestRes = await fetch("/api/v1/research/suggest", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            question,
+                            databaseStructures,
+                            conversationHistory: [],
+                        }),
+                    });
+                    if (suggestRes.ok) {
+                        const suggestData =
+                            (await suggestRes.json()) as SuggestResponse;
                         setChatMessages((prev) => [
                             ...prev,
-                            { id: crypto.randomUUID(), type: "element-harmonize" as const, result: data, overlapThreshold },
+                            {
+                                id: crypto.randomUUID(),
+                                type: "suggestions" as const,
+                                suggestions: suggestData.suggestions,
+                                reasoning: suggestData.reasoning,
+                                networkGraph: suggestData.networkGraph,
+                            },
                         ]);
-                        dispatch({ type: "ELEMENT_HARMONIZE_DONE" });
+                        dispatch({ type: "SUGGEST_DONE" });
+                        return;
                     }
+                } catch {
+                    /* proceed with empty */
                 }
             }
-            setElementProgress("");
-        } catch (err) {
-            setElementProgress("");
-            setErrorMsg(err instanceof Error ? err.message : String(err));
-            dispatch({ type: "ERROR" });
-        }
-    }, [chatMessages, databaseStructures, overlapThreshold]);
+
+            try {
+                const res = await fetch("/api/v1/research/element-harmonize", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        question,
+                        suggestions,
+                        overlapThreshold,
+                    }),
+                });
+                if (!res.ok)
+                    throw new Error((await res.text()) || `HTTP ${res.status}`);
+
+                const reader = res.body!.getReader();
+                const decoder = new TextDecoder();
+                let buffer = "";
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split("\n");
+                    buffer = lines.pop()!;
+                    for (const line of lines) {
+                        if (!line.trim()) continue;
+                        const event = JSON.parse(line) as {
+                            type: string;
+                            [k: string]: unknown;
+                        };
+                        if (event.type === "status")
+                            setElementProgress(event.text as string);
+                        if (event.type === "progress") {
+                            setElementProgress(
+                                `Fetching ${String(event.shortName)} (${String(event.current)}/${String(event.total)})…`,
+                            );
+                        }
+                        if (event.type === "error")
+                            throw new Error(event.message as string);
+                        if (event.type === "result") {
+                            const data =
+                                event as unknown as ElementHarmonizeResponse;
+                            setChatMessages((prev) => [
+                                ...prev,
+                                {
+                                    id: crypto.randomUUID(),
+                                    type: "element-harmonize" as const,
+                                    result: data,
+                                    overlapThreshold,
+                                },
+                            ]);
+                            dispatch({ type: "ELEMENT_HARMONIZE_DONE" });
+                        }
+                    }
+                }
+                setElementProgress("");
+            } catch (err) {
+                setElementProgress("");
+                setErrorMsg(err instanceof Error ? err.message : String(err));
+                dispatch({ type: "ERROR" });
+            }
+        },
+        [chatMessages, databaseStructures, overlapThreshold],
+    );
 
     // ---------------------------------------------------------------------------
     // Unified submit
@@ -581,15 +786,24 @@ export default function ResearchAssistant({
     // ---------------------------------------------------------------------------
 
     const availableVars = [
-        ...mockDatasets.map((ds) => `df_${ds.structure.shortName.toLowerCase().replace(/[^a-z0-9]/g, "_")}`),
+        ...mockDatasets.map(
+            (ds) =>
+                `df_${ds.structure.shortName.toLowerCase().replace(/[^a-z0-9]/g, "_")}`,
+        ),
         ...mergedDatasets.map((m) => m.name),
     ];
 
     const isLoading =
-        phase === "suggesting" || phase === "generating" || phase === "analyzing" ||
-        phase === "harmonizing" || phase === "element-harmonizing";
+        phase === "suggesting" ||
+        phase === "generating" ||
+        phase === "analyzing" ||
+        phase === "harmonizing" ||
+        phase === "element-harmonizing";
 
-    const latestSuggestionsIdx = chatMessages.reduce((acc, m, i) => (m.type === "suggestions" ? i : acc), -1);
+    const latestSuggestionsIdx = chatMessages.reduce(
+        (acc, m, i) => (m.type === "suggestions" ? i : acc),
+        -1,
+    );
     const showScriptPanel = phase === "complete" || phase === "analyzing";
 
     const lastSuggestQuery = (() => {
@@ -615,14 +829,20 @@ export default function ResearchAssistant({
     // ---------------------------------------------------------------------------
 
     return (
-        <div className="flex flex-col" style={{ height: phase === "idle" ? "auto" : "calc(100vh - 8rem)" }}>
+        <div
+            className="flex flex-col"
+            style={{ height: phase === "idle" ? "auto" : "calc(100vh - 8rem)" }}
+        >
             {/* Clear chat modal */}
             {showClearModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
                     <div className="bg-white rounded-xl shadow-xl p-6 max-w-sm w-full mx-4">
-                        <h2 className="text-base font-semibold text-gray-900 mb-2">Clear conversation?</h2>
+                        <h2 className="text-base font-semibold text-gray-900 mb-2">
+                            Clear conversation?
+                        </h2>
                         <p className="text-sm text-gray-500 mb-5">
-                            This will remove all messages, selections, and generated datasets. It cannot be undone.
+                            This will remove all messages, selections, and
+                            generated datasets. It cannot be undone.
                         </p>
                         <div className="flex justify-end gap-3">
                             <button
@@ -648,38 +868,59 @@ export default function ResearchAssistant({
                     <div>
                         <h1 className="text-3xl font-bold text-gray-900 mb-0.5">
                             Research Assistant{" "}
-                            <span className="ml-1 px-2 py-0.5 text-sm font-semibold bg-purple-100 text-purple-600 rounded-full align-middle">beta</span>
+                            <span className="ml-1 px-2 py-0.5 text-sm font-semibold bg-purple-100 text-purple-600 rounded-full align-middle">
+                                beta
+                            </span>
                         </h1>
                         <p className="text-gray-500 text-sm">
-                            Explore IMPACT-MH instruments, generate mock datasets, and plan your analysis — powered by Claude.
+                            Explore IMPACT-MH instruments, generate mock
+                            datasets, and plan your analysis — powered by
+                            Claude.
                         </p>
                     </div>
                     {chatMessages.length > 0 && (
                         <button
                             onClick={() => setShowClearModal(true)}
-                            className="shrink-0 mt-1 px-3 py-1.5 text-xs text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg border border-transparent hover:border-red-200 transition-colors"
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-200"
+                            title="Clear all results"
                         >
-                            Clear chat
+                            <Trash2 className="w-4 h-4" />
+                            Clear
                         </button>
                     )}
                 </div>
                 {databaseConnectionError && (
                     <div className="border border-amber-200 bg-amber-50 rounded-lg px-3 py-2 text-xs text-amber-800">
-                        Database connection unavailable. Suggestions will use all NDA structures.
+                        Database connection unavailable. Suggestions will use
+                        all NDA structures.
                     </div>
                 )}
                 <Phase2Banner />
             </div>
 
             {/* Scrollable chat thread */}
-            <div className={`${phase !== "idle" ? "flex-1 overflow-y-auto" : ""} space-y-4 py-2 min-h-0 pr-1`}>
+            <div
+                className={`${phase !== "idle" ? "flex-1 overflow-y-auto" : ""} space-y-4 py-2 min-h-0 pr-1`}
+            >
                 {chatMessages.length === 0 && (
-                    <EmptyState databaseFilterEnabled={databaseFilterEnabled} count={databaseStructures.length} />
+                    <EmptyState
+                        databaseFilterEnabled={databaseFilterEnabled}
+                        count={databaseStructures.length}
+                    />
                 )}
 
                 {chatMessages.map((msg, i) => {
-                    if (msg.type === "user") return <UserBubble key={msg.id} text={msg.text} />;
-                    if (msg.type === "hint") return <div key={msg.id} className="text-xs text-gray-400 italic pl-1">{msg.text}</div>;
+                    if (msg.type === "user")
+                        return <UserBubble key={msg.id} text={msg.text} />;
+                    if (msg.type === "hint")
+                        return (
+                            <div
+                                key={msg.id}
+                                className="text-xs text-gray-400 italic pl-1"
+                            >
+                                {msg.text}
+                            </div>
+                        );
                     if (msg.type === "suggestions") {
                         return (
                             <SuggestionsMessage
@@ -690,11 +931,27 @@ export default function ResearchAssistant({
                                 phase={phase}
                                 isLatest={i === latestSuggestionsIdx}
                                 onGenerate={() => void handleGenerateMock()}
-                                isGenerating={phase === "generating" || phase === "element-harmonizing" || phase === "suggesting"}
+                                isGenerating={
+                                    phase === "generating" ||
+                                    phase === "element-harmonizing" ||
+                                    phase === "suggesting"
+                                }
                                 onLoadMore={() => void handleLoadMore()}
                                 isLoadingMore={isLoadingMore}
-                                onSelectAll={() => setSelectedShortNames(new Set(msg.suggestions.map((s) => s.shortName)))}
-                                onFindElements={() => void handleElementSearch("Which elements can I harmonize across these instruments?")}
+                                onSelectAll={() =>
+                                    setSelectedShortNames(
+                                        new Set(
+                                            msg.suggestions.map(
+                                                (s) => s.shortName,
+                                            ),
+                                        ),
+                                    )
+                                }
+                                onFindElements={() =>
+                                    void handleElementSearch(
+                                        "Which elements can I harmonize across these instruments?",
+                                    )
+                                }
                                 overlapThreshold={overlapThreshold}
                                 onOverlapThresholdChange={setOverlapThreshold}
                             />
@@ -709,22 +966,57 @@ export default function ResearchAssistant({
                                 onMerge={handleMerge}
                                 onAddToMerge={handleAddToMerge}
                                 onRenameMerged={(id, name) =>
-                                    setMergedDatasets((prev) => prev.map((m) => m.id === id ? { ...m, name } : m))
+                                    setMergedDatasets((prev) =>
+                                        prev.map((m) =>
+                                            m.id === id ? { ...m, name } : m,
+                                        ),
+                                    )
                                 }
-                                onRemoveMerged={(id) => setMergedDatasets((prev) => prev.filter((m) => m.id !== id))}
+                                onRemoveMerged={(id) =>
+                                    setMergedDatasets((prev) =>
+                                        prev.filter((m) => m.id !== id),
+                                    )
+                                }
                                 onRemoveDataset={(shortName) => {
-                                    setMockDatasets((prev) => prev.filter((d) => d.structure.shortName !== shortName));
-                                    setSelectedStructures((prev) => prev.filter((s) => s.shortName !== shortName));
+                                    setMockDatasets((prev) =>
+                                        prev.filter(
+                                            (d) =>
+                                                d.structure.shortName !==
+                                                shortName,
+                                        ),
+                                    );
+                                    setSelectedStructures((prev) =>
+                                        prev.filter(
+                                            (s) => s.shortName !== shortName,
+                                        ),
+                                    );
                                 }}
-                                onHarmonize={phase === "complete" && mockDatasets.length > 1 ? () => void handleHarmonize() : undefined}
+                                onHarmonize={
+                                    phase === "complete" &&
+                                    mockDatasets.length > 1
+                                        ? () => void handleHarmonize()
+                                        : undefined
+                                }
                             />
                         );
                     }
                     if (msg.type === "analysis") {
-                        return <AnalysisMessage key={msg.id} msg={msg} phase={phase} datasets={mockDatasets} />;
+                        return (
+                            <AnalysisMessage
+                                key={msg.id}
+                                msg={msg}
+                                phase={phase}
+                                datasets={mockDatasets}
+                            />
+                        );
                     }
                     if (msg.type === "harmonize") {
-                        return <HarmonizeMessage key={msg.id} result={msg.result} />;
+                        return (
+                            <HarmonizeMessage
+                                key={msg.id}
+                                result={msg.result}
+                            />
+                        );
                     }
                     if (msg.type === "element-harmonize") {
                         return (
@@ -740,9 +1032,18 @@ export default function ResearchAssistant({
                     return null;
                 })}
 
-                {isLoading && <LoadingBubble phase={phase} suggestHistory={suggestHistory} elementProgress={elementProgress} />}
+                {isLoading && (
+                    <LoadingBubble
+                        phase={phase}
+                        suggestHistory={suggestHistory}
+                        elementProgress={elementProgress}
+                    />
+                )}
                 {phase === "error" && errorMsg && (
-                    <ErrorBubble msg={errorMsg} onDismiss={() => dispatch({ type: "DISMISS_ERROR" })} />
+                    <ErrorBubble
+                        msg={errorMsg}
+                        onDismiss={() => dispatch({ type: "DISMISS_ERROR" })}
+                    />
                 )}
                 <div ref={chatEndRef} />
             </div>
@@ -751,18 +1052,23 @@ export default function ResearchAssistant({
             {showScriptPanel && (
                 <div
                     className={`shrink-0 border-t border-gray-100 transition-colors ${isDraggingFile ? "bg-purple-50 ring-2 ring-purple-300 ring-inset" : ""}`}
-                    onDragOver={(e) => { e.preventDefault(); setIsDraggingFile(true); }}
+                    onDragOver={(e) => {
+                        e.preventDefault();
+                        setIsDraggingFile(true);
+                    }}
                     onDragLeave={() => setIsDraggingFile(false)}
                     onDrop={(e) => {
                         e.preventDefault();
                         setIsDraggingFile(false);
                         const file = e.dataTransfer.files[0];
                         if (!file) return;
-                        const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+                        const ext =
+                            file.name.split(".").pop()?.toLowerCase() ?? "";
                         if (ext === "r" || ext === "rmd") setScriptLang("r");
                         else if (ext === "py") setScriptLang("python");
                         const reader = new FileReader();
-                        reader.onload = (ev) => setRScript((ev.target?.result as string) ?? "");
+                        reader.onload = (ev) =>
+                            setRScript((ev.target?.result as string) ?? "");
                         reader.readAsText(file);
                         if (!rScriptOpen) setRScriptOpen(true);
                     }}
@@ -771,20 +1077,31 @@ export default function ResearchAssistant({
                         onClick={() => setRScriptOpen((v) => !v)}
                         className="w-full flex items-center gap-1 px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700 transition-colors"
                     >
-                        <span className="text-gray-400">{rScriptOpen ? "▼" : "▶"}</span>
+                        <span className="text-gray-400">
+                            {rScriptOpen ? "▼" : "▶"}
+                        </span>
                         R/Python script (optional)
                         {scriptLang && (
                             <span className="ml-2 px-1.5 py-0.5 text-xs rounded bg-purple-100 text-purple-700 font-mono">
                                 {scriptLang === "r" ? "R" : "Python"}
                             </span>
                         )}
-                        {isDraggingFile && <span className="ml-auto text-purple-600 font-medium">Drop .r · .py · .Rmd file here</span>}
+                        {isDraggingFile && (
+                            <span className="ml-auto text-purple-600 font-medium">
+                                Drop .r · .py · .Rmd file here
+                            </span>
+                        )}
                     </button>
                     {availableVars.length > 0 && (
                         <p className="px-3 text-xs text-gray-400">
                             Available:{" "}
                             {availableVars.map((v) => (
-                                <code key={v} className="font-mono mr-1 text-indigo-600">{v}</code>
+                                <code
+                                    key={v}
+                                    className="font-mono mr-1 text-indigo-600"
+                                >
+                                    {v}
+                                </code>
                             ))}
                         </p>
                     )}
@@ -813,7 +1130,10 @@ export default function ResearchAssistant({
                         placeholder={inputPlaceholder}
                         disabled={isLoading}
                         onKeyDown={(e) => {
-                            if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSubmit(); }
+                            if (e.key === "Enter" && !e.shiftKey) {
+                                e.preventDefault();
+                                handleSubmit();
+                            }
                         }}
                         className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50"
                     />
@@ -840,10 +1160,18 @@ export default function ResearchAssistant({
                         disabled={isLoading || !inputText.trim()}
                         className="px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 disabled:opacity-50 transition-colors whitespace-nowrap"
                     >
-                        {phase === "suggesting" ? "Finding…" : phase === "analyzing" ? "Analyzing…" : "Send"}
+                        {phase === "suggesting"
+                            ? "Finding…"
+                            : phase === "analyzing"
+                              ? "Analyzing…"
+                              : "Send"}
                     </button>
                 </div>
-                {contextLine && <p className="text-xs text-gray-400 mt-1 px-1">{contextLine}</p>}
+                {contextLine && (
+                    <p className="text-xs text-gray-400 mt-1 px-1">
+                        {contextLine}
+                    </p>
+                )}
             </div>
         </div>
     );

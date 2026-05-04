@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import Image from "next/image";
 import {
     Search,
@@ -11,6 +11,7 @@ import {
     Database,
     Loader2,
     Download,
+    Trash2,
 } from "lucide-react";
 import { parseCSV } from "@/utils/csvUtils";
 import type { RosettaResult } from "@/app/api/v1/research/rosetta/route";
@@ -29,6 +30,38 @@ interface RowState {
     rawResults?: RosettaResult[];
     searchTerms?: string[];
     error?: string;
+}
+
+// ---------------------------------------------------------------------------
+// Session persistence
+// ---------------------------------------------------------------------------
+
+const STORAGE_KEY = "rosetta-session-v1";
+
+interface StoredRosettaSession {
+    mode: "search" | "csv";
+    query: string;
+    singleResult: { rawResults: RosettaResult[]; searchTerms: string[] } | null;
+    csvRows: string[];
+    batchState: Record<string, RowState>;
+    selections: Record<string, RosettaResult>;
+}
+
+function loadRosettaSession(): StoredRosettaSession | null {
+    try {
+        if (typeof window === "undefined") return null;
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return null;
+        return JSON.parse(raw) as StoredRosettaSession;
+    } catch {
+        return null;
+    }
+}
+
+function saveRosettaSession(session: StoredRosettaSession) {
+    try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+    } catch { /* quota */ }
 }
 
 function confidenceLabel(
@@ -210,6 +243,53 @@ export default function Rosetta({
         {},
     );
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const [mounted, setMounted] = useState(false);
+    const [showClearModal, setShowClearModal] = useState(false);
+
+    const clearAll = useCallback(() => {
+        setQuery("");
+        setSingleResult(null);
+        setSingleError(null);
+        setCsvRows([]);
+        setBatchState({});
+        setExpandedRows(new Set());
+        setSelections({});
+        setMode("search");
+        setShowClearModal(false);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+        try { localStorage.removeItem(STORAGE_KEY); } catch { /* SSR */ }
+    }, []);
+
+    // Restore from localStorage after first client render
+    useEffect(() => {
+        setMounted(true);
+        const session = loadRosettaSession();
+        if (!session) return;
+        if (session.mode) setMode(session.mode);
+        if (session.query) setQuery(session.query);
+        if (session.singleResult) setSingleResult(session.singleResult);
+        if (session.csvRows?.length > 0) setCsvRows(session.csvRows);
+        if (session.batchState && Object.keys(session.batchState).length > 0) {
+            setBatchState(session.batchState as Record<number, RowState>);
+        }
+        if (session.selections && Object.keys(session.selections).length > 0) {
+            setSelections(session.selections as Record<number, RosettaResult>);
+        }
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Persist to localStorage on relevant state changes
+    useEffect(() => {
+        if (!mounted) return;
+        const cleanBatchState = Object.fromEntries(
+            Object.entries(batchState).filter(([, v]) => v.status === "done" || v.status === "error")
+        );
+        saveRosettaSession({
+            mode, query, singleResult, csvRows,
+            batchState: cleanBatchState,
+            selections: selections as Record<string, RosettaResult>,
+        });
+    }, [mounted, mode, query, singleResult, csvRows, batchState, selections]);
 
     const filterResults = (results: RosettaResult[]): RosettaResult[] => {
         const dbSet = new Set(databaseStructures.map((s) => s.toLowerCase()));
@@ -448,12 +528,24 @@ export default function Rosetta({
         <div className="space-y-4">
             {/* Header + Database Filter Checkbox */}
             <div className="mb-8">
-                <h1 className="text-3xl font-bold mb-4">
-                    Rosetta Mapper
-                    <span className="ml-1 px-2 py-0.5 text-sm font-semibold bg-indigo-100 text-indigo-600 rounded-full align-middle">
-                        beta
-                    </span>
-                </h1>
+                <div className="flex items-center justify-between gap-3 mb-4">
+                    <h1 className="text-3xl font-bold">
+                        Rosetta Mapper
+                        <span className="ml-1 px-2 py-0.5 text-sm font-semibold bg-indigo-100 text-indigo-600 rounded-full align-middle">
+                            beta
+                        </span>
+                    </h1>
+                    {(query || singleResult || csvRows.length > 0) && (
+                        <button
+                            onClick={() => setShowClearModal(true)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-200"
+                            title="Clear all results"
+                        >
+                            <Trash2 className="w-4 h-4" />
+                            Clear
+                        </button>
+                    )}
+                </div>
                 <p className="text-gray-600 -mb-7">
                     Describe a data element in plain language and Rosetta will
                     find the best matching NDA data elements using AI.
@@ -1133,6 +1225,30 @@ export default function Rosetta({
                                 )}
                         </div>
                     )}
+                </div>
+            )}
+
+            {/* Clear confirmation modal */}
+            {showClearModal && (
+                <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={() => setShowClearModal(false)}>
+                    <div className="bg-white rounded-xl shadow-xl p-6 max-w-sm w-full mx-4" onClick={(e) => e.stopPropagation()}>
+                        <h3 className="text-base font-semibold text-gray-900 mb-2">Clear Rosetta Mapper?</h3>
+                        <p className="text-sm text-gray-500 mb-5">All searches, results, and selections will be removed. This cannot be undone.</p>
+                        <div className="flex gap-3 justify-end">
+                            <button
+                                onClick={() => setShowClearModal(false)}
+                                className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={clearAll}
+                                className="px-4 py-2 text-sm font-medium bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                            >
+                                Clear
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>
