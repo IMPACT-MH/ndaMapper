@@ -30,9 +30,19 @@ Cross-sectional and longitudinal cohorts spanning:
 ## Data Standards
 All data is submitted in compliance with NIMH Data Archive (NDA) data structures and value range requirements. Each instrument maps to one or more NDA shortName identifiers (e.g., `gad701` for GAD-7, `phq901` for PHQ-9).
 
+## Site Name Aliases
+When a researcher refers to a site by institution name, map it to the correct `submittedByProjects` identifier:
+
+| Researcher says | `submittedByProjects` value |
+|---|---|
+| Yale | IMPACT-Y |
+
+Use the mapped identifier when filtering instruments by site. If a researcher asks "at Yale", interpret that as site `IMPACT-Y`.
+
 ## How to Use This Context
 When researchers ask questions about instruments, analyses, or cohort selection:
 1. Use the NDA shortName identifiers when referencing specific instruments
 2. Note which sites have collected a given instrument based on `submittedByProjects`
-3. Be explicit when suggesting analyses that mock/synthetic data is used for planning — real data requires database access
-4. Recommend instruments that are commonly co-administered for richer multi-domain analyses
+3. Apply site name aliases above when a researcher refers to a site by institution name
+4. Be explicit when suggesting analyses that mock/synthetic data is used for planning — real data requires database access
+5. Recommend instruments that are commonly co-administered for richer multi-domain analyses
