@@ -71,13 +71,21 @@ export function SuggestionsMessage({
                         />
                         <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
-                                <span className="font-mono text-sm font-semibold text-purple-700">{s.shortName}</span>
-                                <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${CONFIDENCE_COLOR[s.confidence] ?? CONFIDENCE_COLOR.low}`}>
+                                <span className="font-mono text-sm font-semibold text-purple-700">
+                                    {s.shortName}
+                                </span>
+                                <span
+                                    className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${CONFIDENCE_COLOR[s.confidence] ?? CONFIDENCE_COLOR.low}`}
+                                >
                                     {s.confidence}
                                 </span>
                             </div>
-                            <p className="text-xs text-gray-500 mt-0.5 truncate">{s.title}</p>
-                            <p className="text-xs text-gray-600 mt-1 leading-relaxed">{s.relevanceReason}</p>
+                            <p className="text-xs text-gray-500 mt-0.5 truncate">
+                                {s.title}
+                            </p>
+                            <p className="text-xs text-gray-600 mt-1 leading-relaxed">
+                                {s.relevanceReason}
+                            </p>
                             {s.sites && s.sites.length > 0 && (
                                 <div className="mt-1.5">
                                     <OverflowTags
@@ -102,22 +110,36 @@ export function SuggestionsMessage({
                                     />
                                 </div>
                             )}
-                            {s.recommendedElements && s.recommendedElements.length > 0 && (
-                                <details className="mt-2 group">
-                                    <summary className="text-xs text-gray-400 cursor-pointer select-none hover:text-gray-600 list-none flex items-center gap-1">
-                                        <span className="group-open:rotate-90 inline-block transition-transform">▶</span>
-                                        {s.recommendedElements.length} relevant element{s.recommendedElements.length !== 1 ? "s" : ""}
-                                    </summary>
-                                    <ul className="mt-1.5 space-y-1.5 pl-1">
-                                        {s.recommendedElements.map((el) => (
-                                            <li key={el.name} className="text-xs">
-                                                <span className="font-mono text-purple-700">{el.name}</span>
-                                                <span className="text-gray-400 ml-1">— {el.reason}</span>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </details>
-                            )}
+                            {s.recommendedElements &&
+                                s.recommendedElements.length > 0 && (
+                                    <details className="mt-2 group">
+                                        <summary className="text-xs text-gray-400 cursor-pointer select-none hover:text-gray-600 list-none flex items-center gap-1">
+                                            <span className="group-open:rotate-90 inline-block transition-transform">
+                                                ▶
+                                            </span>
+                                            {s.recommendedElements.length}{" "}
+                                            relevant element
+                                            {s.recommendedElements.length !== 1
+                                                ? "s"
+                                                : ""}
+                                        </summary>
+                                        <ul className="mt-1.5 space-y-1.5 pl-1">
+                                            {s.recommendedElements.map((el) => (
+                                                <li
+                                                    key={el.name}
+                                                    className="text-xs"
+                                                >
+                                                    <span className="font-mono text-purple-700">
+                                                        {el.name}
+                                                    </span>
+                                                    <span className="text-gray-400 ml-1">
+                                                        — {el.reason}
+                                                    </span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </details>
+                                )}
                         </div>
                     </label>
                 ))}
@@ -128,11 +150,24 @@ export function SuggestionsMessage({
                     <div className="flex gap-2 flex-wrap">
                         <button
                             onClick={onGenerate}
-                            disabled={isGenerating || selectedShortNames.size === 0}
+                            disabled={
+                                isGenerating || selectedShortNames.size === 0
+                            }
                             className="px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
                             Generate Mock Dataset
-                            {selectedShortNames.size > 0 ? ` (${selectedShortNames.size} instrument${selectedShortNames.size > 1 ? "s" : ""})` : ""}
+                            {selectedShortNames.size > 0
+                                ? ` (${selectedShortNames.size} instrument${selectedShortNames.size > 1 ? "s" : ""})`
+                                : ""}
+                        </button>
+                        <button
+                            onClick={onLoadMore}
+                            disabled={isLoadingMore || isGenerating}
+                            className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                            {isLoadingMore
+                                ? "Loading…"
+                                : "Load more suggestions"}
                         </button>
                         <div className="flex items-center gap-2">
                             <button
@@ -148,7 +183,9 @@ export function SuggestionsMessage({
                                 className="px-4 py-2 text-sm border border-indigo-300 text-indigo-700 rounded-lg hover:bg-indigo-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                             >
                                 Find Element Relations
-                                {selectedShortNames.size > 0 ? ` (${selectedShortNames.size})` : ""}
+                                {selectedShortNames.size > 0
+                                    ? ` (${selectedShortNames.size})`
+                                    : ""}
                             </button>
                             <label
                                 className="flex items-center gap-1.5 text-xs text-gray-500 whitespace-nowrap"
@@ -157,27 +194,33 @@ export function SuggestionsMessage({
                                 <span>threshold</span>
                                 <input
                                     type="range"
-                                    min={0.05} max={0.5} step={0.01}
+                                    min={0.25}
+                                    max={0.75}
+                                    step={0.01}
                                     value={overlapThreshold}
-                                    onChange={(e) => onOverlapThresholdChange(parseFloat(e.target.value))}
+                                    onChange={(e) =>
+                                        onOverlapThresholdChange(
+                                            parseFloat(e.target.value),
+                                        )
+                                    }
                                     className="w-20 accent-indigo-600"
                                 />
-                                <span className="font-mono w-8">{overlapThreshold.toFixed(2)}</span>
+                                <span className="font-mono w-8">
+                                    {overlapThreshold.toFixed(2)}
+                                </span>
                             </label>
                         </div>
-                        <button
-                            onClick={onLoadMore}
-                            disabled={isLoadingMore || isGenerating}
-                            className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                        >
-                            {isLoadingMore ? "Loading…" : "Load more suggestions"}
-                        </button>
                     </div>
                     {showSelectionWarning && selectedShortNames.size === 0 && (
                         <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                            <span>Select at least one instrument to analyze.</span>
+                            <span>
+                                Select at least one instrument to analyze.
+                            </span>
                             <button
-                                onClick={() => { onSelectAll(); setShowSelectionWarning(false); }}
+                                onClick={() => {
+                                    onSelectAll();
+                                    setShowSelectionWarning(false);
+                                }}
                                 className="underline font-medium hover:text-amber-900 whitespace-nowrap"
                             >
                                 Select all
@@ -189,7 +232,9 @@ export function SuggestionsMessage({
 
             {msg.networkGraph.nodes.length > 0 && (
                 <div>
-                    <p className="text-xs text-gray-500 mb-2 font-medium">Instrument Relationship Network</p>
+                    <p className="text-xs text-gray-500 mb-2 font-medium">
+                        Instrument Relationship Network
+                    </p>
                     <NetworkDiagram graph={msg.networkGraph} />
                 </div>
             )}

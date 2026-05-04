@@ -46,6 +46,8 @@ function detectIntent(q: string): "structures" | "elements" {
         : "structures";
 }
 
+const DEFAULT_OVERLAP_THRESHOLD = 0.5;
+
 // ---------------------------------------------------------------------------
 // Session persistence
 // ---------------------------------------------------------------------------
@@ -133,7 +135,7 @@ export default function ResearchAssistant({
     >([]);
 
     const [showClearModal, setShowClearModal] = useState(false);
-    const [overlapThreshold, setOverlapThreshold] = useState<number>(0.25);
+    const [overlapThreshold, setOverlapThreshold] = useState<number>(DEFAULT_OVERLAP_THRESHOLD);
     const [elementProgress, setElementProgress] = useState<string>("");
 
     const clearChat = useCallback(() => {
@@ -168,7 +170,7 @@ export default function ResearchAssistant({
         if (!session) return;
         const msgs = session.chatMessages;
         if (msgs.length > 0) setChatMessages(msgs);
-        if (session.overlapThreshold !== 0.25)
+        if (session.overlapThreshold !== DEFAULT_OVERLAP_THRESHOLD)
             setOverlapThreshold(session.overlapThreshold);
         const mockMsg = [...msgs]
             .reverse()
