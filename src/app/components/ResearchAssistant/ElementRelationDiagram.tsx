@@ -13,19 +13,26 @@ const CONF_EDGE_COLOR: Record<string, string> = {
 const WIDTH = 600;
 const HEIGHT = 380;
 
+export interface DiagramSelection {
+    instruments: Set<string> | null;
+    constructs: Set<string> | null;
+    mode: "node" | "edge" | null;
+}
+
 export function ElementRelationDiagram({
     graph,
     onSelectionChange,
 }: {
     graph: ElementRelationGraph;
-    onSelectionChange?: (constructNames: string[] | null) => void;
+    onSelectionChange?: (selection: DiagramSelection) => void;
 }) {
     const positions = useSpringSimulation(graph.nodes, graph.edges, {
         width: WIDTH, height: HEIGHT, repulsion: 900, idealLength: 130, paddingX: 44, paddingY: 24,
     });
     const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
-    const [clickedNodeId, setClickedNodeId] = useState<string | null>(null);
-    const [clickedEdgeIdx, setClickedEdgeIdx] = useState<number | null>(null);
+    const [hoveredEdgeIdx, setHoveredEdgeIdx] = useState<number | null>(null);
+    const [selectedNodes, setSelectedNodes] = useState<Set<string>>(new Set());
+    const [selectedEdgeIndices, setSelectedEdgeIndices] = useState<Set<number>>(new Set());
 
     const connectedNodeIds = useMemo(() => {
         if (!hoveredNodeId) return new Set<string>();
@@ -46,10 +53,54 @@ export function ElementRelationDiagram({
         return set;
     }, [hoveredNodeId, graph.edges]);
 
+    // Nodes that are visually "active" (full opacity) given current selection
+    const activeInGraph = useMemo(() => {
+        if (selectedNodes.size > 0) return selectedNodes;
+        if (selectedEdgeIndices.size > 0) {
+            const active = new Set<string>();
+            for (const idx of selectedEdgeIndices) {
+                const edge = graph.edges[idx];
+                if (edge) { active.add(edge.source); active.add(edge.target); }
+            }
+            return active;
+        }
+        return null;
+    }, [selectedNodes, selectedEdgeIndices, graph.edges]);
+
     const isHovering = hoveredNodeId !== null;
+    const hasSelection = activeInGraph !== null;
     const posMap = new Map(positions.map((n) => [n.id, n]));
 
     if (graph.nodes.length === 0) return null;
+
+    const applySelection = (nodes: Set<string>, edges: Set<number>) => {
+        setSelectedNodes(nodes);
+        setSelectedEdgeIndices(edges);
+
+        const hasNodes = nodes.size > 0;
+        const hasEdges = edges.size > 0;
+
+        if (!hasNodes && !hasEdges) {
+            onSelectionChange?.({ instruments: null, constructs: null, mode: null });
+            return;
+        }
+
+        const instruments = new Set(nodes);
+        const constructs = new Set<string>();
+        for (const idx of edges) {
+            const edge = graph.edges[idx];
+            if (!edge) continue;
+            instruments.add(edge.source);
+            instruments.add(edge.target);
+            for (const sc of edge.sharedConstructs) constructs.add(sc.constructName);
+        }
+
+        onSelectionChange?.({
+            instruments: instruments.size > 0 ? instruments : null,
+            constructs: constructs.size > 0 ? constructs : null,
+            mode: hasNodes ? "node" : "edge",
+        });
+    };
 
     return (
         <div className="overflow-auto">
@@ -57,7 +108,7 @@ export function ElementRelationDiagram({
                 width={WIDTH}
                 height={HEIGHT}
                 className="border rounded bg-gray-50 mx-auto block"
-                onClick={() => { setClickedNodeId(null); setClickedEdgeIdx(null); onSelectionChange?.(null); }}
+                onClick={() => applySelection(new Set(), new Set())}
             >
                 <defs>
                     <filter id="er-node-glow" x="-60%" y="-60%" width="220%" height="220%">
@@ -73,20 +124,22 @@ export function ElementRelationDiagram({
                     const src = posMap.get(edge.source);
                     const tgt = posMap.get(edge.target);
                     if (!src || !tgt) return null;
-                    const active = connectedEdgeIndices.has(i);
-                    const isClicked = clickedEdgeIdx === i;
+                    const activeByNode = connectedEdgeIndices.has(i);
+                    const isHoveredEdge = hoveredEdgeIdx === i;
+                    const edgeIsSelected = selectedEdgeIndices.has(i);
                     const color = CONF_EDGE_COLOR[edge.dominantConfidence] ?? "#94a3b8";
                     const strokeW = Math.min(1 + edge.sharedConstructs.length, 8);
                     const mx = (src.x + tgt.x) / 2;
                     const my = (src.y + tgt.y) / 2;
                     const label = `${edge.sharedConstructs.length} construct${edge.sharedConstructs.length !== 1 ? "s" : ""}`;
+                    const showLabel = isHoveredEdge || activeByNode || edgeIsSelected;
                     return (
                         <g key={i}>
                             <line
                                 x1={src.x} y1={src.y} x2={tgt.x} y2={tgt.y}
-                                stroke={isClicked ? "#4f46e5" : active ? color : "#cbd5e1"}
-                                strokeWidth={isClicked ? strokeW + 1 : strokeW}
-                                strokeOpacity={isHovering ? (active ? 1 : 0.08) : 0.65}
+                                stroke={edgeIsSelected ? "#4f46e5" : activeByNode ? color : "#cbd5e1"}
+                                strokeWidth={edgeIsSelected ? strokeW + 1 : strokeW}
+                                strokeOpacity={isHovering ? (activeByNode ? 1 : 0.08) : 0.65}
                                 style={{ transition: "stroke-opacity 0.18s" }}
                             />
                             <line
@@ -94,33 +147,30 @@ export function ElementRelationDiagram({
                                 stroke="transparent"
                                 strokeWidth={14}
                                 style={{ cursor: "pointer" }}
+                                onMouseEnter={() => setHoveredEdgeIdx(i)}
+                                onMouseLeave={() => setHoveredEdgeIdx(null)}
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    setClickedNodeId(null);
-                                    const next = isClicked ? null : i;
-                                    setClickedEdgeIdx(next);
-                                    if (next === null) {
-                                        onSelectionChange?.(null);
-                                    } else {
-                                        onSelectionChange?.(edge.sharedConstructs.map((sc) => sc.constructName));
-                                    }
+                                    const next = new Set(selectedEdgeIndices);
+                                    if (next.has(i)) { next.delete(i); } else { next.add(i); }
+                                    applySelection(new Set(), next);
                                 }}
                             />
-                            {(active || isClicked) && (
-                                <g>
+                            {showLabel && (
+                                <g style={{ pointerEvents: "none" }}>
                                     <rect
                                         x={mx - (label.length * 3.2 + 8)}
                                         y={my - 9}
                                         width={label.length * 6.4 + 16}
                                         height={15}
                                         rx={4}
-                                        fill={isClicked ? "#4f46e5" : "white"}
-                                        stroke={isClicked ? "#4f46e5" : color}
+                                        fill={edgeIsSelected ? "#4f46e5" : "white"}
+                                        stroke={edgeIsSelected ? "#4f46e5" : color}
                                         strokeWidth={0.8}
                                         fillOpacity={0.95}
                                     />
                                     <text x={mx} y={my + 2} textAnchor="middle" fontSize={8}
-                                        fill={isClicked ? "white" : color} fontWeight="600">
+                                        fill={edgeIsSelected ? "white" : color} fontWeight="600">
                                         {label}
                                     </text>
                                 </g>
@@ -133,7 +183,7 @@ export function ElementRelationDiagram({
                     const baseRadius = 9 + Math.min(node.constructCount * 1.5, 13);
                     const isHovered = node.id === hoveredNodeId;
                     const isConnected = connectedNodeIds.has(node.id);
-                    const isClicked = node.id === clickedNodeId;
+                    const isSelected = selectedNodes.has(node.id);
                     const radius = isHovered ? baseRadius * 1.35 : baseRadius;
                     const fullLabel = node.label;
                     const shortLabel = fullLabel.length > 14 ? fullLabel.slice(0, 13) + "…" : fullLabel;
@@ -144,50 +194,34 @@ export function ElementRelationDiagram({
                             key={node.id}
                             style={{
                                 cursor: "pointer",
-                                opacity: isHovering ? (isHovered || isConnected ? 1 : 0.15) : 1,
+                                opacity: hasSelection
+                                    ? (activeInGraph!.has(node.id) ? 1 : 0.15)
+                                    : isHovering ? (isHovered || isConnected ? 1 : 0.15) : 1,
                                 transition: "opacity 0.18s",
                             }}
                             onMouseEnter={() => setHoveredNodeId(node.id)}
                             onMouseLeave={() => setHoveredNodeId(null)}
                             onClick={(e) => {
                                 e.stopPropagation();
-                                setClickedEdgeIdx(null);
-                                const next = isClicked ? null : node.id;
-                                setClickedNodeId(next);
-                                if (next === null) {
-                                    onSelectionChange?.(null);
-                                } else {
-                                    const names = [...new Set(
-                                        graph.edges
-                                            .filter((e) => e.source === next || e.target === next)
-                                            .flatMap((e) => e.sharedConstructs.map((sc) => sc.constructName))
-                                    )];
-                                    onSelectionChange?.(names);
-                                }
+                                const next = new Set(selectedNodes);
+                                if (next.has(node.id)) { next.delete(node.id); } else { next.add(node.id); }
+                                applySelection(next, new Set());
                             }}
                         >
                             {isHovered && (
-                                <circle
-                                    cx={node.x} cy={node.y}
-                                    r={radius + 9}
-                                    fill="#7c3aed"
-                                    fillOpacity={0.22}
-                                    filter="url(#er-node-glow)"
-                                />
+                                <circle cx={node.x} cy={node.y} r={radius + 9}
+                                    fill="#7c3aed" fillOpacity={0.22} filter="url(#er-node-glow)" />
                             )}
                             <circle
-                                cx={node.x} cy={node.y}
-                                r={radius}
+                                cx={node.x} cy={node.y} r={radius}
                                 fill="#7c3aed"
                                 fillOpacity={isHovered ? 1 : 0.82}
-                                stroke={isClicked ? "#4f46e5" : "white"}
-                                strokeWidth={isClicked ? 3 : isHovered ? 3 : 2}
+                                stroke={isSelected ? "#4f46e5" : "white"}
+                                strokeWidth={isSelected ? 3 : isHovered ? 3 : 2}
                             />
                             <text
-                                x={node.x}
-                                y={node.y + radius + 10}
-                                textAnchor="middle"
-                                fontSize={9}
+                                x={node.x} y={node.y + radius + 10}
+                                textAnchor="middle" fontSize={9}
                                 fill={isHovering ? (isHovered || isConnected ? "#111827" : "#9ca3af") : "#374151"}
                                 fontWeight="bold"
                                 style={{ transition: "fill 0.18s" }}
@@ -197,22 +231,12 @@ export function ElementRelationDiagram({
                             {isHovered && fullLabel !== shortLabel && (
                                 <g>
                                     <rect
-                                        x={node.x - tooltipWidth / 2}
-                                        y={node.y - radius - 24}
-                                        width={tooltipWidth}
-                                        height={17}
-                                        rx={5}
-                                        fill="#1f2937"
-                                        fillOpacity={0.92}
+                                        x={node.x - tooltipWidth / 2} y={node.y - radius - 24}
+                                        width={tooltipWidth} height={17} rx={5}
+                                        fill="#1f2937" fillOpacity={0.92}
                                     />
-                                    <text
-                                        x={node.x}
-                                        y={node.y - radius - 12}
-                                        textAnchor="middle"
-                                        fontSize={10}
-                                        fill="white"
-                                        fontWeight="500"
-                                    >
+                                    <text x={node.x} y={node.y - radius - 12}
+                                        textAnchor="middle" fontSize={10} fill="white" fontWeight="500">
                                         {fullLabel}
                                     </text>
                                 </g>
@@ -222,7 +246,6 @@ export function ElementRelationDiagram({
                 })}
             </svg>
 
-            {/* Confidence legend */}
             <div className="flex flex-wrap gap-4 mt-2 justify-center text-xs text-gray-600">
                 {Object.entries(CONF_EDGE_COLOR).map(([conf, color]) => (
                     <span key={conf} className="flex items-center gap-1">
@@ -231,7 +254,6 @@ export function ElementRelationDiagram({
                     </span>
                 ))}
             </div>
-
         </div>
     );
 }
