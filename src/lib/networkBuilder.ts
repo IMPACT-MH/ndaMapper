@@ -83,6 +83,7 @@ export function buildNetworkGraph(structures: DataStructure[]): NetworkGraph {
           target: `instrument:${structures[j].shortName}`,
           label: `${shared.length} shared elements`,
           weight: shared.length,
+          sharedElementNames: shared,
         });
       }
     }

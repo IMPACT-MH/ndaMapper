@@ -99,6 +99,8 @@ const NODE_COLORS: Record<string, string> = {
 function NetworkDiagram({ graph }: { graph: NetworkGraph }) {
     const [positions, setPositions] = useState<SVGNode[]>([]);
     const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+    const [clickedNodeId, setClickedNodeId] = useState<string | null>(null);
+    const [clickedEdgeIdx, setClickedEdgeIdx] = useState<number | null>(null);
     const animRef = useRef<number | null>(null);
     const WIDTH = 600;
     const HEIGHT = 400;
@@ -228,6 +230,7 @@ function NetworkDiagram({ graph }: { graph: NetworkGraph }) {
                 width={WIDTH}
                 height={HEIGHT}
                 className="border rounded bg-gray-50 mx-auto block"
+                onClick={() => { setClickedNodeId(null); setClickedEdgeIdx(null); }}
             >
                 <defs>
                     <filter id="node-glow" x="-60%" y="-60%" width="220%" height="220%">
@@ -245,20 +248,37 @@ function NetworkDiagram({ graph }: { graph: NetworkGraph }) {
                     const tgt = posMap.get(edge.target);
                     if (!src || !tgt) return null;
                     const active = connectedEdgeIndices.has(i);
+                    const isClicked = clickedEdgeIdx === i;
+                    const isClickable = (edge.sharedElementNames?.length ?? 0) > 0;
                     const mx = (src.x + tgt.x) / 2;
                     const my = (src.y + tgt.y) / 2;
                     return (
                         <g key={i}>
                             <line
                                 x1={src.x} y1={src.y} x2={tgt.x} y2={tgt.y}
-                                stroke={active ? "#7c3aed" : "#cbd5e1"}
-                                strokeWidth={active
-                                    ? Math.min((edge.weight ?? 1) + 1, 5)
-                                    : (edge.weight ? Math.min(edge.weight, 4) : 1)}
+                                stroke={isClicked ? "#4f46e5" : active ? "#7c3aed" : "#cbd5e1"}
+                                strokeWidth={isClicked
+                                    ? Math.min((edge.weight ?? 1) + 2, 6)
+                                    : active
+                                        ? Math.min((edge.weight ?? 1) + 1, 5)
+                                        : (edge.weight ? Math.min(edge.weight, 4) : 1)}
                                 strokeOpacity={isHovering ? (active ? 1 : 0.08) : 0.7}
                                 style={{ transition: "stroke-opacity 0.18s, stroke-width 0.18s" }}
                             />
-                            {active && edge.label && (
+                            {isClickable && (
+                                <line
+                                    x1={src.x} y1={src.y} x2={tgt.x} y2={tgt.y}
+                                    stroke="transparent"
+                                    strokeWidth={12}
+                                    style={{ cursor: "pointer" }}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setClickedNodeId(null);
+                                        setClickedEdgeIdx(isClicked ? null : i);
+                                    }}
+                                />
+                            )}
+                            {(active || isClicked) && edge.label && (
                                 <g>
                                     <rect
                                         x={mx - (edge.label.length * 3.4 + 8)}
@@ -266,7 +286,7 @@ function NetworkDiagram({ graph }: { graph: NetworkGraph }) {
                                         width={edge.label.length * 6.8 + 16}
                                         height={15}
                                         rx={4}
-                                        fill="white"
+                                        fill={isClicked ? "#4f46e5" : "white"}
                                         stroke="#7c3aed"
                                         strokeWidth={0.8}
                                         fillOpacity={0.95}
@@ -275,7 +295,7 @@ function NetworkDiagram({ graph }: { graph: NetworkGraph }) {
                                         x={mx} y={my + 2}
                                         textAnchor="middle"
                                         fontSize={8}
-                                        fill="#7c3aed"
+                                        fill={isClicked ? "white" : "#7c3aed"}
                                         fontWeight="600"
                                     >
                                         {edge.label}
@@ -292,6 +312,7 @@ function NetworkDiagram({ graph }: { graph: NetworkGraph }) {
                     const baseRadius = node.type === "instrument" ? 14 : 9;
                     const isHovered = node.id === hoveredNodeId;
                     const isConnected = connectedNodeIds.has(node.id);
+                    const isClicked = node.id === clickedNodeId;
                     const radius = isHovered ? baseRadius * 1.4 : baseRadius;
                     const fullLabel = node.label;
                     const shortLabel = fullLabel.length > 14 ? fullLabel.slice(0, 13) + "…" : fullLabel;
@@ -307,6 +328,13 @@ function NetworkDiagram({ graph }: { graph: NetworkGraph }) {
                             }}
                             onMouseEnter={() => setHoveredNodeId(node.id)}
                             onMouseLeave={() => setHoveredNodeId(null)}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                if (node.type === "instrument") {
+                                    setClickedEdgeIdx(null);
+                                    setClickedNodeId(isClicked ? null : node.id);
+                                }
+                            }}
                         >
                             {/* Glow halo behind hovered node */}
                             {isHovered && (
@@ -324,8 +352,8 @@ function NetworkDiagram({ graph }: { graph: NetworkGraph }) {
                                 r={radius}
                                 fill={color}
                                 fillOpacity={isHovered ? 1 : 0.85}
-                                stroke="white"
-                                strokeWidth={isHovered ? 3 : 2}
+                                stroke={isClicked ? "#4f46e5" : "white"}
+                                strokeWidth={isClicked ? 3 : isHovered ? 3 : 2}
                             />
 
                             {/* Truncated label below (always visible) */}
@@ -380,6 +408,83 @@ function NetworkDiagram({ graph }: { graph: NetworkGraph }) {
                     </span>
                 ))}
             </div>
+
+            {clickedEdgeIdx !== null && (() => {
+                const edge = graph.edges[clickedEdgeIdx];
+                if (!edge?.sharedElementNames?.length) return null;
+                return (
+                    <div className="mt-3 border border-violet-200 rounded-lg bg-violet-50 p-3 text-sm max-w-[600px] mx-auto">
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="font-semibold text-violet-800">
+                                {edge.source.replace("instrument:", "")} &amp; {edge.target.replace("instrument:", "")}
+                            </span>
+                            <button
+                                className="text-violet-400 hover:text-violet-600 text-xs"
+                                onClick={() => setClickedEdgeIdx(null)}
+                            >
+                                dismiss
+                            </button>
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                            {edge.sharedElementNames.map((name) => (
+                                <span
+                                    key={name}
+                                    className="px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 text-xs font-mono border border-violet-200"
+                                >
+                                    {name}
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+                );
+            })()}
+
+            {clickedNodeId && (() => {
+                const connections = graph.edges
+                    .filter((e) =>
+                        (e.source === clickedNodeId || e.target === clickedNodeId) &&
+                        (e.sharedElementNames?.length ?? 0) > 0
+                    )
+                    .map((e) => ({
+                        other: e.source === clickedNodeId ? e.target : e.source,
+                        names: e.sharedElementNames!,
+                    }));
+                if (connections.length === 0) return null;
+                return (
+                    <div className="mt-3 border border-violet-200 rounded-lg bg-violet-50 p-3 text-sm max-w-[600px] mx-auto">
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="font-semibold text-violet-800">
+                                {clickedNodeId.replace("instrument:", "")} — shared elements
+                            </span>
+                            <button
+                                className="text-violet-400 hover:text-violet-600 text-xs"
+                                onClick={() => setClickedNodeId(null)}
+                            >
+                                dismiss
+                            </button>
+                        </div>
+                        <div className="space-y-2">
+                            {connections.map(({ other, names }) => (
+                                <div key={other}>
+                                    <div className="text-xs text-violet-600 font-medium mb-1">
+                                        with {other.replace("instrument:", "")}
+                                    </div>
+                                    <div className="flex flex-wrap gap-1">
+                                        {names.map((name) => (
+                                            <span
+                                                key={name}
+                                                className="px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 text-xs font-mono border border-violet-200"
+                                            >
+                                                {name}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                );
+            })()}
         </div>
     );
 }

@@ -268,15 +268,28 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         }
     }
 
-    const clusterSummary = multiInstrumentClusters.map((cluster, i) => ({
-        clusterIndex: i,
-        elements: cluster.map((m) => ({
-            shortName: m.shortName,
-            elementName: m.elementName,
-            description: m.description,
-            overlapScore: Math.round(m.score * 100) / 100,
-        })),
-    }));
+    // Cap per-cluster elements sent to LLM: keep the top-scoring representative from
+    // each instrument so the output stays within token budget.
+    const clusterSummary = multiInstrumentClusters.map((cluster, i) => {
+        // Keep best-scoring element per instrument, up to 8 total
+        const byInstrument = new Map<string, typeof cluster[0]>();
+        for (const m of cluster) {
+            const prev = byInstrument.get(m.shortName);
+            if (!prev || m.score > prev.score) byInstrument.set(m.shortName, m);
+        }
+        const representatives = [...byInstrument.values()]
+            .sort((a, b) => b.score - a.score)
+            .slice(0, 8);
+        return {
+            clusterIndex: i,
+            elements: representatives.map((m) => ({
+                shortName: m.shortName,
+                elementName: m.elementName,
+                description: m.description,
+                overlapScore: Math.round(m.score * 100) / 100,
+            })),
+        };
+    });
 
     let constructs: ConstructGroup[] = [];
     let summary = "";
@@ -285,7 +298,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     try {
         const message = await client.messages.create({
             model: "claude-sonnet-4-6",
-            max_tokens: 4096,
+            max_tokens: 8192,
             tools: [nameClustersTool],
             tool_choice: { type: "tool", name: "name_clusters" },
             messages: [{

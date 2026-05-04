@@ -240,6 +240,7 @@ export interface NetworkEdge {
   target: string;
   label?: string;
   weight?: number;
+  sharedElementNames?: string[];
 }
 
 export interface NetworkGraph {
