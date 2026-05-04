@@ -13,7 +13,13 @@ const CONF_EDGE_COLOR: Record<string, string> = {
 const WIDTH = 600;
 const HEIGHT = 380;
 
-export function ElementRelationDiagram({ graph }: { graph: ElementRelationGraph }) {
+export function ElementRelationDiagram({
+    graph,
+    onSelectionChange,
+}: {
+    graph: ElementRelationGraph;
+    onSelectionChange?: (constructNames: string[] | null) => void;
+}) {
     const positions = useSpringSimulation(graph.nodes, graph.edges, {
         width: WIDTH, height: HEIGHT, repulsion: 900, idealLength: 130, paddingX: 44, paddingY: 24,
     });
@@ -51,7 +57,7 @@ export function ElementRelationDiagram({ graph }: { graph: ElementRelationGraph 
                 width={WIDTH}
                 height={HEIGHT}
                 className="border rounded bg-gray-50 mx-auto block"
-                onClick={() => { setClickedNodeId(null); setClickedEdgeIdx(null); }}
+                onClick={() => { setClickedNodeId(null); setClickedEdgeIdx(null); onSelectionChange?.(null); }}
             >
                 <defs>
                     <filter id="er-node-glow" x="-60%" y="-60%" width="220%" height="220%">
@@ -91,7 +97,13 @@ export function ElementRelationDiagram({ graph }: { graph: ElementRelationGraph 
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     setClickedNodeId(null);
-                                    setClickedEdgeIdx(isClicked ? null : i);
+                                    const next = isClicked ? null : i;
+                                    setClickedEdgeIdx(next);
+                                    if (next === null) {
+                                        onSelectionChange?.(null);
+                                    } else {
+                                        onSelectionChange?.(edge.sharedConstructs.map((sc) => sc.constructName));
+                                    }
                                 }}
                             />
                             {(active || isClicked) && (
@@ -140,7 +152,18 @@ export function ElementRelationDiagram({ graph }: { graph: ElementRelationGraph 
                             onClick={(e) => {
                                 e.stopPropagation();
                                 setClickedEdgeIdx(null);
-                                setClickedNodeId(isClicked ? null : node.id);
+                                const next = isClicked ? null : node.id;
+                                setClickedNodeId(next);
+                                if (next === null) {
+                                    onSelectionChange?.(null);
+                                } else {
+                                    const names = [...new Set(
+                                        graph.edges
+                                            .filter((e) => e.source === next || e.target === next)
+                                            .flatMap((e) => e.sharedConstructs.map((sc) => sc.constructName))
+                                    )];
+                                    onSelectionChange?.(names);
+                                }
                             }}
                         >
                             {isHovered && (
@@ -209,74 +232,6 @@ export function ElementRelationDiagram({ graph }: { graph: ElementRelationGraph 
                 ))}
             </div>
 
-            {clickedEdgeIdx !== null && (() => {
-                const edge = graph.edges[clickedEdgeIdx];
-                if (!edge?.sharedConstructs?.length) return null;
-                const srcNode = graph.nodes.find((n) => n.id === edge.source);
-                const tgtNode = graph.nodes.find((n) => n.id === edge.target);
-                return (
-                    <div className="mt-3 border border-indigo-200 rounded-lg bg-indigo-50 p-3 text-sm max-w-[600px] mx-auto">
-                        <div className="flex items-center justify-between mb-2">
-                            <span className="font-semibold text-indigo-800">
-                                {srcNode?.label ?? edge.source} &amp; {tgtNode?.label ?? edge.target}
-                            </span>
-                            <button className="text-indigo-400 hover:text-indigo-600 text-xs" onClick={() => setClickedEdgeIdx(null)}>
-                                dismiss
-                            </button>
-                        </div>
-                        <div className="space-y-1">
-                            {edge.sharedConstructs.map((sc) => (
-                                <div key={sc.constructName} className="flex items-center gap-2 text-xs">
-                                    <span className="font-medium text-indigo-700">{sc.constructName}</span>
-                                    <span className="text-indigo-400">{sc.domain}</span>
-                                    <span className="text-gray-400">·</span>
-                                    <span className="text-gray-500">{sc.confidenceA}/{sc.confidenceB}</span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                );
-            })()}
-
-            {clickedNodeId && (() => {
-                const connectedEdges = graph.edges.filter(
-                    (e) => e.source === clickedNodeId || e.target === clickedNodeId
-                );
-                if (connectedEdges.length === 0) return null;
-                const node = graph.nodes.find((n) => n.id === clickedNodeId);
-                return (
-                    <div className="mt-3 border border-indigo-200 rounded-lg bg-indigo-50 p-3 text-sm max-w-[600px] mx-auto">
-                        <div className="flex items-center justify-between mb-2">
-                            <span className="font-semibold text-indigo-800">
-                                {node?.label ?? clickedNodeId} — {node?.constructCount ?? 0} construct{(node?.constructCount ?? 0) !== 1 ? "s" : ""}
-                            </span>
-                            <button className="text-indigo-400 hover:text-indigo-600 text-xs" onClick={() => setClickedNodeId(null)}>
-                                dismiss
-                            </button>
-                        </div>
-                        <div className="space-y-2">
-                            {connectedEdges.map((e, i) => {
-                                const other = e.source === clickedNodeId ? e.target : e.source;
-                                const otherNode = graph.nodes.find((n) => n.id === other);
-                                return (
-                                    <div key={i}>
-                                        <div className="text-xs text-indigo-600 font-medium mb-1">
-                                            with {otherNode?.label ?? other} ({e.sharedConstructs.length} shared)
-                                        </div>
-                                        <div className="flex flex-wrap gap-1">
-                                            {e.sharedConstructs.map((sc) => (
-                                                <span key={sc.constructName} className="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 text-xs border border-indigo-200">
-                                                    {sc.constructName}
-                                                </span>
-                                            ))}
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
-                );
-            })()}
         </div>
     );
 }

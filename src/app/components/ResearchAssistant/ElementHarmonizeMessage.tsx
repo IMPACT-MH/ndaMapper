@@ -44,6 +44,10 @@ export function ElementHarmonizeMessage({
             return next;
         });
 
+    const [highlightedConstructs, setHighlightedConstructs] = useState<Set<string> | null>(null);
+    const handleDiagramSelection = (names: string[] | null) =>
+        setHighlightedConstructs(names ? new Set(names) : null);
+
     const domainOrder: string[] = [];
     const byDomain = new Map<string, ConstructGroup[]>();
     for (const c of result.constructs) {
@@ -91,7 +95,7 @@ export function ElementHarmonizeMessage({
                 <>
                     {relGraph.nodes.length >= 2 && (
                         <div className="px-4 py-3 border-b border-indigo-100">
-                            <ElementRelationDiagram graph={relGraph} />
+                            <ElementRelationDiagram graph={relGraph} onSelectionChange={handleDiagramSelection} />
                         </div>
                     )}
                     <div className="overflow-x-auto">
@@ -129,8 +133,17 @@ export function ElementHarmonizeMessage({
                                         </tr>
                                         {(byDomain.get(domain) ?? []).map((construct) => {
                                             const isCollapsed = collapsedConstructs.has(construct.constructName);
+                                            const isHighlighted = highlightedConstructs?.has(construct.constructName) ?? false;
+                                            const isDimmed = highlightedConstructs !== null && !isHighlighted;
                                             return (
-                                                <tr key={construct.constructName} className="border-b border-gray-100 hover:bg-gray-50">
+                                                <tr
+                                                    key={construct.constructName}
+                                                    className={`border-b border-gray-100 transition-colors ${
+                                                        isHighlighted ? "bg-indigo-50 ring-1 ring-inset ring-indigo-200" :
+                                                        isDimmed ? "opacity-30" :
+                                                        "hover:bg-gray-50"
+                                                    }`}
+                                                >
                                                     <td
                                                         className="px-3 py-2 text-gray-800 font-medium whitespace-nowrap cursor-pointer select-none"
                                                         onClick={() => toggleConstruct(construct.constructName)}
