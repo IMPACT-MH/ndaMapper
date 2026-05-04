@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from "react";
 import {
     BarChart,
     Bar,
@@ -30,6 +30,51 @@ import type {
 import { buildElementRelationGraph } from "@/lib/elementRelationGraph";
 
 // ---------------------------------------------------------------------------
+// OverflowTags — show all tags; collapse to first line + "+N more" if they wrap
+// ---------------------------------------------------------------------------
+
+function OverflowTags({ items, itemClassName }: { items: string[]; itemClassName: string }) {
+    const rowRef = useRef<HTMLDivElement>(null);
+    const [cutoff, setCutoff] = useState<number | null>(null);
+    const [expanded, setExpanded] = useState(false);
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    useLayoutEffect(() => {
+        const el = rowRef.current;
+        if (!el || el.children.length === 0) return;
+        const firstTop = (el.children[0] as HTMLElement).offsetTop;
+        let count = 0;
+        for (const child of Array.from(el.children)) {
+            if ((child as HTMLElement).offsetTop !== firstTop) break;
+            count++;
+        }
+        if (count < items.length) setCutoff(count);
+    }, []); // measure once on mount with all items visible
+
+    const shown = !expanded && cutoff !== null ? items.slice(0, cutoff) : items;
+    const hidden = items.length - shown.length;
+
+    return (
+        <div ref={rowRef} className="flex flex-wrap gap-1">
+            {shown.map((item) => (
+                <span key={item} className={itemClassName}>{item}</span>
+            ))}
+            {hidden > 0 && (
+                <span
+                    role="button"
+                    tabIndex={0}
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setExpanded(true); }}
+                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setExpanded(true); } }}
+                    className="text-xs text-gray-400 hover:text-gray-600 cursor-pointer underline decoration-dotted"
+                >
+                    +{hidden} more
+                </span>
+            )}
+        </div>
+    );
+}
+
+// ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
@@ -57,7 +102,7 @@ type ChatMsg =
     | { id: string; type: "analysis"; text: string; charts: ChartConfig[] }
     | { id: string; type: "hint"; text: string }
     | { id: string; type: "harmonize"; result: HarmonizationResult }
-    | { id: string; type: "element-harmonize"; result: ElementHarmonizeResponse };
+    | { id: string; type: "element-harmonize"; result: ElementHarmonizeResponse; overlapThreshold: number };
 
 interface MergedDataset {
     id: string;
@@ -1145,6 +1190,8 @@ interface SuggestionsMessageProps {
     onLoadMore: () => void;
     isLoadingMore: boolean;
     onFindElements: () => void;
+    overlapThreshold: number;
+    onOverlapThresholdChange: (v: number) => void;
     confidenceColor: Record<string, string>;
 }
 
@@ -1160,6 +1207,8 @@ function SuggestionsMessage({
     onLoadMore,
     isLoadingMore,
     onFindElements,
+    overlapThreshold,
+    onOverlapThresholdChange,
     confidenceColor,
 }: SuggestionsMessageProps) {
     const [showSelectionWarning, setShowSelectionWarning] = useState(false);
@@ -1179,14 +1228,14 @@ function SuggestionsMessage({
                             selectedShortNames.has(s.shortName)
                                 ? "border-purple-400 bg-purple-50"
                                 : "border-gray-200 hover:border-gray-300"
-                        } ${!isLatest || phase !== "selecting" ? "opacity-60 cursor-default" : ""}`}
+                        } ${!isLatest || isGenerating ? "opacity-60 cursor-default" : ""}`}
                     >
                         <input
                             type="checkbox"
                             checked={selectedShortNames.has(s.shortName)}
                             onChange={() => toggleStructure(s.shortName)}
                             className="mt-0.5 accent-purple-600"
-                            disabled={!isLatest || phase !== "selecting"}
+                            disabled={!isLatest || isGenerating}
                         />
                         <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
@@ -1206,44 +1255,27 @@ function SuggestionsMessage({
                                 {s.relevanceReason}
                             </p>
                             {s.sites && s.sites.length > 0 && (
-                                <div className="flex flex-wrap gap-1 mt-1.5">
-                                    {s.sites.slice(0, 3).map((site) => (
-                                        <span
-                                            key={site}
-                                            className="text-xs bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded border border-emerald-200"
-                                        >
-                                            {site}
-                                        </span>
-                                    ))}
-                                    {s.sites.length > 3 && (
-                                        <span className="text-xs text-gray-400">
-                                            +{s.sites.length - 3} more
-                                        </span>
-                                    )}
+                                <div className="mt-1.5">
+                                    <OverflowTags
+                                        items={s.sites}
+                                        itemClassName="text-xs bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded border border-emerald-200"
+                                    />
                                 </div>
                             )}
                             {s.dataTypes && s.dataTypes.length > 0 && (
-                                <div className="flex flex-wrap gap-1 mt-1">
-                                    {s.dataTypes.slice(0, 3).map((dt) => (
-                                        <span
-                                            key={dt}
-                                            className="px-1.5 py-0.5 text-xs rounded bg-blue-100 text-blue-700"
-                                        >
-                                            {dt}
-                                        </span>
-                                    ))}
+                                <div className="mt-1">
+                                    <OverflowTags
+                                        items={s.dataTypes}
+                                        itemClassName="px-1.5 py-0.5 text-xs rounded bg-blue-100 text-blue-700"
+                                    />
                                 </div>
                             )}
                             {s.categories && s.categories.length > 0 && (
-                                <div className="flex flex-wrap gap-1 mt-1">
-                                    {s.categories.slice(0, 3).map((c) => (
-                                        <span
-                                            key={c}
-                                            className="px-1.5 py-0.5 text-xs rounded bg-violet-100 text-violet-700"
-                                        >
-                                            {c}
-                                        </span>
-                                    ))}
+                                <div className="mt-1">
+                                    <OverflowTags
+                                        items={s.categories}
+                                        itemClassName="px-1.5 py-0.5 text-xs rounded bg-violet-100 text-violet-700"
+                                    />
                                 </div>
                             )}
                             {s.recommendedElements && s.recommendedElements.length > 0 && (
@@ -1267,7 +1299,7 @@ function SuggestionsMessage({
                 ))}
             </div>
 
-            {isLatest && phase === "selecting" && (
+            {isLatest && (phase === "selecting" || phase === "complete") && (
                 <div className="flex flex-col gap-2">
                     <div className="flex gap-2 flex-wrap">
                         <button
@@ -1280,23 +1312,34 @@ function SuggestionsMessage({
                                 ? ` (${selectedShortNames.size} instrument${selectedShortNames.size > 1 ? "s" : ""})`
                                 : ""}
                         </button>
-                        <button
-                            onClick={() => {
-                                if (selectedShortNames.size === 0) {
-                                    setShowSelectionWarning(true);
-                                } else {
-                                    setShowSelectionWarning(false);
-                                    onFindElements();
-                                }
-                            }}
-                            disabled={isGenerating}
-                            className="px-4 py-2 text-sm border border-indigo-300 text-indigo-700 rounded-lg hover:bg-indigo-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                        >
-                            Find Element Relations
-                            {selectedShortNames.size > 0
-                                ? ` (${selectedShortNames.size})`
-                                : ""}
-                        </button>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => {
+                                    if (selectedShortNames.size === 0) {
+                                        setShowSelectionWarning(true);
+                                    } else {
+                                        setShowSelectionWarning(false);
+                                        onFindElements();
+                                    }
+                                }}
+                                disabled={isGenerating}
+                                className="px-4 py-2 text-sm border border-indigo-300 text-indigo-700 rounded-lg hover:bg-indigo-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            >
+                                Find Element Relations
+                                {selectedShortNames.size > 0 ? ` (${selectedShortNames.size})` : ""}
+                            </button>
+                            <label className="flex items-center gap-1.5 text-xs text-gray-500 whitespace-nowrap" title="Minimum word-overlap score for two elements to be considered related">
+                                <span>threshold</span>
+                                <input
+                                    type="range"
+                                    min={0.05} max={0.5} step={0.01}
+                                    value={overlapThreshold}
+                                    onChange={(e) => onOverlapThresholdChange(parseFloat(e.target.value))}
+                                    className="w-20 accent-indigo-600"
+                                />
+                                <span className="font-mono w-8">{overlapThreshold.toFixed(2)}</span>
+                            </label>
+                        </div>
                         <button
                             onClick={onLoadMore}
                             disabled={isLoadingMore || isGenerating}
@@ -2001,8 +2044,9 @@ function HarmonizeMessage({ result }: { result: HarmonizationResult }) {
 // ElementHarmonizeMessage
 // ---------------------------------------------------------------------------
 
-function ElementHarmonizeMessage({ result, onElementSearch, onStructureSearch }: {
+function ElementHarmonizeMessage({ result, overlapThreshold, onElementSearch, onStructureSearch }: {
     result: ElementHarmonizeResponse;
+    overlapThreshold: number;
     onElementSearch?: (elementName: string) => void;
     onStructureSearch?: (shortName: string) => void;
 }) {
@@ -2011,6 +2055,14 @@ function ElementHarmonizeMessage({ result, onElementSearch, onStructureSearch }:
         () => buildElementRelationGraph(structs, result.constructs),
         [structs, result.constructs]
     );
+
+    const [collapsedConstructs, setCollapsedConstructs] = useState<Set<string>>(new Set());
+    const toggleConstruct = (name: string) =>
+        setCollapsedConstructs((prev) => {
+            const next = new Set(prev);
+            next.has(name) ? next.delete(name) : next.add(name);
+            return next;
+        });
 
     // Group constructs by domain (same pattern as HarmonizeMessage)
     const domainOrder: string[] = [];
@@ -2044,8 +2096,11 @@ function ElementHarmonizeMessage({ result, onElementSearch, onStructureSearch }:
         <div className="border border-indigo-200 rounded-lg overflow-hidden">
             <div className="bg-indigo-50 px-4 py-3 flex items-start justify-between gap-3">
                 <div>
-                    <p className="text-sm font-semibold text-indigo-900">
+                    <p className="text-sm font-semibold text-indigo-900 flex items-center gap-2 flex-wrap">
                         Element Relations — {result.constructs.length} construct{result.constructs.length !== 1 ? "s" : ""} across {structs.length} instrument{structs.length !== 1 ? "s" : ""}
+                        <span className="px-1.5 py-0.5 text-xs font-mono font-normal bg-indigo-100 text-indigo-500 rounded border border-indigo-200">
+                            threshold {overlapThreshold.toFixed(2)}
+                        </span>
                     </p>
                     <p className="text-xs text-indigo-700 mt-0.5">{result.summary}</p>
                 </div>
@@ -2080,15 +2135,11 @@ function ElementHarmonizeMessage({ result, onElementSearch, onStructureSearch }:
                                             >
                                                 {s.shortName}
                                             </div>
-                                            <div className="flex flex-wrap gap-0.5 mt-1">
-                                                {s.sites.slice(0, 3).map((site) => (
-                                                    <span key={site} className="text-xs bg-emerald-50 text-emerald-700 px-1 py-0.5 rounded border border-emerald-200">
-                                                        {site}
-                                                    </span>
-                                                ))}
-                                                {s.sites.length > 3 && (
-                                                    <span className="text-xs text-gray-400">+{s.sites.length - 3}</span>
-                                                )}
+                                            <div className="mt-1">
+                                                <OverflowTags
+                                                    items={s.sites}
+                                                    itemClassName="text-xs bg-emerald-50 text-emerald-700 px-1 py-0.5 rounded border border-emerald-200"
+                                                />
                                             </div>
                                         </th>
                                     ))}
@@ -2103,33 +2154,43 @@ function ElementHarmonizeMessage({ result, onElementSearch, onStructureSearch }:
                                                 {domain}
                                             </td>
                                         </tr>
-                                        {(byDomain.get(domain) ?? []).map((construct) => (
-                                            <tr key={construct.constructName} className="border-b border-gray-100 hover:bg-gray-50">
-                                                <td className="px-3 py-2 text-gray-800 font-medium whitespace-nowrap">{construct.constructName}</td>
-                                                {structs.map((s) => {
-                                                    const m = construct.mappings.find((x) => x.shortName === s.shortName);
-                                                    if (!m) return <td key={s.shortName} className="px-3 py-2 text-gray-300 text-center">—</td>;
-                                                    const conf = CONF_COLORS[m.mappingConfidence] ?? CONF_COLORS.proxy;
-                                                    const tooltip = [
-                                                        m.description,
-                                                        m.valueRange ? `Range: ${m.valueRange}` : "",
-                                                    ].filter(Boolean).join("\n") || undefined;
-                                                    return (
-                                                        <td key={s.shortName} className="px-3 py-2" title={tooltip}>
-                                                            <span className="flex items-center gap-1.5">
-                                                                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${conf.dot}`} title={m.mappingConfidence} />
-                                                                <code
-                                                                    className={`font-mono ${conf.text} ${onElementSearch ? "cursor-pointer hover:underline" : ""}`}
-                                                                    onClick={() => onElementSearch?.(m.elementName)}
-                                                                >
-                                                                    {m.elementName}
-                                                                </code>
-                                                            </span>
-                                                        </td>
-                                                    );
-                                                })}
-                                            </tr>
-                                        ))}
+                                        {(byDomain.get(domain) ?? []).map((construct) => {
+                                            const isCollapsed = collapsedConstructs.has(construct.constructName);
+                                            return (
+                                                <tr key={construct.constructName} className="border-b border-gray-100 hover:bg-gray-50">
+                                                    <td
+                                                        className="px-3 py-2 text-gray-800 font-medium whitespace-nowrap cursor-pointer select-none"
+                                                        onClick={() => toggleConstruct(construct.constructName)}
+                                                    >
+                                                        <span className="mr-1 text-gray-400 text-xs">{isCollapsed ? "▶" : "▼"}</span>
+                                                        {construct.constructName}
+                                                    </td>
+                                                    {structs.map((s) => {
+                                                        if (isCollapsed) return <td key={s.shortName} className="hidden" />;
+                                                        const m = construct.mappings.find((x) => x.shortName === s.shortName);
+                                                        if (!m) return <td key={s.shortName} className="px-3 py-2 text-gray-300 text-center">—</td>;
+                                                        const conf = CONF_COLORS[m.mappingConfidence] ?? CONF_COLORS.proxy;
+                                                        const tooltip = [
+                                                            m.description,
+                                                            m.valueRange ? `Range: ${m.valueRange}` : "",
+                                                        ].filter(Boolean).join("\n") || undefined;
+                                                        return (
+                                                            <td key={s.shortName} className="px-3 py-2" title={tooltip}>
+                                                                <span className="flex items-center gap-1.5">
+                                                                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${conf.dot}`} title={m.mappingConfidence} />
+                                                                    <code
+                                                                        className={`font-mono ${conf.text} ${onElementSearch ? "cursor-pointer hover:underline" : ""}`}
+                                                                        onClick={() => onElementSearch?.(m.elementName)}
+                                                                    >
+                                                                        {m.elementName}
+                                                                    </code>
+                                                                </span>
+                                                            </td>
+                                                        );
+                                                    })}
+                                                </tr>
+                                            );
+                                        })}
                                     </React.Fragment>
                                 ))}
                             </tbody>
@@ -2224,6 +2285,28 @@ export default function ResearchAssistant({
     const [suggestHistory, setSuggestHistory] = useState<
         Array<{ role: "user" | "assistant"; content: string }>
     >([]);
+
+    const [showClearModal, setShowClearModal] = useState(false);
+    const [overlapThreshold, setOverlapThreshold] = useState(0.25);
+
+    const clearChat = useCallback(() => {
+        setChatMessages([]);
+        setInputText("");
+        setRScript("");
+        setRScriptOpen(false);
+        setScriptLang(null);
+        setPhase("idle");
+        setErrorMsg(null);
+        setSelectedShortNames(new Set());
+        setSelectedStructures([]);
+        setMockDatasets([]);
+        setMergedDatasets([]);
+        setAnalysisText("");
+        setIsLoadingMore(false);
+        setConversationHistory([]);
+        setSuggestHistory([]);
+        setShowClearModal(false);
+    }, []);
 
     // Auto-scroll
     useEffect(() => {
@@ -2753,13 +2836,13 @@ export default function ResearchAssistant({
             const res = await fetch("/api/v1/research/element-harmonize", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ question, suggestions }),
+                body: JSON.stringify({ question, suggestions, overlapThreshold }),
             });
             if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
             const data = (await res.json()) as ElementHarmonizeResponse;
             setChatMessages((prev) => [
                 ...prev,
-                { id: crypto.randomUUID(), type: "element-harmonize" as const, result: data },
+                { id: crypto.randomUUID(), type: "element-harmonize" as const, result: data, overlapThreshold },
             ]);
             setPhase("complete");
         } catch (err) {
@@ -2837,16 +2920,52 @@ export default function ResearchAssistant({
             className="flex flex-col"
             style={{ height: phase === "idle" ? "auto" : "calc(100vh - 8rem)" }}
         >
+            {/* Clear chat modal */}
+            {showClearModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+                    <div className="bg-white rounded-xl shadow-xl p-6 max-w-sm w-full mx-4">
+                        <h2 className="text-base font-semibold text-gray-900 mb-2">Clear conversation?</h2>
+                        <p className="text-sm text-gray-500 mb-5">
+                            This will remove all messages, selections, and generated datasets. It cannot be undone.
+                        </p>
+                        <div className="flex justify-end gap-3">
+                            <button
+                                onClick={() => setShowClearModal(false)}
+                                className="px-4 py-2 text-sm rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={clearChat}
+                                className="px-4 py-2 text-sm rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors"
+                            >
+                                Clear
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Static header */}
             <div className="shrink-0 pb-3 space-y-2">
-                <div>
-                    <h1 className="text-3xl font-bold text-gray-900 mb-0.5">
-                        Research Assistant <span className="ml-1 px-2 py-0.5 text-sm font-semibold bg-purple-100 text-purple-600 rounded-full align-middle">beta</span>
-                    </h1>
-                    <p className="text-gray-500 text-sm">
-                        Explore IMPACT-MH instruments, generate mock datasets,
-                        and plan your analysis — powered by Claude.
-                    </p>
+                <div className="flex items-start justify-between gap-4">
+                    <div>
+                        <h1 className="text-3xl font-bold text-gray-900 mb-0.5">
+                            Research Assistant <span className="ml-1 px-2 py-0.5 text-sm font-semibold bg-purple-100 text-purple-600 rounded-full align-middle">beta</span>
+                        </h1>
+                        <p className="text-gray-500 text-sm">
+                            Explore IMPACT-MH instruments, generate mock datasets,
+                            and plan your analysis — powered by Claude.
+                        </p>
+                    </div>
+                    {chatMessages.length > 0 && (
+                        <button
+                            onClick={() => setShowClearModal(true)}
+                            className="shrink-0 mt-1 px-3 py-1.5 text-xs text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg border border-transparent hover:border-red-200 transition-colors"
+                        >
+                            Clear chat
+                        </button>
+                    )}
                 </div>
                 {databaseConnectionError && (
                     <div className="border border-amber-200 bg-amber-50 rounded-lg px-3 py-2 text-xs text-amber-800">
@@ -2892,11 +3011,13 @@ export default function ResearchAssistant({
                                 phase={phase}
                                 isLatest={i === latestSuggestionsIdx}
                                 onGenerate={() => void handleGenerateMock()}
-                                isGenerating={phase === "generating"}
+                                isGenerating={phase === "generating" || phase === "element-harmonizing" || phase === "suggesting"}
                                 onLoadMore={() => void handleLoadMore()}
                                 isLoadingMore={isLoadingMore}
                                 onSelectAll={() => setSelectedShortNames(new Set(msg.suggestions.map((s) => s.shortName)))}
                                 onFindElements={() => void handleElementSearch("Which elements can I harmonize across these instruments?")}
+                                overlapThreshold={overlapThreshold}
+                                onOverlapThresholdChange={setOverlapThreshold}
                                 confidenceColor={confidenceColor}
                             />
                         );
@@ -2957,7 +3078,7 @@ export default function ResearchAssistant({
                         return <HarmonizeMessage key={msg.id} result={msg.result} />;
                     }
                     if (msg.type === "element-harmonize") {
-                        return <ElementHarmonizeMessage key={msg.id} result={msg.result} onElementSearch={onElementSearch} onStructureSearch={onStructureSearch} />;
+                        return <ElementHarmonizeMessage key={msg.id} result={msg.result} overlapThreshold={msg.overlapThreshold} onElementSearch={onElementSearch} onStructureSearch={onStructureSearch} />;
                     }
                     return null;
                 })}

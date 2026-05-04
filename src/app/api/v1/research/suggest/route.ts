@@ -128,15 +128,18 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     fetchTagMap(),
   ]);
 
+  // Structures that are pure identifier/linkage forms — never meaningful research instruments
+  const EXCLUDED_STRUCTURES = new Set(["ndar_subject01"]);
+
   // Filter to database structures if provided
-  const availableStructures =
-    databaseStructures.length > 0
-      ? allStructures.filter((s) =>
-          databaseStructures.some(
-            (db) => db.toLowerCase() === s.shortName.toLowerCase()
-          )
+  const availableStructures = (databaseStructures.length > 0
+    ? allStructures.filter((s) =>
+        databaseStructures.some(
+          (db) => db.toLowerCase() === s.shortName.toLowerCase()
         )
-      : allStructures;
+      )
+    : allStructures
+  ).filter((s) => !EXCLUDED_STRUCTURES.has(s.shortName.toLowerCase()));
 
   // Filter out already-shown structures if excludeShortNames provided
   const filteredStructures = excludeShortNames.length > 0

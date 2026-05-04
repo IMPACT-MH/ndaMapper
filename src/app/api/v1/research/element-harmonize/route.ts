@@ -100,10 +100,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     let question: string;
     let suggestions: IncomingSuggestion[];
+    let overlapThreshold: number;
     try {
-        const body = await request.json() as { question?: string; suggestions?: IncomingSuggestion[] };
+        const body = await request.json() as { question?: string; suggestions?: IncomingSuggestion[]; overlapThreshold?: number };
         question = (body.question ?? "").trim();
         suggestions = body.suggestions ?? [];
+        overlapThreshold = typeof body.overlapThreshold === "number" ? Math.max(0, Math.min(1, body.overlapThreshold)) : 0.25;
     } catch {
         return createErrorResponse("Invalid JSON request body", 400);
     }
@@ -152,7 +154,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // --------------------------------------------------------------------------
     // Step 3: Cross-instrument semantic matching via wordOverlapScore
     // --------------------------------------------------------------------------
-    const OVERLAP_THRESHOLD = 0.25;
+    const OVERLAP_THRESHOLD = overlapThreshold;
     const pairs: Array<{ a: ElementRef; b: ElementRef; score: number }> = [];
 
     for (let i = 0; i < allElements.length; i++) {
