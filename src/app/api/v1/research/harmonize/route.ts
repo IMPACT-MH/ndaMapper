@@ -4,6 +4,11 @@ import { createErrorResponse, createOptionsResponse, CORS_HEADERS } from "@/lib/
 import { generateHarmonizedDataset } from "@/lib/mockDataGenerator";
 import type { HarmonizeRequest, HarmonizeResponse, ConstructGroup, DataElement } from "@/types";
 
+// Fields present in every NDA structure via ndar_subject01 — not meaningful for cross-instrument relations
+const NDAR_SUBJECT01_FIELDS = new Set([
+  "subjectkey", "src_subject_id", "interview_age", "interview_date", "sex",
+]);
+
 export async function POST(request: NextRequest): Promise<NextResponse> {
   if (!process.env.ANTHROPIC_API_KEY) {
     return createErrorResponse("ANTHROPIC_API_KEY is not configured.", 503);
@@ -31,7 +36,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     shortName: s.shortName,
     title: s.title,
     sites: s.sites?.slice(0, 5),
-    elements: (s.dataElements ?? []).slice(0, 80).map((el) => ({
+    elements: (s.dataElements ?? []).filter((el) => !NDAR_SUBJECT01_FIELDS.has(el.name.toLowerCase())).slice(0, 80).map((el) => ({
       name: el.name,
       description: el.description,
       type: el.type,
@@ -97,6 +102,7 @@ Harmonize data elements across ${structures.length} instruments. For each constr
 - Only include an instrument mapping if it has an element that genuinely measures that construct
 - Only include constructs where at least 2 different instruments have a relevant element
 - Prefer direct and partial mappings over proxy
+- Do NOT include universal administrative fields (subjectkey, src_subject_id, interview_age, interview_date, sex) — these appear in every NDA structure and are not meaningful cross-instrument constructs
 
 Instruments and elements:
 ${JSON.stringify(instrumentSummary, null, 2)}`,
@@ -126,7 +132,8 @@ ${JSON.stringify(instrumentSummary, null, 2)}`,
         ...c,
         mappings: c.mappings.filter((m) => {
           const snLow = m.shortName.toLowerCase();
-          return validShortNames.has(snLow) &&
+          return !NDAR_SUBJECT01_FIELDS.has(m.elementName.toLowerCase()) &&
+            validShortNames.has(snLow) &&
             elementSetByStructure.get(snLow)?.has(m.elementName.toLowerCase());
         }),
       }))
@@ -136,31 +143,6 @@ ${JSON.stringify(instrumentSummary, null, 2)}`,
     console.error("LLM harmonize error:", err);
     return createErrorResponse("Failed to build crosswalk", 500, err instanceof Error ? err.message : String(err));
   }
-
-  // Prepend universal NDA linking fields as a hardcoded "linkage" domain.
-  // These fields are required in every NDA structure and are the connective tissue
-  // for cross-instrument harmonization (subject ID, age, date, sex).
-  const LINKING_FIELDS: Array<{ field: string; constructName: string; description: string }> = [
-    { field: "subjectkey",      constructName: "Subject Key",          description: "Universal subject identifier for linking records across datasets" },
-    { field: "src_subject_id",  constructName: "Study Subject ID",     description: "Study-level subject identifier for record linkage within and across studies" },
-    { field: "interview_age",   constructName: "Interview Age",        description: "Key demographic variable for aligning subjects across instruments" },
-    { field: "interview_date",  constructName: "Interview Date",       description: "Temporal alignment variable for longitudinal harmonization" },
-    { field: "sex",             constructName: "Sex",                  description: "Core demographic covariate for cross-instrument harmonization and stratified analyses" },
-  ];
-
-  const linkageConstructs: ConstructGroup[] = LINKING_FIELDS.map(({ field, constructName, description }) => ({
-    constructName,
-    domain: "linkage",
-    mappings: structures.map((s) => ({
-      shortName: s.shortName,
-      elementName: field,
-      description,
-      mappingConfidence: "direct" as const,
-    })),
-  }));
-
-  // Linkage fields go first so they anchor the top of the crosswalk table
-  constructs = [...linkageConstructs, ...constructs];
 
   const harmonizedDataset = generateHarmonizedDataset(constructs, elementsByKey, 50);
 

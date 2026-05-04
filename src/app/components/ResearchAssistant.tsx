@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
     BarChart,
     Bar,
@@ -98,6 +98,7 @@ const NODE_COLORS: Record<string, string> = {
 
 function NetworkDiagram({ graph }: { graph: NetworkGraph }) {
     const [positions, setPositions] = useState<SVGNode[]>([]);
+    const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
     const animRef = useRef<number | null>(null);
     const WIDTH = 600;
     const HEIGHT = 400;
@@ -190,6 +191,27 @@ function NetworkDiagram({ graph }: { graph: NetworkGraph }) {
         };
     }, [graph]);
 
+    const connectedNodeIds = useMemo(() => {
+        if (!hoveredNodeId) return new Set<string>();
+        const set = new Set<string>();
+        for (const edge of graph.edges) {
+            if (edge.source === hoveredNodeId) set.add(edge.target);
+            if (edge.target === hoveredNodeId) set.add(edge.source);
+        }
+        return set;
+    }, [hoveredNodeId, graph.edges]);
+
+    const connectedEdgeIndices = useMemo(() => {
+        if (!hoveredNodeId) return new Set<number>();
+        const set = new Set<number>();
+        graph.edges.forEach((edge, i) => {
+            if (edge.source === hoveredNodeId || edge.target === hoveredNodeId) set.add(i);
+        });
+        return set;
+    }, [hoveredNodeId, graph.edges]);
+
+    const isHovering = hoveredNodeId !== null;
+
     if (graph.nodes.length === 0) {
         return (
             <div className="text-gray-400 text-sm text-center py-8">
@@ -207,55 +229,142 @@ function NetworkDiagram({ graph }: { graph: NetworkGraph }) {
                 height={HEIGHT}
                 className="border rounded bg-gray-50 mx-auto block"
             >
+                <defs>
+                    <filter id="node-glow" x="-60%" y="-60%" width="220%" height="220%">
+                        <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur" />
+                        <feMerge>
+                            <feMergeNode in="blur" />
+                            <feMergeNode in="SourceGraphic" />
+                        </feMerge>
+                    </filter>
+                </defs>
+
+                {/* Edges — dimmed when not connected to hovered node */}
                 {graph.edges.map((edge, i) => {
                     const src = posMap.get(edge.source);
                     const tgt = posMap.get(edge.target);
                     if (!src || !tgt) return null;
+                    const active = connectedEdgeIndices.has(i);
+                    const mx = (src.x + tgt.x) / 2;
+                    const my = (src.y + tgt.y) / 2;
                     return (
-                        <line
-                            key={i}
-                            x1={src.x}
-                            y1={src.y}
-                            x2={tgt.x}
-                            y2={tgt.y}
-                            stroke="#cbd5e1"
-                            strokeWidth={
-                                edge.weight ? Math.min(edge.weight, 4) : 1
-                            }
-                            strokeOpacity={0.7}
-                        />
+                        <g key={i}>
+                            <line
+                                x1={src.x} y1={src.y} x2={tgt.x} y2={tgt.y}
+                                stroke={active ? "#7c3aed" : "#cbd5e1"}
+                                strokeWidth={active
+                                    ? Math.min((edge.weight ?? 1) + 1, 5)
+                                    : (edge.weight ? Math.min(edge.weight, 4) : 1)}
+                                strokeOpacity={isHovering ? (active ? 1 : 0.08) : 0.7}
+                                style={{ transition: "stroke-opacity 0.18s, stroke-width 0.18s" }}
+                            />
+                            {active && edge.label && (
+                                <g>
+                                    <rect
+                                        x={mx - (edge.label.length * 3.4 + 8)}
+                                        y={my - 9}
+                                        width={edge.label.length * 6.8 + 16}
+                                        height={15}
+                                        rx={4}
+                                        fill="white"
+                                        stroke="#7c3aed"
+                                        strokeWidth={0.8}
+                                        fillOpacity={0.95}
+                                    />
+                                    <text
+                                        x={mx} y={my + 2}
+                                        textAnchor="middle"
+                                        fontSize={8}
+                                        fill="#7c3aed"
+                                        fontWeight="600"
+                                    >
+                                        {edge.label}
+                                    </text>
+                                </g>
+                            )}
+                        </g>
                     );
                 })}
+
+                {/* Nodes */}
                 {positions.map((node) => {
                     const color = NODE_COLORS[node.type] ?? "#6b7280";
-                    const radius = node.type === "instrument" ? 14 : 9;
+                    const baseRadius = node.type === "instrument" ? 14 : 9;
+                    const isHovered = node.id === hoveredNodeId;
+                    const isConnected = connectedNodeIds.has(node.id);
+                    const radius = isHovered ? baseRadius * 1.4 : baseRadius;
+                    const fullLabel = node.label;
+                    const shortLabel = fullLabel.length > 14 ? fullLabel.slice(0, 13) + "…" : fullLabel;
+                    const tooltipWidth = Math.min(Math.max(fullLabel.length * 7 + 16, 60), 200);
+
                     return (
-                        <g key={node.id}>
+                        <g
+                            key={node.id}
+                            style={{
+                                cursor: "pointer",
+                                opacity: isHovering ? (isHovered || isConnected ? 1 : 0.15) : 1,
+                                transition: "opacity 0.18s",
+                            }}
+                            onMouseEnter={() => setHoveredNodeId(node.id)}
+                            onMouseLeave={() => setHoveredNodeId(null)}
+                        >
+                            {/* Glow halo behind hovered node */}
+                            {isHovered && (
+                                <circle
+                                    cx={node.x} cy={node.y}
+                                    r={radius + 9}
+                                    fill={color}
+                                    fillOpacity={0.28}
+                                    filter="url(#node-glow)"
+                                />
+                            )}
+
                             <circle
-                                cx={node.x}
-                                cy={node.y}
+                                cx={node.x} cy={node.y}
                                 r={radius}
                                 fill={color}
-                                fillOpacity={0.85}
+                                fillOpacity={isHovered ? 1 : 0.85}
                                 stroke="white"
-                                strokeWidth={2}
+                                strokeWidth={isHovered ? 3 : 2}
                             />
+
+                            {/* Truncated label below (always visible) */}
                             <text
                                 x={node.x}
                                 y={node.y + radius + 10}
                                 textAnchor="middle"
                                 fontSize={9}
-                                fill="#374151"
-                                fontWeight={
-                                    node.type === "instrument"
-                                        ? "bold"
-                                        : "normal"
-                                }
+                                fill={isHovering ? (isHovered || isConnected ? "#111827" : "#9ca3af") : "#374151"}
+                                fontWeight={node.type === "instrument" ? "bold" : "normal"}
+                                style={{ transition: "fill 0.18s" }}
                             >
-                                {node.label.length > 14
-                                    ? node.label.slice(0, 13) + "…"
-                                    : node.label}
+                                {shortLabel}
                             </text>
+
+                            {/* Tooltip above hovered node with full label */}
+                            {isHovered && fullLabel !== shortLabel && (
+                                <g>
+                                    <rect
+                                        x={node.x - tooltipWidth / 2}
+                                        y={node.y - radius - 24}
+                                        width={tooltipWidth}
+                                        height={17}
+                                        rx={5}
+                                        fill="#1f2937"
+                                        fillOpacity={0.92}
+                                    />
+                                    <text
+                                        x={node.x}
+                                        y={node.y - radius - 12}
+                                        textAnchor="middle"
+                                        fontSize={10}
+                                        fill="white"
+                                        fontWeight="500"
+                                    >
+                                        {fullLabel}
+                                    </text>
+                                </g>
+                            )}
                         </g>
                     );
                 })}
@@ -1448,14 +1557,12 @@ function ElementHarmonizeMessage({ result, onElementSearch, onStructureSearch }:
         downloadCSV("element_relations.csv", [headers.join(","), ...rows].join("\n"));
     };
 
-    const nonLinkageCount = result.constructs.filter((c) => c.domain !== "linkage").length;
-
     return (
         <div className="border border-indigo-200 rounded-lg overflow-hidden">
             <div className="bg-indigo-50 px-4 py-3 flex items-start justify-between gap-3">
                 <div>
                     <p className="text-sm font-semibold text-indigo-900">
-                        Element Relations — {nonLinkageCount} construct{nonLinkageCount !== 1 ? "s" : ""} across {structs.length} instrument{structs.length !== 1 ? "s" : ""}
+                        Element Relations — {result.constructs.length} construct{result.constructs.length !== 1 ? "s" : ""} across {structs.length} instrument{structs.length !== 1 ? "s" : ""}
                     </p>
                     <p className="text-xs text-indigo-700 mt-0.5">{result.summary}</p>
                 </div>

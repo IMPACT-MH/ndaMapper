@@ -20,21 +20,14 @@ interface ElementRef {
     description: string;
 }
 
-// Standard NDA administrative/linkage fields — handled separately as linkage constructs
+// Standard NDA administrative/linkage fields — excluded from element relations entirely
+// (present in every structure via ndar_subject01, not meaningful as cross-instrument constructs)
 const ADMIN_FIELDS = new Set([
     "subjectkey", "src_subject_id", "interview_age", "interview_date", "sex",
     "visit", "visit_number", "version_form", "interview_type", "site",
     "respondent", "comqother", "fneill", "translation_language",
     "data_file1", "data_file1_type", "data_file2", "data_file2_type",
 ]);
-
-const LINKING_FIELDS: Array<{ field: string; constructName: string; description: string }> = [
-    { field: "subjectkey",     constructName: "Subject Key",      description: "Universal subject identifier for linking records across datasets" },
-    { field: "src_subject_id", constructName: "Study Subject ID", description: "Study-level subject identifier for record linkage" },
-    { field: "interview_age",  constructName: "Interview Age",    description: "Key demographic variable for aligning subjects across instruments" },
-    { field: "interview_date", constructName: "Interview Date",   description: "Temporal alignment variable for longitudinal harmonization" },
-    { field: "sex",            constructName: "Sex",              description: "Core demographic covariate for cross-instrument harmonization" },
-];
 
 async function fetchStructureElements(shortName: string): Promise<DataElement[]> {
     try {
@@ -217,16 +210,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     console.log(`[element-harmonize] ${multiInstrumentClusters.length} clusters spanning ≥2 instruments`);
 
     if (multiInstrumentClusters.length === 0) {
-        const linkageConstructs: ConstructGroup[] = LINKING_FIELDS.map(({ field, constructName, description }) => ({
-            constructName,
-            domain: "linkage",
-            mappings: structuresWithElements.map((s) => ({
-                shortName: s.shortName,
-                elementName: field,
-                description,
-                mappingConfidence: "direct" as const,
-            })),
-        }));
         const structures: ElementHarmonizeSite[] = structuresWithElements.map((s) => ({
             shortName: s.shortName,
             title: s.title,
@@ -234,7 +217,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         }));
         return NextResponse.json({
             structures,
-            constructs: linkageConstructs,
+            constructs: [],
             summary: "No semantically similar elements found across these instruments. They may measure distinct constructs with little lexical overlap.",
             reasoning: "",
         } satisfies ElementHarmonizeResponse, { headers: CORS_HEADERS });
@@ -395,20 +378,6 @@ ${JSON.stringify(clusterSummary, null, 2)}`,
         }));
         summary = `Found ${constructs.length} element clusters across instruments.`;
     }
-
-    // Prepend linkage fields
-    const linkageConstructs: ConstructGroup[] = LINKING_FIELDS.map(({ field, constructName, description }) => ({
-        constructName,
-        domain: "linkage",
-        mappings: structuresWithElements.map((s) => ({
-            shortName: s.shortName,
-            elementName: field,
-            description,
-            mappingConfidence: "direct" as const,
-        })),
-    }));
-
-    constructs = [...linkageConstructs, ...constructs];
 
     const structures: ElementHarmonizeSite[] = structuresWithElements.map((s) => ({
         shortName: s.shortName,
