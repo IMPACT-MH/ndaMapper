@@ -1,6 +1,10 @@
 import "server-only";
 import type { DataStructure, NetworkGraph, NetworkNode, NetworkEdge } from "@/types";
 
+const NDAR_SUBJECT01_FIELDS = new Set([
+  "subjectkey", "src_subject_id", "interview_age", "interview_date", "sex",
+]);
+
 /**
  * Build a NetworkGraph from multiple DataStructure objects.
  *
@@ -65,11 +69,13 @@ export function buildNetworkGraph(structures: DataStructure[]): NetworkGraph {
   for (let i = 0; i < structures.length; i++) {
     for (let j = i + 1; j < structures.length; j++) {
       const aElements = new Set(
-        (structures[i].dataElements ?? []).map((e) => e.name.toLowerCase())
+        (structures[i].dataElements ?? [])
+          .map((e) => e.name.toLowerCase())
+          .filter((n) => !NDAR_SUBJECT01_FIELDS.has(n))
       );
-      const bElements = (structures[j].dataElements ?? []).map((e) =>
-        e.name.toLowerCase()
-      );
+      const bElements = (structures[j].dataElements ?? [])
+        .map((e) => e.name.toLowerCase())
+        .filter((n) => !NDAR_SUBJECT01_FIELDS.has(n));
       const shared = bElements.filter((e) => aElements.has(e));
       if (shared.length > 0) {
         edges.push({
