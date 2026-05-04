@@ -109,28 +109,21 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     if (!question) return createErrorResponse("question is required", 400);
-
-    // Filter to multi-site instruments only
-    const multiSite = suggestions.filter((s) => (s.sites ?? []).length >= 2);
-
-    if (multiSite.length < 2) {
-        const resp: ElementHarmonizeResponse = {
-            structures: multiSite.map((s) => ({ shortName: s.shortName, title: s.title, sites: s.sites ?? [] })),
+    if (suggestions.length < 2) {
+        return NextResponse.json({
+            structures: [],
             constructs: [],
-            summary: multiSite.length === 0
-                ? "No instruments with cross-site coverage found. Try asking about instruments first."
-                : "Only one multi-site instrument found — need at least two for element harmonization.",
+            summary: "Select at least two instruments to find element relations.",
             reasoning: "",
-        };
-        return NextResponse.json(resp, { headers: CORS_HEADERS });
+        } satisfies ElementHarmonizeResponse, { headers: CORS_HEADERS });
     }
 
-    // Fetch element schemas from NDA in parallel
+    // Fetch element schemas from NDA in parallel for all selected instruments
     const elementResults = await Promise.all(
-        multiSite.map((s) => fetchStructureElements(s.shortName))
+        suggestions.map((s) => fetchStructureElements(s.shortName))
     );
 
-    const structuresWithElements = multiSite.map((s, i) => ({
+    const structuresWithElements = suggestions.map((s, i) => ({
         shortName: s.shortName,
         title: s.title,
         sites: s.sites ?? [],

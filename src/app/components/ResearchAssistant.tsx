@@ -684,6 +684,7 @@ interface SuggestionsMessageProps {
     msg: Extract<ChatMsg, { type: "suggestions" }>;
     selectedShortNames: Set<string>;
     toggleStructure: (shortName: string) => void;
+    onSelectAll: () => void;
     phase: Phase;
     isLatest: boolean;
     onGenerate: () => void;
@@ -698,6 +699,7 @@ function SuggestionsMessage({
     msg,
     selectedShortNames,
     toggleStructure,
+    onSelectAll,
     phase,
     isLatest,
     onGenerate,
@@ -707,6 +709,7 @@ function SuggestionsMessage({
     onFindElements,
     confidenceColor,
 }: SuggestionsMessageProps) {
+    const [showSelectionWarning, setShowSelectionWarning] = useState(false);
     return (
         <div className="space-y-3">
             {msg.reasoning && (
@@ -812,31 +815,54 @@ function SuggestionsMessage({
             </div>
 
             {isLatest && phase === "selecting" && (
-                <div className="flex gap-2 flex-wrap">
-                    <button
-                        onClick={onGenerate}
-                        disabled={isGenerating || selectedShortNames.size === 0}
-                        className="px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                        Generate Mock Dataset
-                        {selectedShortNames.size > 0
-                            ? ` (${selectedShortNames.size} instrument${selectedShortNames.size > 1 ? "s" : ""})`
-                            : ""}
-                    </button>
-                    <button
-                        onClick={onFindElements}
-                        disabled={isGenerating}
-                        className="px-4 py-2 text-sm border border-indigo-300 text-indigo-700 rounded-lg hover:bg-indigo-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                        Find Element Relations
-                    </button>
-                    <button
-                        onClick={onLoadMore}
-                        disabled={isLoadingMore || isGenerating}
-                        className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                        {isLoadingMore ? "Loading…" : "Load more suggestions"}
-                    </button>
+                <div className="flex flex-col gap-2">
+                    <div className="flex gap-2 flex-wrap">
+                        <button
+                            onClick={onGenerate}
+                            disabled={isGenerating || selectedShortNames.size === 0}
+                            className="px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                            Generate Mock Dataset
+                            {selectedShortNames.size > 0
+                                ? ` (${selectedShortNames.size} instrument${selectedShortNames.size > 1 ? "s" : ""})`
+                                : ""}
+                        </button>
+                        <button
+                            onClick={() => {
+                                if (selectedShortNames.size === 0) {
+                                    setShowSelectionWarning(true);
+                                } else {
+                                    setShowSelectionWarning(false);
+                                    onFindElements();
+                                }
+                            }}
+                            disabled={isGenerating}
+                            className="px-4 py-2 text-sm border border-indigo-300 text-indigo-700 rounded-lg hover:bg-indigo-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                            Find Element Relations
+                            {selectedShortNames.size > 0
+                                ? ` (${selectedShortNames.size})`
+                                : ""}
+                        </button>
+                        <button
+                            onClick={onLoadMore}
+                            disabled={isLoadingMore || isGenerating}
+                            className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:border-gray-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                            {isLoadingMore ? "Loading…" : "Load more suggestions"}
+                        </button>
+                    </div>
+                    {showSelectionWarning && selectedShortNames.size === 0 && (
+                        <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                            <span>Select at least one instrument to analyze.</span>
+                            <button
+                                onClick={() => { onSelectAll(); setShowSelectionWarning(false); }}
+                                className="underline font-medium hover:text-amber-900 whitespace-nowrap"
+                            >
+                                Select all
+                            </button>
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -1714,6 +1740,9 @@ export default function ResearchAssistant({
     const [selectedShortNames, setSelectedShortNames] = useState<Set<string>>(
         new Set(),
     );
+    // Ref so callbacks always read the latest selection without stale-closure issues
+    const selectedShortNamesRef = useRef<Set<string>>(new Set());
+    useEffect(() => { selectedShortNamesRef.current = selectedShortNames; }, [selectedShortNames]);
     const [selectedStructures, setSelectedStructures] = useState<
         DataStructure[]
     >([]);
@@ -2214,15 +2243,17 @@ export default function ResearchAssistant({
             .find((m) => m.type === "suggestions");
 
         let suggestions = latestSuggestions?.type === "suggestions"
-            ? latestSuggestions.suggestions.map((s) => ({
-                shortName: s.shortName,
-                title: s.title,
-                sites: s.sites ?? [],
-            }))
+            ? latestSuggestions.suggestions
+                .filter((s) => selectedShortNamesRef.current.has(s.shortName))
+                .map((s) => ({
+                    shortName: s.shortName,
+                    title: s.title,
+                    sites: s.sites ?? [],
+                }))
             : [];
 
-        // No prior instrument context — auto-discover relevant instruments first,
-        // show them in the chat, then run element crosswalk on the multi-site ones.
+        // No prior instrument context — auto-discover relevant instruments first and
+        // show them so the user can review before triggering element harmonization.
         if (suggestions.length === 0) {
             try {
                 const suggestRes = await fetch("/api/v1/research/suggest", {
@@ -2236,12 +2267,6 @@ export default function ResearchAssistant({
                 });
                 if (suggestRes.ok) {
                     const suggestData = (await suggestRes.json()) as SuggestResponse;
-                    suggestions = suggestData.suggestions.map((s) => ({
-                        shortName: s.shortName,
-                        title: s.title,
-                        sites: s.sites ?? [],
-                    }));
-                    // Show the discovered instruments in chat so the user can see the context
                     setChatMessages((prev) => [
                         ...prev,
                         {
@@ -2252,6 +2277,10 @@ export default function ResearchAssistant({
                             networkGraph: suggestData.networkGraph,
                         },
                     ]);
+                    // Stop here — let the user review suggested instruments and click
+                    // "Find shared elements →" on the card to proceed with their selection.
+                    setPhase("selecting");
+                    return;
                 }
             } catch {
                 // Proceed with empty suggestions; route will return a clear empty state
@@ -2404,6 +2433,7 @@ export default function ResearchAssistant({
                                 isGenerating={phase === "generating"}
                                 onLoadMore={() => void handleLoadMore()}
                                 isLoadingMore={isLoadingMore}
+                                onSelectAll={() => setSelectedShortNames(new Set(msg.suggestions.map((s) => s.shortName)))}
                                 onFindElements={() => void handleElementSearch("Which elements can I harmonize across these instruments?")}
                                 confidenceColor={confidenceColor}
                             />
