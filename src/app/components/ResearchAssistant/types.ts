@@ -66,7 +66,7 @@ export type ChatMsg =
     | { id: string; type: "analysis"; text: string; charts: ChartConfig[] }
     | { id: string; type: "hint"; text: string }
     | { id: string; type: "harmonize"; result: HarmonizationResult }
-    | { id: string; type: "element-harmonize"; result: ElementHarmonizeResponse; overlapThreshold: number };
+    | { id: string; type: "element-harmonize"; result: ElementHarmonizeResponse };
 
 export interface MergedDataset {
     id: string;

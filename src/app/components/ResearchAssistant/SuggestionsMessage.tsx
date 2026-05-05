@@ -23,8 +23,6 @@ export interface SuggestionsMessageProps {
     onLoadMore: () => void;
     isLoadingMore: boolean;
     onFindElements: () => void;
-    overlapThreshold: number;
-    onOverlapThresholdChange: (v: number) => void;
 }
 
 export function SuggestionsMessage({
@@ -39,8 +37,6 @@ export function SuggestionsMessage({
     onLoadMore,
     isLoadingMore,
     onFindElements,
-    overlapThreshold,
-    onOverlapThresholdChange,
 }: SuggestionsMessageProps) {
     const [showSelectionWarning, setShowSelectionWarning] = useState(false);
 
@@ -169,47 +165,23 @@ export function SuggestionsMessage({
                                 ? "Loading…"
                                 : "Load more suggestions"}
                         </button>
-                        <div className="flex items-center gap-2">
-                            <button
-                                onClick={() => {
-                                    if (selectedShortNames.size === 0) {
-                                        setShowSelectionWarning(true);
-                                    } else {
-                                        setShowSelectionWarning(false);
-                                        onFindElements();
-                                    }
-                                }}
-                                disabled={isGenerating}
-                                className="px-4 py-2 text-sm border border-indigo-300 text-indigo-700 rounded-lg hover:bg-indigo-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                            >
-                                Find Element Relations
-                                {selectedShortNames.size > 0
-                                    ? ` (${selectedShortNames.size})`
-                                    : ""}
-                            </button>
-                            <label
-                                className="flex items-center gap-1.5 text-xs text-gray-500 whitespace-nowrap"
-                                title="Minimum word-overlap score for two elements to be considered related"
-                            >
-                                <span>threshold</span>
-                                <input
-                                    type="range"
-                                    min={0.25}
-                                    max={0.75}
-                                    step={0.01}
-                                    value={overlapThreshold}
-                                    onChange={(e) =>
-                                        onOverlapThresholdChange(
-                                            parseFloat(e.target.value),
-                                        )
-                                    }
-                                    className="w-20 accent-indigo-600"
-                                />
-                                <span className="font-mono w-8">
-                                    {overlapThreshold.toFixed(2)}
-                                </span>
-                            </label>
-                        </div>
+                        <button
+                            onClick={() => {
+                                if (selectedShortNames.size === 0) {
+                                    setShowSelectionWarning(true);
+                                } else {
+                                    setShowSelectionWarning(false);
+                                    onFindElements();
+                                }
+                            }}
+                            disabled={isGenerating}
+                            className="px-4 py-2 text-sm border border-indigo-300 text-indigo-700 rounded-lg hover:bg-indigo-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                            Find Element Relations
+                            {selectedShortNames.size > 0
+                                ? ` (${selectedShortNames.size})`
+                                : ""}
+                        </button>
                     </div>
                     {showSelectionWarning && selectedShortNames.size === 0 && (
                         <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">

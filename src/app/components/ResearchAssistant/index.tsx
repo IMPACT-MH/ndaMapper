@@ -46,8 +46,6 @@ function detectIntent(q: string): "structures" | "elements" {
         : "structures";
 }
 
-const DEFAULT_OVERLAP_THRESHOLD = 0.5;
-
 // ---------------------------------------------------------------------------
 // Session persistence
 // ---------------------------------------------------------------------------
@@ -56,7 +54,6 @@ const STORAGE_KEY = "ra-session-v1";
 
 interface StoredSession {
     chatMessages: ChatMsg[];
-    overlapThreshold: number;
 }
 
 function loadSession(): StoredSession | null {
@@ -70,11 +67,10 @@ function loadSession(): StoredSession | null {
     }
 }
 
-function saveSession(messages: ChatMsg[], threshold: number) {
+function saveSession(messages: ChatMsg[]) {
     try {
         const toStore: StoredSession = {
             chatMessages: messages.slice(-20),
-            overlapThreshold: threshold,
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(toStore));
     } catch {
@@ -135,9 +131,6 @@ export default function ResearchAssistant({
     >([]);
 
     const [showClearModal, setShowClearModal] = useState(false);
-    const [overlapThreshold, setOverlapThreshold] = useState<number>(
-        DEFAULT_OVERLAP_THRESHOLD,
-    );
     const [elementProgress, setElementProgress] = useState<string>("");
 
     const clearChat = useCallback(() => {
@@ -172,8 +165,6 @@ export default function ResearchAssistant({
         if (!session) return;
         const msgs = session.chatMessages;
         if (msgs.length > 0) setChatMessages(msgs);
-        if (session.overlapThreshold !== DEFAULT_OVERLAP_THRESHOLD)
-            setOverlapThreshold(session.overlapThreshold);
         const mockMsg = [...msgs]
             .reverse()
             .find((m) => m.type === "mock-ready");
@@ -186,11 +177,9 @@ export default function ResearchAssistant({
         }
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // Persist to localStorage whenever chat or threshold changes
     useEffect(() => {
-        if (chatMessages.length > 0)
-            saveSession(chatMessages, overlapThreshold);
-    }, [chatMessages, overlapThreshold]);
+        if (chatMessages.length > 0) saveSession(chatMessages);
+    }, [chatMessages]);
 
     useEffect(() => {
         chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -723,7 +712,6 @@ export default function ResearchAssistant({
                     body: JSON.stringify({
                         question,
                         suggestions,
-                        overlapThreshold,
                     }),
                 });
                 if (!res.ok)
@@ -762,7 +750,6 @@ export default function ResearchAssistant({
                                     id: crypto.randomUUID(),
                                     type: "element-harmonize" as const,
                                     result: data,
-                                    overlapThreshold,
                                 },
                             ]);
                             dispatch({ type: "ELEMENT_HARMONIZE_DONE" });
@@ -784,7 +771,7 @@ export default function ResearchAssistant({
                 dispatch({ type: "ERROR" });
             }
         },
-        [chatMessages, databaseStructures, overlapThreshold],
+        [chatMessages, databaseStructures],
     );
 
     // ---------------------------------------------------------------------------
@@ -917,7 +904,7 @@ export default function ResearchAssistant({
                         all NDA structures.
                     </div>
                 )}
-                <Phase2Banner />
+                {/* <Phase2Banner /> */}
             </div>
 
             {/* Scrollable chat thread */}
@@ -974,8 +961,6 @@ export default function ResearchAssistant({
                                         "Which elements can I harmonize across these instruments?",
                                     )
                                 }
-                                overlapThreshold={overlapThreshold}
-                                onOverlapThresholdChange={setOverlapThreshold}
                             />
                         );
                     }
@@ -1045,7 +1030,6 @@ export default function ResearchAssistant({
                             <ElementHarmonizeMessage
                                 key={msg.id}
                                 result={msg.result}
-                                overlapThreshold={msg.overlapThreshold}
                                 onElementSearch={onElementSearch}
                                 onStructureSearch={onStructureSearch}
                             />

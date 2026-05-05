@@ -22,13 +22,12 @@ function downloadCSV(filename: string, csvContent: string) {
 
 interface ElementHarmonizeMessageProps {
     result: ElementHarmonizeResponse;
-    overlapThreshold: number;
     onElementSearch?: (elementName: string) => void;
     onStructureSearch?: (shortName: string) => void;
 }
 
 export function ElementHarmonizeMessage({
-    result, overlapThreshold, onElementSearch, onStructureSearch,
+    result, onElementSearch, onStructureSearch,
 }: ElementHarmonizeMessageProps) {
     const structs = result.structures;
     const relGraph = useMemo(
@@ -101,9 +100,6 @@ export function ElementHarmonizeMessage({
                 <div>
                     <p className="text-sm font-semibold text-indigo-900 flex items-center gap-2 flex-wrap">
                         Element Relations — {result.constructs.length} construct{result.constructs.length !== 1 ? "s" : ""} across {structs.length} instrument{structs.length !== 1 ? "s" : ""}
-                        <span className="px-1.5 py-0.5 text-xs font-mono font-normal bg-indigo-100 text-indigo-500 rounded border border-indigo-200">
-                            threshold {overlapThreshold.toFixed(2)}
-                        </span>
                     </p>
                     <p className="text-xs text-indigo-700 mt-0.5">{result.summary}</p>
                 </div>

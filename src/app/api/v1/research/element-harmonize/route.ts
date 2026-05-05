@@ -173,12 +173,10 @@ export async function POST(request: NextRequest): Promise<Response> {
 
     let question: string;
     let suggestions: IncomingSuggestion[];
-    let overlapThreshold: number;
     try {
-        const body = await request.json() as { question?: string; suggestions?: IncomingSuggestion[]; overlapThreshold?: number };
+        const body = await request.json() as { question?: string; suggestions?: IncomingSuggestion[] };
         question = (body.question ?? "").trim();
         suggestions = body.suggestions ?? [];
-        overlapThreshold = typeof body.overlapThreshold === "number" ? Math.max(0, Math.min(1, body.overlapThreshold)) : 0.25;
     } catch {
         return createErrorResponse("Invalid JSON request body", 400);
     }
@@ -262,7 +260,7 @@ export async function POST(request: NextRequest): Promise<Response> {
                 console.log("[element-harmonize] concept label groups:", JSON.stringify(Object.fromEntries(labelsByConstruct), null, 2));
 
                 // Step 4: Build pairs — semantic first, then lexical
-                const OVERLAP_THRESHOLD = overlapThreshold;
+                const OVERLAP_THRESHOLD = 0.75;
                 const pairs: Array<{ a: ElementRef; b: ElementRef; score: number; matchSource: "semantic" | "lexical" }> = [];
                 const semanticPairKeys = new Set<string>();
 
