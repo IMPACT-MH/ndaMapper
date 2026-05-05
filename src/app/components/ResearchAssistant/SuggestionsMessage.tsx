@@ -148,7 +148,7 @@ export function SuggestionsMessage({
             {isLatest && (phase === "selecting" || phase === "complete") && (
                 <div className="flex flex-col gap-2">
                     <div className="flex gap-2 flex-wrap">
-                        <button
+                        {/* <button
                             onClick={onGenerate}
                             disabled={
                                 isGenerating || selectedShortNames.size === 0
@@ -159,7 +159,7 @@ export function SuggestionsMessage({
                             {selectedShortNames.size > 0
                                 ? ` (${selectedShortNames.size} instrument${selectedShortNames.size > 1 ? "s" : ""})`
                                 : ""}
-                        </button>
+                        </button> */}
                         <button
                             onClick={onLoadMore}
                             disabled={isLoadingMore || isGenerating}

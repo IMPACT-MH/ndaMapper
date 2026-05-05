@@ -373,8 +373,18 @@ ${JSON.stringify(instrumentsWithElements, null, 2)}`,
     console.warn("Element recommendations failed:", err instanceof Error ? err.message : String(err));
   }
 
-  // Build network graph
-  const networkGraph = buildNetworkGraph(validStructures);
+  // Build network graph — enrich with IMPACT-MH custom dataTypes/categories
+  const enrichedStructures = validStructures.map((s) => {
+    const suggestion = suggestionsRaw.find(
+      (r) => r.shortName.toLowerCase() === s.shortName.toLowerCase()
+    );
+    return {
+      ...s,
+      dataTypes: suggestion?.dataTypes?.length ? suggestion.dataTypes : s.dataTypes,
+      categories: suggestion?.categories?.length ? suggestion.categories : s.categories,
+    };
+  });
+  const networkGraph = buildNetworkGraph(enrichedStructures);
 
   const responseBody: SuggestResponse = {
     suggestions: suggestionsRaw,

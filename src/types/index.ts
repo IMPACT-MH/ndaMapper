@@ -233,6 +233,8 @@ export interface NetworkNode {
   label: string;
   type: "instrument" | "datatype" | "site" | "category";
   value?: number;
+  dataType?: string;
+  sites?: string[];
 }
 
 export interface NetworkEdge {
@@ -241,6 +243,7 @@ export interface NetworkEdge {
   label?: string;
   weight?: number;
   sharedElementNames?: string[];
+  jaccardSimilarity?: number;
 }
 
 export interface NetworkGraph {

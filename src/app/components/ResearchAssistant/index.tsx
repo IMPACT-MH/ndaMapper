@@ -135,7 +135,9 @@ export default function ResearchAssistant({
     >([]);
 
     const [showClearModal, setShowClearModal] = useState(false);
-    const [overlapThreshold, setOverlapThreshold] = useState<number>(DEFAULT_OVERLAP_THRESHOLD);
+    const [overlapThreshold, setOverlapThreshold] = useState<number>(
+        DEFAULT_OVERLAP_THRESHOLD,
+    );
     const [elementProgress, setElementProgress] = useState<string>("");
 
     const clearChat = useCallback(() => {
@@ -699,10 +701,13 @@ export default function ResearchAssistant({
                         dispatch({ type: "SUGGEST_DONE" });
                         setSuggestHistory([
                             { role: "user" as const, content: question },
-                            { role: "assistant" as const, content: JSON.stringify({
-                                suggestions: suggestData.suggestions,
-                                reasoning: suggestData.reasoning,
-                            }) },
+                            {
+                                role: "assistant" as const,
+                                content: JSON.stringify({
+                                    suggestions: suggestData.suggestions,
+                                    reasoning: suggestData.reasoning,
+                                }),
+                            },
                         ]);
                         return;
                     }
@@ -764,7 +769,10 @@ export default function ResearchAssistant({
                             setSuggestHistory((prev) => [
                                 ...prev,
                                 { role: "user" as const, content: question },
-                                { role: "assistant" as const, content: `Performed element harmonization across ${data.structures?.length ?? 0} instruments, finding ${data.constructs?.length ?? 0} shared construct groups.` },
+                                {
+                                    role: "assistant" as const,
+                                    content: `Performed element harmonization across ${data.structures?.length ?? 0} instruments, finding ${data.constructs?.length ?? 0} shared construct groups.`,
+                                },
                             ]);
                         }
                     }
@@ -1087,7 +1095,7 @@ export default function ResearchAssistant({
                         if (!rScriptOpen) setRScriptOpen(true);
                     }}
                 >
-                    <button
+                    {/* <button
                         onClick={() => setRScriptOpen((v) => !v)}
                         className="w-full flex items-center gap-1 px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700 transition-colors"
                     >
@@ -1105,7 +1113,7 @@ export default function ResearchAssistant({
                                 Drop .r · .py · .Rmd file here
                             </span>
                         )}
-                    </button>
+                    </button> */}
                     {availableVars.length > 0 && (
                         <p className="px-3 text-xs text-gray-400">
                             Available:{" "}

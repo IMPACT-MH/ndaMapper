@@ -5,6 +5,8 @@ import { useState, useEffect, useRef } from "react";
 interface SimEdge {
     source: string;
     target: string;
+    idealLength?: number;
+    strength?: number;
 }
 
 type Positioned<T> = T & { x: number; y: number; vx: number; vy: number };
@@ -71,7 +73,7 @@ export function useSpringSimulation<TNode extends { id: string }>(
                 const dx = tgt.x - src.x;
                 const dy = tgt.y - src.y;
                 const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-                const f = ((dist - idealLength) / dist) * 0.3 * alpha;
+                const f = ((dist - (edge.idealLength ?? idealLength)) / dist) * (edge.strength ?? 0.3) * alpha;
                 src.vx += dx * f; src.vy += dy * f;
                 tgt.vx -= dx * f; tgt.vy -= dy * f;
             }
