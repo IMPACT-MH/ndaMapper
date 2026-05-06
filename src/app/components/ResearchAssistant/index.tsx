@@ -1143,7 +1143,7 @@ export default function ResearchAssistant({
                         }}
                         className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50"
                     />
-                    {phase === "selecting" && selectedShortNames.size > 0 && (
+                    {/* {phase === "selecting" && selectedShortNames.size > 0 && (
                         <button
                             onClick={() => void handleGenerateMock()}
                             disabled={isLoading}
@@ -1151,7 +1151,7 @@ export default function ResearchAssistant({
                         >
                             Generate ({selectedShortNames.size})
                         </button>
-                    )}
+                    )} */}
                     {isRefineMode && (
                         <button
                             onClick={() => setShowClearModal(true)}
