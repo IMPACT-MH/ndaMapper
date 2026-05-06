@@ -18,7 +18,7 @@ export function OverflowTags({ items, itemClassName }: { items: string[]; itemCl
             count++;
         }
         if (count < items.length) setCutoff(count);
-    }, []); // measure once on mount with all items visible
+    }, [items.length]);
 
     const shown = !expanded && cutoff !== null ? items.slice(0, cutoff) : items;
     const hidden = items.length - shown.length;
