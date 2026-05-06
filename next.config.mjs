@@ -1,9 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
     transpilePackages: ['recharts'],
-    experimental: {
-        serverComponentsExternalPackages: ['@anthropic-ai/sdk'],
-    },
+    serverExternalPackages: ['@anthropic-ai/sdk'],
 };
 
 export default nextConfig;
