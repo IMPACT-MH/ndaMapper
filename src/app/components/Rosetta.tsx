@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { parseCSV } from "@/utils/csvUtils";
 import type { RosettaResult } from "@/app/api/v1/research/rosetta/route";
+import type { OmapResult } from "@/app/api/v1/research/rosetta/omap/route";
 
 interface RosettaProps {
     databaseStructures: string[];
@@ -28,6 +29,7 @@ interface RosettaProps {
 interface RowState {
     status: "idle" | "loading" | "done" | "error";
     rawResults?: RosettaResult[];
+    omapResults?: OmapResult[];
     searchTerms?: string[];
     error?: string;
 }
@@ -37,14 +39,17 @@ interface RowState {
 // ---------------------------------------------------------------------------
 
 const STORAGE_KEY = "rosetta-session-v1";
+const SOURCE_MODE_KEY = "rosetta-source-mode";
 
 interface StoredRosettaSession {
     mode: "search" | "csv";
     query: string;
     singleResult: { rawResults: RosettaResult[]; searchTerms: string[] } | null;
+    singleOmapResult: { results: OmapResult[]; searchTerms: string[] } | null;
     csvRows: string[];
     batchState: Record<string, RowState>;
     selections: Record<string, RosettaResult>;
+    omapSelections: Record<string, OmapResult>;
 }
 
 function loadRosettaSession(): StoredRosettaSession | null {
@@ -214,6 +219,66 @@ function ResultCard({
     );
 }
 
+function OmapResultCard({
+    result,
+    selectable,
+    selected,
+    onSelect,
+}: {
+    result: OmapResult;
+    selectable?: boolean;
+    selected?: boolean;
+    onSelect?: () => void;
+}) {
+    const conf = confidenceLabel(result.score, result.matchedBy, result.descriptionOverlap);
+    return (
+        <div
+            className={`border rounded-lg p-3 transition-colors ${
+                selectable ? "cursor-pointer" : ""
+            } ${
+                selected
+                    ? "border-indigo-400 bg-indigo-50"
+                    : "border-gray-200 bg-white hover:border-gray-300"
+            }`}
+            onClick={() => selectable && onSelect?.()}
+        >
+            <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-2 flex-wrap min-w-0">
+                    {selectable && (
+                        <span className={`shrink-0 text-base leading-none ${selected ? "text-indigo-600" : "text-gray-300"}`}>
+                            {selected ? "●" : "○"}
+                        </span>
+                    )}
+                    <span className="font-medium text-gray-900 text-sm">{result.conceptName}</span>
+                    <span className="font-mono text-xs text-gray-400">{result.conceptId}</span>
+                </div>
+                <span className={`shrink-0 text-xs font-medium px-2 py-0.5 rounded ${conf.color}`}>
+                    {conf.label}
+                </span>
+            </div>
+            <div className="flex flex-wrap gap-1 mt-1.5">
+                <span className="text-xs px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded border border-blue-100">
+                    {result.domainId}
+                </span>
+                <span className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded font-mono">
+                    {result.vocabularyId}
+                </span>
+                {result.standardConcept === "S" && (
+                    <span className="text-xs px-1.5 py-0.5 bg-green-50 text-green-700 rounded border border-green-100">
+                        Standard
+                    </span>
+                )}
+                <span className="text-xs px-1.5 py-0.5 bg-gray-50 text-gray-500 rounded font-mono">
+                    {result.conceptCode}
+                </span>
+            </div>
+            {result.conceptClassId && (
+                <p className="text-xs text-gray-400 mt-1 italic">{result.conceptClassId}</p>
+            )}
+        </div>
+    );
+}
+
 export default function Rosetta({
     databaseStructures,
     databaseElementNames,
@@ -222,6 +287,7 @@ export default function Rosetta({
     onElementSearch,
     onStructureSearch,
 }: RosettaProps) {
+    const [sourceMode, setSourceMode] = useState<"nda" | "omap">("nda");
     const [databaseFilterEnabled, setDatabaseFilterEnabled] = useState(false);
     const [mode, setMode] = useState<"search" | "csv">("search");
 
@@ -233,15 +299,15 @@ export default function Rosetta({
         searchTerms: string[];
     } | null>(null);
     const [singleError, setSingleError] = useState<string | null>(null);
+    const [singleOmapResult, setSingleOmapResult] = useState<{ results: OmapResult[]; searchTerms: string[] } | null>(null);
 
     // CSV batch state
     const [csvRows, setCsvRows] = useState<string[]>([]);
     const [batchState, setBatchState] = useState<Record<number, RowState>>({});
     const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
     const [batchProcessing, setBatchProcessing] = useState(false);
-    const [selections, setSelections] = useState<Record<number, RosettaResult>>(
-        {},
-    );
+    const [selections, setSelections] = useState<Record<number, RosettaResult>>({});
+    const [omapSelections, setOmapSelections] = useState<Record<number, OmapResult>>({});
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const [mounted, setMounted] = useState(false);
@@ -250,25 +316,33 @@ export default function Rosetta({
     const clearAll = useCallback(() => {
         setQuery("");
         setSingleResult(null);
+        setSingleOmapResult(null);
         setSingleError(null);
         setCsvRows([]);
         setBatchState({});
         setExpandedRows(new Set());
         setSelections({});
+        setOmapSelections({});
         setMode("search");
         setShowClearModal(false);
         if (fileInputRef.current) fileInputRef.current.value = "";
         try { localStorage.removeItem(STORAGE_KEY); } catch { /* SSR */ }
+        // SOURCE_MODE_KEY is intentionally preserved
     }, []);
 
     // Restore from localStorage after first client render
     useEffect(() => {
         setMounted(true);
+        try {
+            const saved = localStorage.getItem(SOURCE_MODE_KEY);
+            if (saved === "nda" || saved === "omap") setSourceMode(saved);
+        } catch { /* SSR */ }
         const session = loadRosettaSession();
         if (!session) return;
         if (session.mode) setMode(session.mode);
         if (session.query) setQuery(session.query);
         if (session.singleResult) setSingleResult(session.singleResult);
+        if (session.singleOmapResult) setSingleOmapResult(session.singleOmapResult);
         if (session.csvRows?.length > 0) setCsvRows(session.csvRows);
         if (session.batchState && Object.keys(session.batchState).length > 0) {
             setBatchState(session.batchState as Record<number, RowState>);
@@ -276,22 +350,32 @@ export default function Rosetta({
         if (session.selections && Object.keys(session.selections).length > 0) {
             setSelections(session.selections as Record<number, RosettaResult>);
         }
+        if (session.omapSelections && Object.keys(session.omapSelections).length > 0) {
+            setOmapSelections(session.omapSelections as Record<number, OmapResult>);
+        }
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // Persist to localStorage on relevant state changes
+    // Persist sourceMode separately so it survives session clears
+    useEffect(() => {
+        if (!mounted) return;
+        try { localStorage.setItem(SOURCE_MODE_KEY, sourceMode); } catch { /* quota */ }
+    }, [mounted, sourceMode]);
+
+    // Persist session to localStorage on relevant state changes
     useEffect(() => {
         if (!mounted) return;
         const cleanBatchState = Object.fromEntries(
             Object.entries(batchState).filter(([, v]) => v.status === "done" || v.status === "error")
         );
         saveRosettaSession({
-            mode, query, singleResult, csvRows,
+            mode, query, singleResult, singleOmapResult, csvRows,
             batchState: cleanBatchState,
             selections: selections as Record<string, RosettaResult>,
+            omapSelections: omapSelections as Record<string, OmapResult>,
         });
-    }, [mounted, mode, query, singleResult, csvRows, batchState, selections]);
+    }, [mounted, mode, query, singleResult, singleOmapResult, csvRows, batchState, selections, omapSelections]);
 
-    const filterResults = (results: RosettaResult[]): RosettaResult[] => {
+    const filterNdaResults = (results: RosettaResult[]): RosettaResult[] => {
         const dbSet = new Set(databaseStructures.map((s) => s.toLowerCase()));
         const isInDb = (r: RosettaResult) =>
             r.dataStructures.some((s) => dbSet.has(s.toLowerCase()));
@@ -301,14 +385,13 @@ export default function Rosetta({
                 ? results.filter(isInDb)
                 : results;
 
-        // Sort DB elements to the top within the result set
         return [
             ...filtered.filter(isInDb),
             ...filtered.filter((r) => !isInDb(r)),
         ];
     };
 
-    const runSearch = async (description: string, exclude: string[] = []) => {
+    const runNdaSearch = async (description: string, exclude: string[] = []) => {
         const res = await fetch("/api/v1/research/rosetta", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -322,22 +405,36 @@ export default function Rosetta({
         }>;
     };
 
+    const runOmapSearchClient = async (description: string, excludeIds: number[] = []) => {
+        const res = await fetch("/api/v1/research/rosetta/omap", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ description, exclude: excludeIds }),
+        });
+        if (!res.ok) throw new Error(`Search failed: ${res.status}`);
+        return res.json() as Promise<{
+            results: OmapResult[];
+            searchTerms: string[];
+        }>;
+    };
+
     const handleSearch = async () => {
         const trimmed = query.trim();
         if (!trimmed) return;
         setIsSearching(true);
         setSingleError(null);
         setSingleResult(null);
+        setSingleOmapResult(null);
         try {
-            const data = await runSearch(trimmed);
-            setSingleResult({
-                rawResults: data.results,
-                searchTerms: data.searchTerms,
-            });
+            if (sourceMode === "omap") {
+                const data = await runOmapSearchClient(trimmed);
+                setSingleOmapResult({ results: data.results, searchTerms: data.searchTerms });
+            } else {
+                const data = await runNdaSearch(trimmed);
+                setSingleResult({ rawResults: data.results, searchTerms: data.searchTerms });
+            }
         } catch (err) {
-            setSingleError(
-                err instanceof Error ? err.message : "Search failed",
-            );
+            setSingleError(err instanceof Error ? err.message : "Search failed");
         } finally {
             setIsSearching(false);
         }
@@ -371,13 +468,27 @@ export default function Rosetta({
     };
 
     const exportCSV = () => {
-        const header = [
-            "input_description",
-            "element_name",
-            "data_structures",
-            "nda_description",
-            "confidence",
-        ];
+        if (sourceMode === "omap") {
+            const header = ["input_description", "concept_id", "concept_name", "domain", "vocabulary", "concept_code", "standard_concept", "confidence"];
+            const rows = csvRows.map((row, i) => {
+                const sel = omapSelections[i];
+                if (!sel) return [row, "", "", "", "", "", "", ""];
+                return [
+                    row,
+                    String(sel.conceptId),
+                    sel.conceptName,
+                    sel.domainId,
+                    sel.vocabularyId,
+                    sel.conceptCode,
+                    sel.standardConcept ?? "",
+                    confidenceLabel(sel.score, sel.matchedBy, sel.descriptionOverlap).label,
+                ];
+            });
+            const escape = (v: string) => `"${v.replace(/"/g, '""')}"`;
+            downloadFile("rosetta-omap-mapping.csv", [header, ...rows].map((r) => r.map(escape).join(",")).join("\n"), "text/csv");
+            return;
+        }
+        const header = ["input_description", "element_name", "data_structures", "nda_description", "confidence"];
         const rows = csvRows.map((row, i) => {
             const sel = selections[i];
             if (!sel) return [row, "", "", "", ""];
@@ -390,23 +501,32 @@ export default function Rosetta({
             ];
         });
         const escape = (v: string) => `"${v.replace(/"/g, '""')}"`;
-        const csv = [header, ...rows]
-            .map((r) => r.map(escape).join(","))
-            .join("\n");
-        downloadFile("rosetta-mapping.csv", csv, "text/csv");
+        downloadFile("rosetta-mapping.csv", [header, ...rows].map((r) => r.map(escape).join(",")).join("\n"), "text/csv");
     };
 
     const exportJSON = () => {
+        if (sourceMode === "omap") {
+            const data = csvRows.map((row, i) => {
+                const sel = omapSelections[i];
+                if (!sel) return { inputDescription: row, conceptId: null, conceptName: null, domain: null, vocabulary: null, confidence: null };
+                return {
+                    inputDescription: row,
+                    conceptId: sel.conceptId,
+                    conceptName: sel.conceptName,
+                    conceptCode: sel.conceptCode,
+                    domain: sel.domainId,
+                    vocabulary: sel.vocabularyId,
+                    standardConcept: sel.standardConcept,
+                    confidence: confidenceLabel(sel.score, sel.matchedBy, sel.descriptionOverlap).label,
+                };
+            });
+            downloadFile("rosetta-omap-mapping.json", JSON.stringify(data, null, 2), "application/json");
+            return;
+        }
         const data = csvRows.map((row, i) => {
             const sel = selections[i];
             if (!sel)
-                return {
-                    inputDescription: row,
-                    elementName: null,
-                    dataStructures: [],
-                    ndaDescription: null,
-                    confidence: null,
-                };
+                return { inputDescription: row, elementName: null, dataStructures: [], ndaDescription: null, confidence: null };
             return {
                 inputDescription: row,
                 elementName: sel.name,
@@ -416,39 +536,38 @@ export default function Rosetta({
                 confidence: confidenceLabel(sel.score, sel.matchedBy, sel.descriptionOverlap).label,
             };
         });
-        downloadFile(
-            "rosetta-mapping.json",
-            JSON.stringify(data, null, 2),
-            "application/json",
-        );
+        downloadFile("rosetta-mapping.json", JSON.stringify(data, null, 2), "application/json");
     };
 
     const handleBatchProcess = async () => {
         if (csvRows.length === 0 || batchProcessing) return;
         setBatchProcessing(true);
         setSelections({});
-        // Initialize all rows to loading
+        setOmapSelections({});
         setBatchState(
             Object.fromEntries(
                 csvRows.map((_, i) => [i, { status: "loading" as const }]),
             ),
         );
-        // Process all rows in parallel
         await Promise.all(
             csvRows.map(async (row, i) => {
                 try {
-                    const data = await runSearch(row);
-                    setBatchState((prev) => ({
-                        ...prev,
-                        [i]: {
-                            status: "done",
-                            rawResults: data.results,
-                            searchTerms: data.searchTerms,
-                        },
-                    }));
-                    // Auto-expand only the first row
-                    if (i === 0 && data.results.length > 0) {
-                        setExpandedRows((prev) => new Set([...prev, i]));
+                    if (sourceMode === "omap") {
+                        const data = await runOmapSearchClient(row);
+                        setBatchState((prev) => ({
+                            ...prev,
+                            [i]: { status: "done", omapResults: data.results, searchTerms: data.searchTerms },
+                        }));
+                        if (i === 0 && data.results.length > 0)
+                            setExpandedRows((prev) => new Set([...prev, i]));
+                    } else {
+                        const data = await runNdaSearch(row);
+                        setBatchState((prev) => ({
+                            ...prev,
+                            [i]: { status: "done", rawResults: data.results, searchTerms: data.searchTerms },
+                        }));
+                        if (i === 0 && data.results.length > 0)
+                            setExpandedRows((prev) => new Set([...prev, i]));
                     }
                 } catch {
                     setBatchState((prev) => ({
@@ -473,30 +592,36 @@ export default function Rosetta({
     const loadMoreRow = async (i: number) => {
         const row = csvRows[i];
         if (!row) return;
+        setBatchState((prev) => ({ ...prev, [i]: { ...prev[i], status: "loading" } }));
+        if (sourceMode === "omap") {
+            const existing = batchState[i]?.omapResults ?? [];
+            const excludeIds = existing.map((r) => r.conceptId);
+            try {
+                const data = await runOmapSearchClient(row, excludeIds);
+                setBatchState((prev) => ({
+                    ...prev,
+                    [i]: { status: "done", omapResults: [...existing, ...data.results], searchTerms: prev[i]?.searchTerms ?? data.searchTerms },
+                }));
+            } catch {
+                setBatchState((prev) => ({
+                    ...prev,
+                    [i]: { status: "done", omapResults: existing, searchTerms: prev[i]?.searchTerms },
+                }));
+            }
+            return;
+        }
         const existing = batchState[i]?.rawResults ?? [];
         const exclude = existing.map((r) => r.name);
-        setBatchState((prev) => ({
-            ...prev,
-            [i]: { ...prev[i], status: "loading" },
-        }));
         try {
-            const data = await runSearch(row, exclude);
+            const data = await runNdaSearch(row, exclude);
             setBatchState((prev) => ({
                 ...prev,
-                [i]: {
-                    status: "done",
-                    rawResults: [...existing, ...data.results],
-                    searchTerms: prev[i]?.searchTerms ?? data.searchTerms,
-                },
+                [i]: { status: "done", rawResults: [...existing, ...data.results], searchTerms: prev[i]?.searchTerms ?? data.searchTerms },
             }));
         } catch {
             setBatchState((prev) => ({
                 ...prev,
-                [i]: {
-                    status: "done",
-                    rawResults: existing,
-                    searchTerms: prev[i]?.searchTerms,
-                },
+                [i]: { status: "done", rawResults: existing, searchTerms: prev[i]?.searchTerms },
             }));
         }
     };
@@ -507,15 +632,19 @@ export default function Rosetta({
         setBatchState((prev) => ({ ...prev, [i]: { status: "loading" } }));
         setExpandedRows((prev) => new Set([...prev, i]));
         try {
-            const data = await runSearch(row);
-            setBatchState((prev) => ({
-                ...prev,
-                [i]: {
-                    status: "done",
-                    rawResults: data.results,
-                    searchTerms: data.searchTerms,
-                },
-            }));
+            if (sourceMode === "omap") {
+                const data = await runOmapSearchClient(row);
+                setBatchState((prev) => ({
+                    ...prev,
+                    [i]: { status: "done", omapResults: data.results, searchTerms: data.searchTerms },
+                }));
+            } else {
+                const data = await runNdaSearch(row);
+                setBatchState((prev) => ({
+                    ...prev,
+                    [i]: { status: "done", rawResults: data.results, searchTerms: data.searchTerms },
+                }));
+            }
         } catch {
             setBatchState((prev) => ({
                 ...prev,
@@ -546,11 +675,37 @@ export default function Rosetta({
                         </button>
                     )}
                 </div>
-                <p className="text-gray-600 -mb-7">
+                <p className="text-gray-600">
                     Describe a data element in plain language and Rosetta will
-                    find the best matching NDA data elements using AI.
+                    find the best matching{" "}
+                    {sourceMode === "omap" ? "OMOP vocabulary concepts" : "NDA data elements"}{" "}
+                    using AI.
                 </p>
-                <br />
+                {/* NDA / OMOP source toggle */}
+                <div className="flex items-start gap-3 mt-3">
+                    <button
+                        onClick={() => setSourceMode("nda")}
+                        className={`flex flex-col items-start px-3 py-2 rounded-lg border text-left transition-colors ${
+                            sourceMode === "nda"
+                                ? "border-indigo-400 bg-indigo-50 text-indigo-700"
+                                : "border-gray-200 bg-white text-gray-500 hover:border-gray-300 hover:bg-gray-50"
+                        }`}
+                    >
+                        <span className="text-xs font-semibold">NDA</span>
+                        <span className="text-xs text-gray-400 mt-0.5 font-normal">NIMH Data Archive elements</span>
+                    </button>
+                    <button
+                        onClick={() => setSourceMode("omap")}
+                        className={`flex flex-col items-start px-3 py-2 rounded-lg border text-left transition-colors ${
+                            sourceMode === "omap"
+                                ? "border-indigo-400 bg-indigo-50 text-indigo-700"
+                                : "border-gray-200 bg-white text-gray-500 hover:border-gray-300 hover:bg-gray-50"
+                        }`}
+                    >
+                        <span className="text-xs font-semibold">OMOP</span>
+                        <span className="text-xs text-gray-400 mt-0.5 font-normal">OHDSI standard vocabulary (SNOMED, LOINC)</span>
+                    </button>
+                </div>
                 {/* <div className="-mb-8">
                     <label className="flex items-center space-x-3 cursor-pointer">
                         <input
@@ -652,7 +807,7 @@ export default function Rosetta({
                     {isSearching && (
                         <div className="flex items-center gap-2 text-gray-500 text-sm">
                             <Loader2 className="w-4 h-4 animate-spin" />
-                            Searching NDA data elements…
+                            {sourceMode === "omap" ? "Searching OMOP vocabulary…" : "Searching NDA data elements…"}
                         </div>
                     )}
 
@@ -662,81 +817,73 @@ export default function Rosetta({
                         </div>
                     )}
 
-                    {singleResult && (
+                    {/* NDA single results */}
+                    {sourceMode === "nda" && singleResult && (
                         <div className="space-y-3">
                             {singleResult.searchTerms.length > 0 && (
                                 <div className="text-xs text-gray-500 flex flex-wrap gap-1 items-center">
-                                    <span className="font-medium text-gray-400">
-                                        Terms used:
-                                    </span>
+                                    <span className="font-medium text-gray-400">Terms used:</span>
                                     {singleResult.searchTerms.map((t) => (
-                                        <span
-                                            key={t}
-                                            className="px-2 py-0.5 bg-gray-100 rounded font-mono"
-                                        >
-                                            {t}
-                                        </span>
+                                        <span key={t} className="px-2 py-0.5 bg-gray-100 rounded font-mono">{t}</span>
                                     ))}
                                 </div>
                             )}
-                            {filterResults(singleResult.rawResults).length ===
-                            0 ? (
+                            {filterNdaResults(singleResult.rawResults).length === 0 ? (
                                 <div className="text-center py-10 text-gray-500">
                                     <Search className="w-10 h-10 mx-auto mb-3 text-gray-300" />
-                                    <p className="font-medium">
-                                        No matching elements found
-                                    </p>
-                                    <p className="text-sm mt-1">
-                                        Try rephrasing with more clinical or
-                                        technical terms.
-                                    </p>
+                                    <p className="font-medium">No matching elements found</p>
+                                    <p className="text-sm mt-1">Try rephrasing with more clinical or technical terms.</p>
                                     {databaseFilterEnabled && (
-                                        <p className="text-xs mt-2 text-gray-400">
-                                            DB filter is on — results are
-                                            limited to IMPACT-MH structures.
-                                        </p>
+                                        <p className="text-xs mt-2 text-gray-400">DB filter is on — results are limited to IMPACT-MH structures.</p>
                                     )}
                                 </div>
                             ) : (
                                 <div className="space-y-2">
                                     <p className="text-xs text-gray-500">
-                                        {
-                                            filterResults(
-                                                singleResult.rawResults,
-                                            ).length
-                                        }{" "}
-                                        match
-                                        {filterResults(singleResult.rawResults)
-                                            .length !== 1
-                                            ? "es"
-                                            : ""}
-                                        {databaseFilterEnabled
-                                            ? " (IMPACT-MH only)"
-                                            : ""}
+                                        {filterNdaResults(singleResult.rawResults).length} match{filterNdaResults(singleResult.rawResults).length !== 1 ? "es" : ""}
+                                        {databaseFilterEnabled ? " (IMPACT-MH only)" : ""}
                                     </p>
-                                    {filterResults(singleResult.rawResults).map(
-                                        (r) => (
-                                            <ResultCard
-                                                key={r.name}
-                                                result={r}
-                                                databaseFilterEnabled={
-                                                    databaseFilterEnabled
-                                                }
-                                                databaseStructures={
-                                                    databaseStructures
-                                                }
-                                                databaseElementNames={
-                                                    databaseElementNames
-                                                }
-                                                onElementSearch={
-                                                    onElementSearch
-                                                }
-                                                onStructureSearch={
-                                                    onStructureSearch
-                                                }
-                                            />
-                                        ),
-                                    )}
+                                    {filterNdaResults(singleResult.rawResults).map((r) => (
+                                        <ResultCard
+                                            key={r.name}
+                                            result={r}
+                                            databaseFilterEnabled={databaseFilterEnabled}
+                                            databaseStructures={databaseStructures}
+                                            databaseElementNames={databaseElementNames}
+                                            onElementSearch={onElementSearch}
+                                            onStructureSearch={onStructureSearch}
+                                        />
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* OMOP single results */}
+                    {sourceMode === "omap" && singleOmapResult && (
+                        <div className="space-y-3">
+                            {singleOmapResult.searchTerms.length > 0 && (
+                                <div className="text-xs text-gray-500 flex flex-wrap gap-1 items-center">
+                                    <span className="font-medium text-gray-400">Terms used:</span>
+                                    {singleOmapResult.searchTerms.map((t) => (
+                                        <span key={t} className="px-2 py-0.5 bg-gray-100 rounded font-mono">{t}</span>
+                                    ))}
+                                </div>
+                            )}
+                            {singleOmapResult.results.length === 0 ? (
+                                <div className="text-center py-10 text-gray-500">
+                                    <Search className="w-10 h-10 mx-auto mb-3 text-gray-300" />
+                                    <p className="font-medium">No matching OMOP concepts found</p>
+                                    <p className="text-sm mt-1">Try a shorter clinical term, e.g. &ldquo;depressive disorder&rdquo; or &ldquo;PHQ-9&rdquo;.</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-2">
+                                    <p className="text-xs text-gray-500">
+                                        {singleOmapResult.results.length} match{singleOmapResult.results.length !== 1 ? "es" : ""}
+                                    </p>
+                                    {singleOmapResult.results.map((r) => (
+                                        <OmapResultCard key={r.conceptId} result={r} />
+                                    ))}
                                 </div>
                             )}
                         </div>
@@ -833,48 +980,48 @@ export default function Rosetta({
                             <div className="border border-gray-200 rounded-lg overflow-hidden">
                                 {(() => {
                                     const nodes: React.ReactNode[] = [];
-                                    let lastStructure: string | undefined;
+                                    let lastGroupKey: string | undefined;
                                     csvRows.forEach((row, i) => {
-                                        const sel = selections[i];
-                                        const structure =
-                                            sel?.dataStructures[0];
-                                        // Insert a structure header when a new structure group starts
-                                        if (
-                                            sel &&
-                                            structure !== lastStructure
-                                        ) {
-                                            const countInGroup = csvRows.filter(
-                                                (_, j) =>
-                                                    selections[j]
-                                                        ?.dataStructures[0] ===
-                                                    structure,
+                                        const sel = sourceMode === "nda" ? selections[i] : undefined;
+                                        const omapSel = sourceMode === "omap" ? omapSelections[i] : undefined;
+                                        const groupKey = sourceMode === "nda"
+                                            ? sel?.dataStructures[0]
+                                            : omapSel?.domainId;
+                                        const groupLabel = sourceMode === "nda"
+                                            ? (groupKey ?? "Other")
+                                            : (groupKey ?? "Other");
+                                        const hasSelection = sourceMode === "nda" ? !!sel : !!omapSel;
+                                        // Insert a group header when a new group starts
+                                        if (hasSelection && groupKey !== lastGroupKey) {
+                                            const countInGroup = csvRows.filter((_, j) =>
+                                                sourceMode === "nda"
+                                                    ? selections[j]?.dataStructures[0] === groupKey
+                                                    : omapSelections[j]?.domainId === groupKey
                                             ).length;
                                             nodes.push(
                                                 <div
-                                                    key={`struct-header-${structure ?? "other"}-${i}`}
+                                                    key={`group-header-${groupLabel}-${i}`}
                                                     className="px-4 py-2 bg-slate-50 border-t border-slate-200 flex items-center gap-2"
                                                 >
                                                     <span className="text-xs font-mono font-medium px-2 py-0.5 bg-white text-slate-600 rounded border border-slate-200">
-                                                        {structure ?? "Other"}
+                                                        {groupLabel}
                                                     </span>
                                                     <span className="text-xs text-gray-400">
-                                                        {countInGroup} element
-                                                        {countInGroup !== 1
-                                                            ? "s"
-                                                            : ""}
+                                                        {countInGroup} element{countInGroup !== 1 ? "s" : ""}
                                                     </span>
                                                 </div>,
                                             );
                                         }
-                                        lastStructure = sel
-                                            ? structure
-                                            : undefined;
+                                        lastGroupKey = hasSelection ? groupKey : undefined;
                                         const state = batchState[i];
                                         const isExpanded = expandedRows.has(i);
-                                        const allResults = filterResults(
-                                            state?.rawResults ?? [],
-                                        );
+                                        const allResults = sourceMode === "nda"
+                                            ? filterNdaResults(state?.rawResults ?? [])
+                                            : (state?.omapResults ?? []);
                                         const resultCount = allResults.length;
+                                        const selDisplayName = sourceMode === "nda"
+                                            ? sel?.name
+                                            : omapSel?.conceptName;
                                         const rowNode = (
                                             <div
                                                 key={i}
@@ -914,14 +1061,10 @@ export default function Rosetta({
                                                     {state?.status ===
                                                         "done" && (
                                                         <span className="shrink-0 flex items-center gap-1.5">
-                                                            {selections[i] && (
+                                                            {selDisplayName && (
                                                                 <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-700">
                                                                     ✓{" "}
-                                                                    {
-                                                                        selections[
-                                                                            i
-                                                                        ].name
-                                                                    }
+                                                                    {selDisplayName}
                                                                 </span>
                                                             )}
                                                             <span
@@ -1008,169 +1151,89 @@ export default function Rosetta({
                                                                         )}
                                                                     </div>
                                                                 )}
-                                                            {allResults.length ===
-                                                            0 ? (
+                                                            {allResults.length === 0 ? (
                                                                 <p className="text-sm text-gray-400 italic pt-3">
-                                                                    No matching
-                                                                    elements
-                                                                    found. Try
-                                                                    rephrasing.
+                                                                    No matching{" "}
+                                                                    {sourceMode === "omap" ? "OMOP concepts" : "NDA elements"}{" "}
+                                                                    found. Try a shorter clinical term.
                                                                 </p>
+                                                            ) : sourceMode === "omap" ? (
+                                                                // OMAP: flat list of OmapResultCards
+                                                                <div className="space-y-2 pt-2">
+                                                                    {(allResults as OmapResult[]).map((r) => (
+                                                                        <OmapResultCard
+                                                                            key={r.conceptId}
+                                                                            result={r}
+                                                                            selectable
+                                                                            selected={omapSelections[i]?.conceptId === r.conceptId}
+                                                                            onSelect={() => {
+                                                                                setOmapSelections((prev) => ({ ...prev, [i]: r }));
+                                                                                setExpandedRows((prev) => {
+                                                                                    const next = new Set(prev);
+                                                                                    next.delete(i);
+                                                                                    const nextIdx = i + 1;
+                                                                                    if (nextIdx < csvRows.length && batchState[nextIdx]?.status === "done")
+                                                                                        next.add(nextIdx);
+                                                                                    return next;
+                                                                                });
+                                                                            }}
+                                                                        />
+                                                                    ))}
+                                                                </div>
                                                             ) : (
+                                                                // NDA: group by primary data structure
                                                                 (() => {
-                                                                    // Group by primary structure
-                                                                    const groups: {
-                                                                        structure: string;
-                                                                        results: RosettaResult[];
-                                                                    }[] = [];
-                                                                    const groupIndex =
-                                                                        new Map<
-                                                                            string,
-                                                                            number
-                                                                        >();
-                                                                    for (const r of allResults) {
-                                                                        const key =
-                                                                            r
-                                                                                .dataStructures[0] ??
-                                                                            "Other";
-                                                                        if (
-                                                                            !groupIndex.has(
-                                                                                key,
-                                                                            )
-                                                                        ) {
-                                                                            groupIndex.set(
-                                                                                key,
-                                                                                groups.length,
-                                                                            );
-                                                                            groups.push(
-                                                                                {
-                                                                                    structure:
-                                                                                        key,
-                                                                                    results:
-                                                                                        [],
-                                                                                },
-                                                                            );
+                                                                    const ndaResults = allResults as RosettaResult[];
+                                                                    const groups: { structure: string; results: RosettaResult[] }[] = [];
+                                                                    const groupIndex = new Map<string, number>();
+                                                                    for (const r of ndaResults) {
+                                                                        const key = r.dataStructures[0] ?? "Other";
+                                                                        if (!groupIndex.has(key)) {
+                                                                            groupIndex.set(key, groups.length);
+                                                                            groups.push({ structure: key, results: [] });
                                                                         }
-                                                                        groups[
-                                                                            groupIndex.get(
-                                                                                key,
-                                                                            )!
-                                                                        ].results.push(
-                                                                            r,
-                                                                        );
+                                                                        groups[groupIndex.get(key)!].results.push(r);
                                                                     }
                                                                     return (
                                                                         <div className="space-y-3 pt-2">
-                                                                            {groups.map(
-                                                                                ({
-                                                                                    structure,
-                                                                                    results:
-                                                                                        groupResults,
-                                                                                }) => (
-                                                                                    <div
-                                                                                        key={
-                                                                                            structure
-                                                                                        }
-                                                                                    >
-                                                                                        <div className="flex items-center gap-2 mb-1.5">
-                                                                                            <span className="text-xs font-mono font-medium px-2 py-0.5 bg-slate-100 text-slate-600 rounded border border-slate-200">
-                                                                                                {
-                                                                                                    structure
-                                                                                                }
-                                                                                            </span>
-                                                                                            <span className="text-xs text-gray-400">
-                                                                                                {
-                                                                                                    groupResults.length
-                                                                                                }{" "}
-                                                                                                element
-                                                                                                {groupResults.length !==
-                                                                                                1
-                                                                                                    ? "s"
-                                                                                                    : ""}
-                                                                                            </span>
-                                                                                        </div>
-                                                                                        <div className="space-y-2">
-                                                                                            {groupResults.map(
-                                                                                                (
-                                                                                                    r,
-                                                                                                ) => (
-                                                                                                    <ResultCard
-                                                                                                        key={
-                                                                                                            r.name
-                                                                                                        }
-                                                                                                        result={
-                                                                                                            r
-                                                                                                        }
-                                                                                                        databaseFilterEnabled={
-                                                                                                            databaseFilterEnabled
-                                                                                                        }
-                                                                                                        databaseStructures={
-                                                                                                            databaseStructures
-                                                                                                        }
-                                                                                                        databaseElementNames={
-                                                                                                            databaseElementNames
-                                                                                                        }
-                                                                                                        onElementSearch={
-                                                                                                            onElementSearch
-                                                                                                        }
-                                                                                                        onStructureSearch={
-                                                                                                            onStructureSearch
-                                                                                                        }
-                                                                                                        selectable
-                                                                                                        selected={
-                                                                                                            selections[
-                                                                                                                i
-                                                                                                            ]
-                                                                                                                ?.name ===
-                                                                                                            r.name
-                                                                                                        }
-                                                                                                        onSelect={() => {
-                                                                                                            setSelections(
-                                                                                                                (
-                                                                                                                    prev,
-                                                                                                                ) => ({
-                                                                                                                    ...prev,
-                                                                                                                    [i]: r,
-                                                                                                                }),
-                                                                                                            );
-                                                                                                            setExpandedRows(
-                                                                                                                (
-                                                                                                                    prev,
-                                                                                                                ) => {
-                                                                                                                    const next =
-                                                                                                                        new Set(
-                                                                                                                            prev,
-                                                                                                                        );
-                                                                                                                    next.delete(
-                                                                                                                        i,
-                                                                                                                    );
-                                                                                                                    const nextIdx =
-                                                                                                                        i +
-                                                                                                                        1;
-                                                                                                                    if (
-                                                                                                                        nextIdx <
-                                                                                                                            csvRows.length &&
-                                                                                                                        batchState[
-                                                                                                                            nextIdx
-                                                                                                                        ]
-                                                                                                                            ?.status ===
-                                                                                                                            "done"
-                                                                                                                    ) {
-                                                                                                                        next.add(
-                                                                                                                            nextIdx,
-                                                                                                                        );
-                                                                                                                    }
-                                                                                                                    return next;
-                                                                                                                },
-                                                                                                            );
-                                                                                                        }}
-                                                                                                    />
-                                                                                                ),
-                                                                                            )}
-                                                                                        </div>
+                                                                            {groups.map(({ structure, results: groupResults }) => (
+                                                                                <div key={structure}>
+                                                                                    <div className="flex items-center gap-2 mb-1.5">
+                                                                                        <span className="text-xs font-mono font-medium px-2 py-0.5 bg-slate-100 text-slate-600 rounded border border-slate-200">
+                                                                                            {structure}
+                                                                                        </span>
+                                                                                        <span className="text-xs text-gray-400">
+                                                                                            {groupResults.length} element{groupResults.length !== 1 ? "s" : ""}
+                                                                                        </span>
                                                                                     </div>
-                                                                                ),
-                                                                            )}
+                                                                                    <div className="space-y-2">
+                                                                                        {groupResults.map((r) => (
+                                                                                            <ResultCard
+                                                                                                key={r.name}
+                                                                                                result={r}
+                                                                                                databaseFilterEnabled={databaseFilterEnabled}
+                                                                                                databaseStructures={databaseStructures}
+                                                                                                databaseElementNames={databaseElementNames}
+                                                                                                onElementSearch={onElementSearch}
+                                                                                                onStructureSearch={onStructureSearch}
+                                                                                                selectable
+                                                                                                selected={selections[i]?.name === r.name}
+                                                                                                onSelect={() => {
+                                                                                                    setSelections((prev) => ({ ...prev, [i]: r }));
+                                                                                                    setExpandedRows((prev) => {
+                                                                                                        const next = new Set(prev);
+                                                                                                        next.delete(i);
+                                                                                                        const nextIdx = i + 1;
+                                                                                                        if (nextIdx < csvRows.length && batchState[nextIdx]?.status === "done")
+                                                                                                            next.add(nextIdx);
+                                                                                                        return next;
+                                                                                                    });
+                                                                                                }}
+                                                                                            />
+                                                                                        ))}
+                                                                                    </div>
+                                                                                </div>
+                                                                            ))}
                                                                         </div>
                                                                     );
                                                                 })()
@@ -1190,19 +1253,12 @@ export default function Rosetta({
                                 Object.keys(batchState).length > 0 && (
                                     <div className="flex items-center justify-between pt-3 border-t border-gray-200 mt-2">
                                         <p className="text-sm text-gray-500">
-                                            {Object.keys(selections).length} of{" "}
-                                            {csvRows.length} row
-                                            {csvRows.length !== 1
-                                                ? "s"
-                                                : ""}{" "}
-                                            mapped
+                                            {Object.keys(sourceMode === "omap" ? omapSelections : selections).length} of{" "}
+                                            {csvRows.length} row{csvRows.length !== 1 ? "s" : ""} mapped
                                         </p>
                                         <div className="flex gap-2">
                                             <button
-                                                disabled={
-                                                    Object.keys(selections)
-                                                        .length === 0
-                                                }
+                                                disabled={Object.keys(sourceMode === "omap" ? omapSelections : selections).length === 0}
                                                 onClick={exportCSV}
                                                 className="px-3 py-1.5 text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
                                             >
@@ -1210,10 +1266,7 @@ export default function Rosetta({
                                                 Export CSV
                                             </button>
                                             <button
-                                                disabled={
-                                                    Object.keys(selections)
-                                                        .length === 0
-                                                }
+                                                disabled={Object.keys(sourceMode === "omap" ? omapSelections : selections).length === 0}
                                                 onClick={exportJSON}
                                                 className="px-3 py-1.5 text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
                                             >
