@@ -143,7 +143,9 @@ Tips:
     }
 
     // Only search the extracted terms (not the raw description — it's too long for vocab search)
-    const queries = searchTerms.length > 0 ? searchTerms : [description.split(" ").slice(0, 4).join(" ")];
+    const queries = searchTerms.length > 0
+        ? searchTerms
+        : [description.replace(/[^a-zA-Z0-9\s-]/g, " ").split(/\s+/).filter((w) => w.length > 3).slice(0, 4).join(" ")];
     const searchResults = await Promise.all(
         queries.map((q, i) =>
             searchAtlas(q).then((results) => ({

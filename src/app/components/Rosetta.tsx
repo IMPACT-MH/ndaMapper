@@ -67,9 +67,39 @@ function loadRosettaSession(): StoredRosettaSession | null {
     }
 }
 
+// Strip units.elements (never displayed) and trim ndaElements to 3 before persisting.
+// RdocConstruct.units[].elements arrays are 50+ strings each — they dominate storage.
+function trimRdocResult(r: RdocResult): RdocResult {
+    return {
+        ...r,
+        construct: {
+            ...r.construct,
+            units: r.construct.units.map((u) => ({ name: u.name, elements: [] })),
+        },
+        ndaElements: r.ndaElements.slice(0, 3),
+    };
+}
+
 function saveRosettaSession(session: StoredRosettaSession) {
+    const trimmed: StoredRosettaSession = {
+        ...session,
+        singleRdocResult: session.singleRdocResult
+            ? { ...session.singleRdocResult, results: session.singleRdocResult.results.map(trimRdocResult) }
+            : null,
+        batchState: Object.fromEntries(
+            Object.entries(session.batchState).map(([k, v]) => [
+                k,
+                v.rdocResults
+                    ? { ...v, rdocResults: v.rdocResults.map(trimRdocResult) }
+                    : v,
+            ])
+        ),
+        rdocSelections: Object.fromEntries(
+            Object.entries(session.rdocSelections).map(([k, v]) => [k, trimRdocResult(v)])
+        ),
+    };
     try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
     } catch { /* quota */ }
 }
 
@@ -703,42 +733,47 @@ export default function Rosetta({
                 csvRows.map((_, i) => [i, { status: "loading" as const }]),
             ),
         );
-        await Promise.all(
-            csvRows.map(async (row, i) => {
-                try {
-                    if (sourceMode === "omap") {
-                        const data = await runOmapSearchClient(row);
+        const CONCURRENCY = 1;
+        for (let start = 0; start < csvRows.length; start += CONCURRENCY) {
+            const chunk = csvRows.slice(start, start + CONCURRENCY);
+            await Promise.all(
+                chunk.map(async (row, j) => {
+                    const i = start + j;
+                    try {
+                        if (sourceMode === "omap") {
+                            const data = await runOmapSearchClient(row);
+                            setBatchState((prev) => ({
+                                ...prev,
+                                [i]: { status: "done", omapResults: data.results, searchTerms: data.searchTerms },
+                            }));
+                            if (i === 0 && data.results.length > 0)
+                                setExpandedRows((prev) => new Set([...prev, i]));
+                        } else if (sourceMode === "rdoc") {
+                            const data = await runRdocSearchClient(row);
+                            setBatchState((prev) => ({
+                                ...prev,
+                                [i]: { status: "done", rdocResults: data.results, searchTerms: data.searchTerms },
+                            }));
+                            if (i === 0 && data.results.length > 0)
+                                setExpandedRows((prev) => new Set([...prev, i]));
+                        } else {
+                            const data = await runNdaSearch(row);
+                            setBatchState((prev) => ({
+                                ...prev,
+                                [i]: { status: "done", rawResults: data.results, searchTerms: data.searchTerms },
+                            }));
+                            if (i === 0 && data.results.length > 0)
+                                setExpandedRows((prev) => new Set([...prev, i]));
+                        }
+                    } catch {
                         setBatchState((prev) => ({
                             ...prev,
-                            [i]: { status: "done", omapResults: data.results, searchTerms: data.searchTerms },
+                            [i]: { status: "error", error: "Search failed" },
                         }));
-                        if (i === 0 && data.results.length > 0)
-                            setExpandedRows((prev) => new Set([...prev, i]));
-                    } else if (sourceMode === "rdoc") {
-                        const data = await runRdocSearchClient(row);
-                        setBatchState((prev) => ({
-                            ...prev,
-                            [i]: { status: "done", rdocResults: data.results, searchTerms: data.searchTerms },
-                        }));
-                        if (i === 0 && data.results.length > 0)
-                            setExpandedRows((prev) => new Set([...prev, i]));
-                    } else {
-                        const data = await runNdaSearch(row);
-                        setBatchState((prev) => ({
-                            ...prev,
-                            [i]: { status: "done", rawResults: data.results, searchTerms: data.searchTerms },
-                        }));
-                        if (i === 0 && data.results.length > 0)
-                            setExpandedRows((prev) => new Set([...prev, i]));
                     }
-                } catch {
-                    setBatchState((prev) => ({
-                        ...prev,
-                        [i]: { status: "error", error: "Search failed" },
-                    }));
-                }
-            }),
-        );
+                }),
+            );
+        }
         setBatchProcessing(false);
     };
 

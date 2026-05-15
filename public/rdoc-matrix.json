@@ -1,1201 +1,173 @@
 {
-  "fetchedAt": "2026-05-15T16:23:17.312Z",
+  "fetchedAt": "2026-05-15T16:39:41.340Z",
   "constructs": [
     {
-      "id": "negative-valence-systems-li-class-generic-container-acute-threat-fear-molecules-bdnf-cck-cortisol-corticosterone-crf-family-dopamine-endogenous-cannabinoids-fgf2-gaba-glutamate-neuropeptide-s-neurosteroids-nmdar-npy-orexin-oxytocin-serotonin-vasopressin-cells-gabaergic-cells-glia-neurons-pyramidal-cells-circuits-autonomic-nervous-system-basamyg-central-nucleus-d-hippocampus-ant-dmpfc-pl-dorsal-acc-dpag-hypothalamus-icms-insular-cortex-latamyg-latpfc-insula-lc-medial-amyg-ofc-pag-pons-rostral-vent-acc-rpvm-v-hippocampus-post-vmpfc-il-vpag-physiology-bp-context-startle-emg-eye-tracking-facial-emg-fear-potentiated-startle-heart-rate-pupillometry-respiration-response-accuracy-skin-conductance-behavior-analgesia-approach-early-development-avoidance-facial-expressions-freezing-open-field-response-inhibition-response-time-risk-assessment-social-approach-self-report-fear-survey-schedule-suds-paradigms-behavioral-approach-test-co2-challenge-test-cold-pressor-test-fear-conditioning-stranger-tests-trier-social-stress-test-li-class-generic-container",
-      "domain": "Negative Valence Systems <li class=\"generic-container\"",
-      "construct": "Acute Threat (\"Fear\") Molecules BDNF CCK Cortisol/Corticosterone CRF family Dopamine Endogenous cannabinoids FGF2 GABA Glutamate Neuropeptide S Neurosteroids NMDAR NPY Orexin Oxytocin Serotonin Vasopressin Cells GABAergic cells Glia Neurons Pyramidal cells Circuits autonomic nervous system BasAmyg Central Nucleus d-hippocampus (ant) dmPFC (pl) dorsal ACC dPAG Hypothalamus ICMs insular cortex LatAmyg latPFC/insula LC Medial Amyg OFC PAG Pons rostral/vent ACC RPVM v-hippocampus (post) vmPFC (il) vPAG Physiology BP Context Startle EMG Eye Tracking Facial EMG Fear Potentiated Startle Heart Rate pupillometry Respiration Response accuracy Skin Conductance Behavior Analgesia approach (early development) Avoidance Facial expressions Freezing Open field Response inhibition Response time Risk assessment Social approach Self-Report Fear survey schedule SUDS Paradigms Behavioral Approach Test CO2 Challenge Test Cold Pressor Test Fear conditioning Stranger Tests Trier Social Stress Test <li class=\"generic-container\"",
-      "units": [
-        {
-          "name": "Molecules",
-          "elements": [
-            "BDNF",
-            "CCK",
-            "Cortisol/Corticosterone",
-            "CRF family",
-            "Dopamine",
-            "Endogenous cannabinoids",
-            "FGF2",
-            "GABA",
-            "Glutamate",
-            "Neuropeptide S",
-            "Neurosteroids",
-            "NMDAR",
-            "NPY",
-            "Orexin",
-            "Oxytocin",
-            "Serotonin",
-            "Vasopressin"
-          ]
-        },
-        {
-          "name": "Cells",
-          "elements": [
-            "GABAergic cells",
-            "Glia",
-            "Neurons",
-            "Pyramidal cells"
-          ]
-        },
-        {
-          "name": "Circuits",
-          "elements": [
-            "autonomic nervous system",
-            "BasAmyg",
-            "Central Nucleus",
-            "d-hippocampus (ant)",
-            "dmPFC (pl)",
-            "dorsal ACC",
-            "dPAG",
-            "Hypothalamus",
-            "ICMs",
-            "insular cortex",
-            "LatAmyg",
-            "latPFC/insula",
-            "LC",
-            "Medial Amyg",
-            "OFC",
-            "PAG",
-            "Pons",
-            "rostral/vent ACC",
-            "RPVM",
-            "v-hippocampus (post)",
-            "vmPFC (il)",
-            "vPAG"
-          ]
-        },
-        {
-          "name": "Physiology",
-          "elements": [
-            "BP",
-            "Context Startle",
-            "EMG",
-            "Eye Tracking",
-            "Facial EMG",
-            "Fear Potentiated Startle",
-            "Heart Rate",
-            "pupillometry",
-            "Respiration",
-            "Response accuracy",
-            "Skin Conductance"
-          ]
-        },
-        {
-          "name": "Behavior",
-          "elements": [
-            "Analgesia",
-            "approach (early development)",
-            "Avoidance",
-            "Facial expressions",
-            "Freezing",
-            "Open field",
-            "Response inhibition",
-            "Response time",
-            "Risk assessment",
-            "Social approach"
-          ]
-        },
-        {
-          "name": "Self-Report",
-          "elements": [
-            "Fear survey schedule",
-            "SUDS"
-          ]
-        },
-        {
-          "name": "Paradigms",
-          "elements": [
-            "Behavioral Approach Test",
-            "CO2 Challenge Test",
-            "Cold Pressor Test",
-            "Fear conditioning",
-            "Stranger Tests",
-            "Trier Social Stress Test"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "negative-valence-systems-li-class-generic-container-potential-threat-anxiety-molecules-cortisol-crf-family-cells-pituitary-cells-circuits-bed-nucleus-of-stria-terminalis-physiology-acth-average-cortisol-levels-potentiated-startle-self-report-anxiety-sensitivity-index-bis-fear-of-negative-evaluation-scale-intolerance-of-uncertainty-scale-leds-paradigms-npu-threat-task-li-class-generic-container",
-      "domain": "Negative Valence Systems <li class=\"generic-container\"",
-      "construct": "Potential Threat (\"Anxiety\") Molecules Cortisol CRF family Cells Pituitary cells Circuits Bed nucleus of stria terminalis Physiology ACTH Average cortisol levels Potentiated startle Self-Report Anxiety Sensitivity Index BIS Fear of Negative Evaluation Scale Intolerance of Uncertainty Scale LEDS Paradigms NPU Threat Task <li class=\"generic-container\"",
-      "units": [
-        {
-          "name": "Molecules",
-          "elements": [
-            "Cortisol",
-            "CRF family"
-          ]
-        },
-        {
-          "name": "Cells",
-          "elements": [
-            "Pituitary cells"
-          ]
-        },
-        {
-          "name": "Circuits",
-          "elements": [
-            "Bed nucleus of stria terminalis"
-          ]
-        },
-        {
-          "name": "Physiology",
-          "elements": [
-            "ACTH",
-            "Average cortisol levels",
-            "Potentiated startle"
-          ]
-        },
-        {
-          "name": "Self-Report",
-          "elements": [
-            "Anxiety Sensitivity Index",
-            "BIS",
-            "Fear of Negative Evaluation Scale",
-            "Intolerance of Uncertainty Scale",
-            "LEDS"
-          ]
-        },
-        {
-          "name": "Paradigms",
-          "elements": [
-            "NPU Threat Task"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "negative-valence-systems-li-class-generic-container-sustained-threat-molecules-acth-crf-hpa-axis-hormones-cells-hippocampal-microglia-prefrontal-circuits-attention-network-dysregulation-of-amygdala-reactivity-dysregulation-of-cingulate-reactivity-habit-systems-striatum-caudate-accumbens-hypothalamic-nuclei-pvt-vigilance-network-physiology-dysregulated-hpa-axis-error-related-negativity-behavior-anhedonia-decreased-appetitive-behavior-anxious-arousal-attentional-bias-to-threat-avoidance-decreased-libido-helplessness-behavior-increased-conflict-detection-increased-perseverative-behavior-memory-retrieval-deficits-punishment-sensitivity-self-report-childhood-trauma-questionnaire-leds-risky-families-strain-tesi-youth-life-stress-interview-li-class-generic-container",
-      "domain": "Negative Valence Systems <li class=\"generic-container\"",
-      "construct": "Sustained Threat Molecules ACTH CRF HPA-axis hormones Cells Hippocampal Microglia prefrontal Circuits Attention network Dysregulation of amygdala reactivity Dysregulation of cingulate reactivity Habit systems (Striatum/caudate/accumbens) Hypothalamic nuclei PVT Vigilance network Physiology Dysregulated HPA axis Error-related negativity Behavior Anhedonia/decreased appetitive behavior Anxious Arousal Attentional bias to threat Avoidance Decreased libido Helplessness behavior Increased conflict detection Increased perseverative behavior Memory retrieval deficits Punishment sensitivity Self-Report Childhood Trauma Questionnaire LEDS Risky Families STRAIN TESI Youth Life Stress Interview <li class=\"generic-container\"",
-      "units": [
-        {
-          "name": "Molecules",
-          "elements": [
-            "ACTH",
-            "CRF",
-            "HPA-axis hormones"
-          ]
-        },
-        {
-          "name": "Cells",
-          "elements": [
-            "Hippocampal",
-            "Microglia",
-            "prefrontal"
-          ]
-        },
-        {
-          "name": "Circuits",
-          "elements": [
-            "Attention network",
-            "Dysregulation of amygdala reactivity",
-            "Dysregulation of cingulate reactivity",
-            "Habit systems (Striatum/caudate/accumbens)",
-            "Hypothalamic nuclei",
-            "PVT",
-            "Vigilance network"
-          ]
-        },
-        {
-          "name": "Physiology",
-          "elements": [
-            "Dysregulated HPA axis",
-            "Error-related negativity"
-          ]
-        },
-        {
-          "name": "Behavior",
-          "elements": [
-            "Anhedonia/decreased appetitive behavior",
-            "Anxious Arousal",
-            "Attentional bias to threat",
-            "Avoidance",
-            "Decreased libido",
-            "Helplessness behavior",
-            "Increased conflict detection",
-            "Increased perseverative behavior",
-            "Memory retrieval deficits",
-            "Punishment sensitivity"
-          ]
-        },
-        {
-          "name": "Self-Report",
-          "elements": [
-            "Childhood Trauma Questionnaire",
-            "LEDS",
-            "Risky Families",
-            "STRAIN",
-            "TESI",
-            "Youth Life Stress Interview"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "negative-valence-systems-li-class-generic-container-loss-molecules-androgens-crh-estrogens-glucocorticoid-receptors-inflammatory-molecules-oxytocin-vasopressin-circuits-amygdala-default-mode-network-dlpfc-habit-systems-striatum-caudate-accumbens-hippocampus-insula-orbitofrontal-cortex-parietal-cortex-posterior-cingulate-pvn-reward-circuitry-vmpfc-physiology-ans-hpa-neuroimmune-prolonged-psychophysiological-reactivity-behavior-amotivation-anhedonia-attentional-bias-to-negative-valenced-information-crying-executive-function-guilt-increased-self-focus-loss-of-drive-loss-relevant-recall-bias-morbid-thoughts-psychomotor-retardation-rumination-sadness-shame-withdrawal-worry-self-report-leds-strain-paradigms-sadness-eliciting-film-clips-li-class-generic-container",
-      "domain": "Negative Valence Systems <li class=\"generic-container\"",
-      "construct": "Loss Molecules Androgens CRH Estrogens Glucocorticoid receptors Inflammatory molecules Oxytocin Vasopressin Circuits Amygdala Default mode network DLPFC Habit systems (Striatum/caudate/accumbens) Hippocampus Insula Orbitofrontal cortex Parietal cortex Posterior cingulate PVN Reward circuitry vmPFC Physiology ANS HPA neuroimmune Prolonged psychophysiological reactivity Behavior Amotivation Anhedonia Attentional bias to negative valenced information Crying Executive function Guilt Increased self-focus Loss of drive Loss-relevant recall bias Morbid Thoughts Psychomotor retardation Rumination Sadness Shame Withdrawal Worry Self-Report LEDS STRAIN Paradigms Sadness eliciting film clips <li class=\"generic-container\"",
-      "units": [
-        {
-          "name": "Molecules",
-          "elements": [
-            "Androgens",
-            "CRH",
-            "Estrogens",
-            "Glucocorticoid receptors",
-            "Inflammatory molecules",
-            "Oxytocin",
-            "Vasopressin"
-          ]
-        },
-        {
-          "name": "Circuits",
-          "elements": [
-            "Amygdala",
-            "Default mode network",
-            "DLPFC",
-            "Habit systems (Striatum/caudate/accumbens)",
-            "Hippocampus",
-            "Insula",
-            "Orbitofrontal cortex",
-            "Parietal cortex",
-            "Posterior cingulate",
-            "PVN",
-            "Reward circuitry",
-            "vmPFC"
-          ]
-        },
-        {
-          "name": "Physiology",
-          "elements": [
-            "ANS",
-            "HPA",
-            "neuroimmune",
-            "Prolonged psychophysiological reactivity"
-          ]
-        },
-        {
-          "name": "Behavior",
-          "elements": [
-            "Amotivation",
-            "Anhedonia",
-            "Attentional bias to negative valenced information",
-            "Crying",
-            "Executive function",
-            "Guilt",
-            "Increased self-focus",
-            "Loss of drive",
-            "Loss-relevant recall bias",
-            "Morbid Thoughts",
-            "Psychomotor retardation",
-            "Rumination",
-            "Sadness",
-            "Shame",
-            "Withdrawal",
-            "Worry"
-          ]
-        },
-        {
-          "name": "Self-Report",
-          "elements": [
-            "LEDS",
-            "STRAIN"
-          ]
-        },
-        {
-          "name": "Paradigms",
-          "elements": [
-            "Sadness eliciting film clips"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "negative-valence-systems-li-class-generic-container-frustrative-nonreward-molecules-dopamine-gaba-glutamate-serotonin-steroids-vasopressin-circuits-amygdala-hypothalamus-lc-ofc-pag-parasympathetic-system-septum-striatum-behavior-physical-and-relational-aggression-self-report-frustrative-nonreward-responsiveness-subscale-questionnaire-of-daily-frustrations-paradigms-lab-tab-psap-li-class-generic-container",
-      "domain": "Negative Valence Systems <li class=\"generic-container\"",
-      "construct": "Frustrative Nonreward Molecules Dopamine GABA Glutamate Serotonin steroids Vasopressin Circuits Amygdala Hypothalamus LC OFC PAG parasympathetic system Septum striatum Behavior physical and relational aggression Self-Report Frustrative Nonreward Responsiveness Subscale Questionnaire of Daily Frustrations Paradigms Lab-TAB PSAP <li class=\"generic-container\"",
-      "units": [
-        {
-          "name": "Molecules",
-          "elements": [
-            "Dopamine",
-            "GABA",
-            "Glutamate",
-            "Serotonin",
-            "steroids",
-            "Vasopressin"
-          ]
-        },
-        {
-          "name": "Circuits",
-          "elements": [
-            "Amygdala",
-            "Hypothalamus",
-            "LC",
-            "OFC",
-            "PAG",
-            "parasympathetic system",
-            "Septum",
-            "striatum"
-          ]
-        },
-        {
-          "name": "Behavior",
-          "elements": [
-            "physical and relational aggression"
-          ]
-        },
-        {
-          "name": "Self-Report",
-          "elements": [
-            "Frustrative Nonreward Responsiveness Subscale",
-            "Questionnaire of Daily Frustrations"
-          ]
-        },
-        {
-          "name": "Paradigms",
-          "elements": [
-            "Lab-TAB",
-            "PSAP"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "positive-valence-systems-li-class-generic-container-approach-motivation-li-class-generic-container",
-      "domain": "Positive Valence Systems <li class=\"generic-container\"",
-      "construct": "Approach Motivation <li class=\"generic-container\"",
+      "id": "negative-valence-systems-acute-threat-fear",
+      "domain": "Negative Valence Systems",
+      "construct": "Acute Threat (\"Fear\")",
       "units": []
     },
     {
-      "id": "positive-valence-systems-li-class-generic-container-approach-motivation-li-class-generic-container-reward-valuation-molecules-dopamine-serotonin-circuits-anterior-medial-ofc-cortico-limbic-circuit-ventral-limbic-striatum-incl-ventral-caudate-ventral-tegmental-area-substantia-nigra-self-report-bas-reward-sensitivity-subscale-sensitivity-to-reward-sub-scale-of-the-sensitivity-to-reward-and-sensitivity-to-punishment-questionnaire-paradigms-delay-discounting-probability-choice-task-willingness-to-pay-task-paradigms-can-be-explicit-or-implicit-li-class-generic-container",
-      "domain": "Positive Valence Systems <li class=\"generic-container\"",
-      "construct": "Approach Motivation <li class=\"generic-container\"",
-      "subconstruct": "Reward Valuation Molecules Dopamine Serotonin Circuits Anterior medial OFC Cortico-limbic circuit Ventral limbic striatum (incl. ventral caudate) Ventral tegmental area/Substantia Nigra Self-Report BAS reward sensitivity subscale Sensitivity to Reward sub scale of the Sensitivity to Reward and Sensitivity to Punishment questionnaire Paradigms Delay discounting Probability Choice Task Willingness to Pay Task Paradigms can be explicit or implicit. <li class=\"generic-container\"",
-      "units": [
-        {
-          "name": "Molecules",
-          "elements": [
-            "Dopamine",
-            "Serotonin"
-          ]
-        },
-        {
-          "name": "Circuits",
-          "elements": [
-            "Anterior medial OFC",
-            "Cortico-limbic circuit",
-            "Ventral limbic striatum (incl. ventral caudate)",
-            "Ventral tegmental area/Substantia Nigra"
-          ]
-        },
-        {
-          "name": "Self-Report",
-          "elements": [
-            "BAS reward sensitivity subscale",
-            "Sensitivity to Reward sub scale of the Sensitivity to Reward and Sensitivity to Punishment questionnaire"
-          ]
-        },
-        {
-          "name": "Paradigms",
-          "elements": [
-            "Delay discounting",
-            "Probability Choice Task",
-            "Willingness to Pay Task"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "positive-valence-systems-li-class-generic-container-approach-motivation-li-class-generic-container-effort-valuation-willingness-to-work-molecules-adenosine-dopamine-gaba-circuits-basolateral-amygdala-dorsal-acc-ventral-pallidum-ventral-striatum-nacc-vta-self-report-drive-subscale-of-the-behavioral-activation-scale-paradigms-eefrt-task-li-class-generic-container",
-      "domain": "Positive Valence Systems <li class=\"generic-container\"",
-      "construct": "Approach Motivation <li class=\"generic-container\"",
-      "subconstruct": "Effort Valuation / Willingness to Work Molecules Adenosine Dopamine GABA Circuits Basolateral amygdala dorsal ACC Ventral pallidum Ventral striatum (nACC) VTA Self-Report Drive subscale of the Behavioral Activation Scale Paradigms EEfRT task <li class=\"generic-container\"",
-      "units": [
-        {
-          "name": "Molecules",
-          "elements": [
-            "Adenosine",
-            "Dopamine",
-            "GABA"
-          ]
-        },
-        {
-          "name": "Circuits",
-          "elements": [
-            "Basolateral amygdala",
-            "dorsal ACC",
-            "Ventral pallidum",
-            "Ventral striatum (nACC)",
-            "VTA"
-          ]
-        },
-        {
-          "name": "Self-Report",
-          "elements": [
-            "Drive subscale of the Behavioral Activation Scale"
-          ]
-        },
-        {
-          "name": "Paradigms",
-          "elements": [
-            "EEfRT task"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "positive-valence-systems-li-class-generic-container-approach-motivation-li-class-generic-container-expectancy-reward-prediction-error-molecules-dopamine-serotonin-circuits-amygdala-basal-ganglia-dorsal-acc-lateral-habenula-orbitofrontal-cortex-rostral-medial-tegmentum-substantia-nigra-vta-ventral-striatum-physiology-cortical-slow-waves-heart-rate-change-skin-conductance-behavior-goal-tracking-pavlovian-approach-reward-related-speeding-sign-tracking-self-report-affective-forecasting-asam-scale-eating-expectancy-inventory-generalized-reward-and-punishment-expectancy-scale-self-report-of-craving-teps-anticipatory-scale-paradigms-drifting-double-bandit-rutledge-passive-lottery-task-li-class-generic-container",
-      "domain": "Positive Valence Systems <li class=\"generic-container\"",
-      "construct": "Approach Motivation <li class=\"generic-container\"",
-      "subconstruct": "Expectancy / Reward Prediction Error Molecules Dopamine Serotonin Circuits Amygdala Basal ganglia dorsal ACC Lateral habenula Orbitofrontal cortex Rostral medial tegmentum Substantia nigra/VTA Ventral striatum Physiology Cortical slow waves Heart Rate Change Skin Conductance Behavior Goal tracking Pavlovian approach Reward-related speeding Sign tracking Self-Report Affective forecasting ASAM scale Eating Expectancy Inventory Generalized reward and punishment expectancy scale Self-report of craving TEPS anticipatory scale Paradigms Drifting Double Bandit Rutledge Passive Lottery Task <li class=\"generic-container\"",
-      "units": [
-        {
-          "name": "Molecules",
-          "elements": [
-            "Dopamine",
-            "Serotonin"
-          ]
-        },
-        {
-          "name": "Circuits",
-          "elements": [
-            "Amygdala",
-            "Basal ganglia",
-            "dorsal ACC",
-            "Lateral habenula",
-            "Orbitofrontal cortex",
-            "Rostral medial tegmentum",
-            "Substantia nigra/VTA",
-            "Ventral striatum"
-          ]
-        },
-        {
-          "name": "Physiology",
-          "elements": [
-            "Cortical slow waves",
-            "Heart Rate Change",
-            "Skin Conductance"
-          ]
-        },
-        {
-          "name": "Behavior",
-          "elements": [
-            "Goal tracking",
-            "Pavlovian approach",
-            "Reward-related speeding",
-            "Sign tracking"
-          ]
-        },
-        {
-          "name": "Self-Report",
-          "elements": [
-            "Affective forecasting",
-            "ASAM scale",
-            "Eating Expectancy Inventory",
-            "Generalized reward and punishment expectancy scale",
-            "Self-report of craving",
-            "TEPS anticipatory scale"
-          ]
-        },
-        {
-          "name": "Paradigms",
-          "elements": [
-            "Drifting Double Bandit",
-            "Rutledge Passive Lottery Task"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "positive-valence-systems-li-class-generic-container-approach-motivation-li-class-generic-container-action-selection-preference-based-decision-making-circuits-amygdala-li-class-generic-container",
-      "domain": "Positive Valence Systems <li class=\"generic-container\"",
-      "construct": "Approach Motivation <li class=\"generic-container\"",
-      "subconstruct": "Action Selection / Preference-Based Decision Making Circuits Amygdala <li class=\"generic-container\"",
-      "units": [
-        {
-          "name": "Circuits",
-          "elements": [
-            "Amygdala"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "positive-valence-systems-li-class-generic-container-initial-responsiveness-to-reward-attainment-molecules-creb-endocannabinoids-fosb-glutamate-mu-and-delta-opioid-orexin-circuits-anterior-insula-dorsal-acc-lateral-hypothalamus-medial-ofc-nucleus-accumbens-ventral-pallidum-ventromedial-pfc-vta-behavior-taste-reactivity-self-report-consummatory-subscale-of-teps-panas-state-version-paradigms-simple-guessing-task-li-class-generic-container",
-      "domain": "Positive Valence Systems <li class=\"generic-container\"",
-      "construct": "Initial Responsiveness to Reward Attainment Molecules CREB Endocannabinoids FosB Glutamate Mu and delta opioid Orexin Circuits Anterior insula dorsal ACC Lateral hypothalamus Medial OFC Nucleus accumbens Ventral pallidum Ventromedial PFC VTA Behavior Taste reactivity Self-Report Consummatory subscale of TEPS PANAS (state version) Paradigms Simple Guessing Task <li class=\"generic-container\"",
-      "units": [
-        {
-          "name": "Molecules",
-          "elements": [
-            "CREB",
-            "Endocannabinoids",
-            "FosB",
-            "Glutamate",
-            "Mu and delta opioid",
-            "Orexin"
-          ]
-        },
-        {
-          "name": "Circuits",
-          "elements": [
-            "Anterior insula",
-            "dorsal ACC",
-            "Lateral hypothalamus",
-            "Medial OFC",
-            "Nucleus accumbens",
-            "Ventral pallidum",
-            "Ventromedial PFC",
-            "VTA"
-          ]
-        },
-        {
-          "name": "Behavior",
-          "elements": [
-            "Taste reactivity"
-          ]
-        },
-        {
-          "name": "Self-Report",
-          "elements": [
-            "Consummatory subscale of TEPS",
-            "PANAS (state version)"
-          ]
-        },
-        {
-          "name": "Paradigms",
-          "elements": [
-            "Simple Guessing Task"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "positive-valence-systems-li-class-generic-container-sustained-longer-term-responsiveness-to-reward-attainment-molecules-dopamine-endocannabinoids-opioid-orexin-serotonin-circuits-arcuate-nucleus-ba9-medial-medial-preoptic-area-ofc-paraventricular-hypothalamus-ventromedial-hypothalamus-physiology-glp1-gonadal-hormones-peripheral-endocannabinoids-pyy-vagus-nerve-stimulation-cck-behavior-cessation-of-consumption-meal-termination-meal-pattern-analysis-nipple-refusal-satiety-sequence-self-report-drug-effects-questionnaire-loss-of-control-scale-reward-responsiveness-subscale-of-bis-bas-visual-analog-scales-of-satiety-li-class-generic-container",
-      "domain": "Positive Valence Systems <li class=\"generic-container\"",
-      "construct": "Sustained/Longer-Term Responsiveness to Reward Attainment Molecules Dopamine Endocannabinoids Opioid Orexin Serotonin Circuits Arcuate nucleus BA9/medial Medial preoptic area OFC Paraventricular hypothalamus Ventromedial hypothalamus Physiology GLP1 Gonadal hormones Peripheral endocannabinoids PYY Vagus nerve stimulation (CCK) Behavior Cessation of consumption/meal termination Meal pattern analysis Nipple refusal Satiety sequence Self-Report Drug effects questionnaire Loss of control scale Reward responsiveness subscale of BIS/BAS Visual analog scales of satiety <li class=\"generic-container\"",
-      "units": [
-        {
-          "name": "Molecules",
-          "elements": [
-            "Dopamine",
-            "Endocannabinoids",
-            "Opioid",
-            "Orexin",
-            "Serotonin"
-          ]
-        },
-        {
-          "name": "Circuits",
-          "elements": [
-            "Arcuate nucleus",
-            "BA9/medial",
-            "Medial preoptic area",
-            "OFC",
-            "Paraventricular hypothalamus",
-            "Ventromedial hypothalamus"
-          ]
-        },
-        {
-          "name": "Physiology",
-          "elements": [
-            "GLP1",
-            "Gonadal hormones",
-            "Peripheral endocannabinoids",
-            "PYY",
-            "Vagus nerve stimulation (CCK)"
-          ]
-        },
-        {
-          "name": "Behavior",
-          "elements": [
-            "Cessation of consumption/meal termination",
-            "Meal pattern analysis",
-            "Nipple refusal",
-            "Satiety sequence"
-          ]
-        },
-        {
-          "name": "Self-Report",
-          "elements": [
-            "Drug effects questionnaire",
-            "Loss of control scale",
-            "Reward responsiveness subscale of BIS/BAS",
-            "Visual analog scales of satiety"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "positive-valence-systems-li-class-generic-container-reward-learning-molecules-acetylcholine-co-released-neuromodular-glutamate-creb-dopamine-and-dopamine-related-molecules-fosb-cells-dopaminergic-neurons-medium-spiny-neurons-circuits-amygdala-dorsal-striatum-medial-prefrontal-ofc-ventral-striatum-vta-sn-physiology-correct-related-negativity-error-related-negativity-feedback-related-negativity-midline-theta-behavior-approach-behaviors-consummatory-behaviors-toward-any-goal-object-self-report-ambulatory-assessment-and-monitoring-ecological-momentary-assessment-paradigms-drifting-double-bandit-pavlovian-conditioning-probabilistic-reward-task-probabilistic-stimulus-selection-task-li-class-generic-container",
-      "domain": "Positive Valence Systems <li class=\"generic-container\"",
-      "construct": "Reward Learning Molecules Acetylcholine Co-released neuromodular glutamate CREB dopamine and dopamine-related molecules FosB Cells Dopaminergic neurons medium spiny neurons Circuits Amygdala dorsal striatum Medial prefrontal OFC Ventral striatum VTA/SN Physiology Correct related negativity Error related negativity Feedback related negativity Midline theta Behavior Approach behaviors Consummatory behaviors toward any goal object Self-Report Ambulatory assessment and monitoring Ecological momentary assessment Paradigms Drifting Double Bandit Pavlovian conditioning Probabilistic Reward Task Probabilistic Stimulus Selection Task <li class=\"generic-container\"",
-      "units": [
-        {
-          "name": "Molecules",
-          "elements": [
-            "Acetylcholine",
-            "Co-released neuromodular glutamate",
-            "CREB",
-            "dopamine and dopamine-related molecules",
-            "FosB"
-          ]
-        },
-        {
-          "name": "Cells",
-          "elements": [
-            "Dopaminergic neurons",
-            "medium spiny neurons"
-          ]
-        },
-        {
-          "name": "Circuits",
-          "elements": [
-            "Amygdala",
-            "dorsal striatum",
-            "Medial prefrontal",
-            "OFC",
-            "Ventral striatum",
-            "VTA/SN"
-          ]
-        },
-        {
-          "name": "Physiology",
-          "elements": [
-            "Correct related negativity",
-            "Error related negativity",
-            "Feedback related negativity",
-            "Midline theta"
-          ]
-        },
-        {
-          "name": "Behavior",
-          "elements": [
-            "Approach behaviors",
-            "Consummatory behaviors toward any goal object"
-          ]
-        },
-        {
-          "name": "Self-Report",
-          "elements": [
-            "Ambulatory assessment and monitoring",
-            "Ecological momentary assessment"
-          ]
-        },
-        {
-          "name": "Paradigms",
-          "elements": [
-            "Drifting Double Bandit",
-            "Pavlovian conditioning",
-            "Probabilistic Reward Task",
-            "Probabilistic Stimulus Selection Task"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "positive-valence-systems-li-class-generic-container-habit-molecules-acetylcholine-co-released-neuromodular-glutamate-creb-dopamine-and-dopamine-related-molecules-fosb-cells-dopaminergic-neurons-medium-spiny-neurons-substantia-nigra-circuits-dorsal-striatum-medial-prefrontal-sn-vta-ventral-striatum-behavior-compulsive-behaviors-repetitive-behaviors-stereotypic-behaviors-self-report-aberrant-behaviors-checklist-measures-of-repetitive-behaviors-paradigms-devaluation-task-habit-learning-task-habit-task-li-class-generic-container",
-      "domain": "Positive Valence Systems <li class=\"generic-container\"",
-      "construct": "Habit Molecules Acetylcholine Co-released neuromodular glutamate CREB dopamine and dopamine-related molecules FosB Cells Dopaminergic neurons medium spiny neurons Substantia Nigra Circuits dorsal striatum Medial prefrontal SN/VTA Ventral striatum Behavior Compulsive behaviors Repetitive behaviors Stereotypic behaviors Self-Report Aberrant behaviors checklist Measures of repetitive behaviors Paradigms Devaluation task Habit Learning Task Habit Task <li class=\"generic-container\"",
-      "units": [
-        {
-          "name": "Molecules",
-          "elements": [
-            "Acetylcholine",
-            "Co-released neuromodular glutamate",
-            "CREB",
-            "dopamine and dopamine-related molecules",
-            "FosB"
-          ]
-        },
-        {
-          "name": "Cells",
-          "elements": [
-            "Dopaminergic neurons",
-            "medium spiny neurons",
-            "Substantia Nigra"
-          ]
-        },
-        {
-          "name": "Circuits",
-          "elements": [
-            "dorsal striatum",
-            "Medial prefrontal",
-            "SN/VTA",
-            "Ventral striatum"
-          ]
-        },
-        {
-          "name": "Behavior",
-          "elements": [
-            "Compulsive behaviors",
-            "Repetitive behaviors",
-            "Stereotypic behaviors"
-          ]
-        },
-        {
-          "name": "Self-Report",
-          "elements": [
-            "Aberrant behaviors checklist",
-            "Measures of repetitive behaviors"
-          ]
-        },
-        {
-          "name": "Paradigms",
-          "elements": [
-            "Devaluation task",
-            "Habit Learning Task",
-            "Habit Task"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "cognitive-systems-li-class-generic-container-attention-molecules-implementation-gaba-glutamate-control-acetylcholine-dopamine-glutamate-histamine-serotonin-cells-parvalbumin-positive-interneurons-circuits-balance-between-task-positive-network-tpn-vs-dmn-implementation-local-circuit-interactions-pulvinar-trn-control-amygdala-ascending-descending-information-pathways-attentional-systems-basal-forebrain-limbic-system-dorsal-attention-network-ventral-attention-network-physiology-fmri-sensory-areas-from-peripheral-to-central-auditory-erp-n1-n2-neural-oscillations-p1-p300-processing-negativity-visual-erp-n2pc-negativity-sn-neural-oscillations-p300-selection-modulations-of-sensory-erp-components-slow-waves-peripheral-physiology-heart-rate-deceleration-pupil-dilation-behavior-ant-task-distractibility-attentional-lapses-vs-sustained-attention-distractibility-object-feature-attention-psychophysics-spatial-attention-paradigms-attentional-blink-and-psychological-refractory-period-paradigm-blocked-channel-selection-tasks-dichotic-listening-distraction-paradigms-capture-dual-task-paradigms-inter-modal-selective-attention-spatial-and-non-spatial-cuing-paradigms-time-series-of-response-times-to-extract-variability-and-frequency-domain-analyses-visual-search-target-detection-tasks-in-the-absence-of-competition-are-considered-measues-of-sustained-attention-and-not-selective-or-divided-attention-which-are-subsumed-under-cog-control-li-class-generic-container",
-      "domain": "Cognitive Systems <li class=\"generic-container\"",
-      "construct": "Attention Molecules Implementation GABA Glutamate Control Acetylcholine Dopamine Glutamate Histamine Serotonin Cells Parvalbumin-positive interneurons Circuits Balance between task positive network (TPN) vs DMN Implementation local circuit interactions pulvinar TRN Control Amygdala ascending/descending information pathways Attentional Systems basal forebrain limbic system Dorsal attention network Ventral attention network Physiology fMRI Sensory areas from peripheral to central Auditory ERP N1 N2 Neural oscillations P1 P300 processing negativity Visual ERP N2pc negativity (SN) Neural oscillations P300 Selection modulations of sensory ERP components slow waves Peripheral Physiology Heart rate deceleration Pupil dilation Behavior ANT task distractibility Attentional lapses vs sustained attention Distractibility Object/feature attention Psychophysics Spatial attention Paradigms attentional blink and psychological refractory period paradigm blocked channel-selection tasks dichotic listening distraction paradigms (capture) Dual Task Paradigms inter-modal selective attention spatial and non-spatial cuing paradigms, time-series of response times to extract variability and frequency domain analyses visual search Target detection tasks in the absence of competition are considered measues of sustained attention, and not selective or divided attention, which are subsumed under cog control <li class=\"generic-container\"",
-      "units": [
-        {
-          "name": "Molecules",
-          "elements": [
-            "GABA",
-            "Glutamate",
-            "Acetylcholine",
-            "Dopamine",
-            "Glutamate",
-            "Histamine",
-            "Serotonin"
-          ]
-        },
-        {
-          "name": "Cells",
-          "elements": [
-            "Parvalbumin-positive interneurons"
-          ]
-        },
-        {
-          "name": "Circuits",
-          "elements": [
-            "Balance between task positive network (TPN) vs DMN",
-            "local circuit interactions",
-            "pulvinar",
-            "TRN",
-            "Amygdala",
-            "ascending/descending information pathways",
-            "basal forebrain limbic system",
-            "Dorsal attention network",
-            "Ventral attention network"
-          ]
-        },
-        {
-          "name": "Physiology",
-          "elements": [
-            "Sensory areas from peripheral to central",
-            "N1",
-            "N2",
-            "Neural oscillations",
-            "P1",
-            "P300",
-            "processing negativity",
-            "N2pc",
-            "negativity (SN)",
-            "Neural oscillations",
-            "P300",
-            "Selection modulations of sensory ERP components",
-            "slow waves",
-            "Heart rate deceleration",
-            "Pupil dilation"
-          ]
-        },
-        {
-          "name": "Behavior",
-          "elements": [
-            "ANT task distractibility",
-            "Attentional lapses vs sustained attention",
-            "Distractibility",
-            "Object/feature attention",
-            "Psychophysics",
-            "Spatial attention"
-          ]
-        },
-        {
-          "name": "Paradigms",
-          "elements": [
-            "attentional blink and psychological refractory period paradigm",
-            "blocked channel-selection tasks",
-            "dichotic listening",
-            "distraction paradigms (capture)",
-            "Dual Task Paradigms",
-            "inter-modal selective attention",
-            "spatial and non-spatial cuing paradigms,",
-            "time-series of response times to extract variability and frequency domain analyses",
-            "visual search"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "cognitive-systems-li-class-generic-container-perception-li-class-generic-container",
-      "domain": "Cognitive Systems <li class=\"generic-container\"",
-      "construct": "Perception <li class=\"generic-container\"",
+      "id": "negative-valence-systems-potential-threat-anxiety",
+      "domain": "Negative Valence Systems",
+      "construct": "Potential Threat (\"Anxiety\")",
       "units": []
     },
     {
-      "id": "cognitive-systems-li-class-generic-container-perception-li-class-generic-container-visual-perception-molecules-ach-catecholamines-gaba-glutamate-nmda-peptides-serotonin-cells-magno-non-linear-gain-control-parvalbumin-positive-interneurons-parvo-pyramidal-cells-circuits-subcortical-koniocellular-magnocellular-parvocellular-cortical-cortico-cortical-connections-into-supra-and-infra-granular-layers-dorsal-ventral-streams-non-retinogeniculate-superior-colliculus-suprachiasmatic-nucleus-local-circuitry-lateral-interactions-top-down-interactions-implicated-in-contextual-fields-and-association-fields-responsible-for-the-influence-of-spatial-context-on-target-processing-physiology-adaptation-habituation-bold-activation-of-cortical-regions-erp-components-ncl-oscillations-scalp-eeg-lfp-and-single-multi-unit-ssvep-tvep-behavior-discrimination-identification-and-localization-perceptual-learning-perceptual-priming-reading-stimulus-detection-visual-acuity-self-report-perceptual-anomalies-of-schizophrenia-and-depression-paradigms-scheme-1-stages-of-vision-early-vision-local-computations-retinotopic-representations-intermediate-vision-nonlocal-properties-of-images-transformations-beyond-retinotopic-representations-late-vision-representations-of-external-objects-scheme-2-commonly-used-research-paradigms-backward-masking-biological-motion-processing-bistability-coherent-motion-contour-integration-interpolation-contrast-sensitivity-cross-modality-paradigms-emotion-expression-identification-face-identification-figure-ground-lateral-facilitation-multistability-object-perception-object-recognition-perceptual-closure-perceptual-organization-parallel-serial-search-reading-vernier-discrimination-visual-illusion-susceptibility-other-schemes-action-perception-loops-re-entrant-processing-li-class-generic-container",
-      "domain": "Cognitive Systems <li class=\"generic-container\"",
-      "construct": "Perception <li class=\"generic-container\"",
-      "subconstruct": "Visual Perception Molecules ACH Catecholamines GABA Glutamate NMDA Peptides Serotonin Cells Magno (non-linear gain control) Parvalbumin-positive interneurons Parvo Pyramidal cells Circuits Subcortical Koniocellular Magnocellular Parvocellular Cortical Cortico-cortical connections into supra- and infra-granular layers Dorsal/ventral streams Non-retinogeniculate Superior colliculus Suprachiasmatic nucleus Local circuitry Lateral interactions Top-down interactions Implicated in contextual fields and association fields (responsible for the influence of spatial context on target processing) Physiology Adaptation/ habituation BOLD activation of cortical regions ERP components Ncl Oscillations (scalp EEG, LFP, and single/multi-unit) ssVEP tVEP Behavior Discrimination, identification and localization Perceptual learning Perceptual priming Reading Stimulus detection Visual acuity Self-Report Perceptual anomalies of schizophrenia and depression Paradigms Scheme 1: Stages of Vision Early Vision Local computations Retinotopic representations Intermediate Vision Nonlocal properties of images Transformations beyond retinotopic representations Late Vision Representations of external objects Scheme 2: Commonly Used Research Paradigms Backward masking Biological motion processing Bistability Coherent motion Contour integration/interpolation Contrast sensitivity Cross modality paradigms Emotion expression identification Face identification Figure ground Lateral facilitation Multistability Object perception Object recognition/perceptual closure/perceptual organization Parallel/serial search Reading Vernier discrimination Visual illusion susceptibility Other Schemes Action-Perception loops Re-entrant processing <li class=\"generic-container\"",
-      "units": [
-        {
-          "name": "Molecules",
-          "elements": [
-            "ACH",
-            "Catecholamines",
-            "GABA",
-            "Glutamate",
-            "NMDA",
-            "Peptides",
-            "Serotonin"
-          ]
-        },
-        {
-          "name": "Cells",
-          "elements": [
-            "Magno (non-linear gain control)",
-            "Parvalbumin-positive interneurons",
-            "Parvo",
-            "Pyramidal cells"
-          ]
-        },
-        {
-          "name": "Circuits",
-          "elements": [
-            "Koniocellular",
-            "Magnocellular",
-            "Parvocellular",
-            "Cortico-cortical connections into supra- and infra-granular layers",
-            "Dorsal/ventral streams",
-            "Superior colliculus",
-            "Suprachiasmatic nucleus",
-            "Lateral interactions",
-            "Top-down interactions"
-          ]
-        },
-        {
-          "name": "Physiology",
-          "elements": [
-            "Adaptation/ habituation",
-            "BOLD activation of cortical regions",
-            "ERP components",
-            "Ncl",
-            "Oscillations (scalp EEG, LFP, and single/multi-unit)",
-            "ssVEP",
-            "tVEP"
-          ]
-        },
-        {
-          "name": "Behavior",
-          "elements": [
-            "Discrimination, identification and localization",
-            "Perceptual learning",
-            "Perceptual priming",
-            "Reading",
-            "Stimulus detection",
-            "Visual acuity"
-          ]
-        },
-        {
-          "name": "Self-Report",
-          "elements": [
-            "Perceptual anomalies of schizophrenia and depression"
-          ]
-        },
-        {
-          "name": "Paradigms",
-          "elements": [
-            "Local computations",
-            "Retinotopic representations",
-            "Nonlocal properties of images",
-            "Transformations beyond retinotopic representations",
-            "Representations of external objects",
-            "Backward masking",
-            "Biological motion processing",
-            "Bistability",
-            "Coherent motion",
-            "Contour integration/interpolation",
-            "Contrast sensitivity",
-            "Cross modality paradigms",
-            "Emotion expression identification",
-            "Face identification",
-            "Figure ground",
-            "Lateral facilitation",
-            "Multistability",
-            "Object perception",
-            "Object recognition/perceptual closure/perceptual organization",
-            "Parallel/serial search",
-            "Reading",
-            "Vernier discrimination",
-            "Visual illusion susceptibility",
-            "Action-Perception loops",
-            "Re-entrant processing"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "cognitive-systems-li-class-generic-container-perception-li-class-generic-container-auditory-perception-molecules-acetylcholine-gaba-glutamate-nmda-serotonin-cells-cochlear-hair-cells-cortical-and-limbic-inhibitory-interneurons-ribbon-synapses-circuits-nodes-in-circuits-a1-anterior-insula-brainstem-cochlea-inferior-colliculus-mgn-stg-circuits-corticofugal-dorsal-ventral-streams-physiology-adaptation-habituation-auditory-steady-state-response-assr-fmri-intracortical-eeg-metabolic-changes-mismatch-negativity-mmn-n1-neural-oscillations-p3a-p50-startle-and-ppi-behavior-perceptual-identification-perceptual-learning-perceptual-priming-spatial-localization-stimulus-detection-self-report-auditory-hallucinations-hyperacusis-paradigms-action-perception-loops-auditory-masking-auditory-scene-perception-e-g-streaming-bistability-categorization-cross-modal-interactions-detection-of-speech-in-noise-deviance-detection-gating-inhibitory-control-manipulation-of-isi-and-or-intensity-mcgurk-multisensory-novelty-oddball-detection-object-perception-regularity-and-change-detection-same-different-tasks-self-monitoring-tone-detection-e-g-jnd-tasks-tone-matching-li-class-generic-container",
-      "domain": "Cognitive Systems <li class=\"generic-container\"",
-      "construct": "Perception <li class=\"generic-container\"",
-      "subconstruct": "Auditory Perception Molecules Acetylcholine GABA Glutamate NMDA Serotonin Cells Cochlear hair cells Cortical and limbic inhibitory interneurons Ribbon synapses Circuits Nodes in Circuits A1 Anterior insula Brainstem Cochlea Inferior colliculus MGN STG Circuits Corticofugal Dorsal/ventral streams Physiology Adaptation/ habituation Auditory steady-state response (ASSR) fMRI Intracortical EEG Metabolic changes Mismatch negativity (MMN) N1 Neural oscillations P3a P50 startle and PPI Behavior Perceptual identification Perceptual learning Perceptual priming Spatial localization Stimulus detection Self-Report Auditory hallucinations Hyperacusis Paradigms Action-Perception loops Auditory masking auditory scene perception (e.g., streaming) Bistability Categorization Cross-modal interactions Detection of speech in noise Deviance detection Gating inhibitory control Manipulation of ISI and/or intensity McGurk (multisensory) novelty/oddball detection Object perception Regularity and change detection same-different tasks self-monitoring tone detection (e.g., JND tasks) Tone matching <li class=\"generic-container\"",
-      "units": [
-        {
-          "name": "Molecules",
-          "elements": [
-            "Acetylcholine",
-            "GABA",
-            "Glutamate",
-            "NMDA",
-            "Serotonin"
-          ]
-        },
-        {
-          "name": "Cells",
-          "elements": [
-            "Cochlear hair cells",
-            "Cortical and limbic inhibitory interneurons",
-            "Ribbon synapses"
-          ]
-        },
-        {
-          "name": "Circuits",
-          "elements": [
-            "A1",
-            "Anterior insula",
-            "Brainstem",
-            "Cochlea",
-            "Inferior colliculus",
-            "MGN",
-            "STG",
-            "Corticofugal",
-            "Dorsal/ventral streams"
-          ]
-        },
-        {
-          "name": "Physiology",
-          "elements": [
-            "Adaptation/ habituation",
-            "Auditory steady-state response (ASSR)",
-            "fMRI",
-            "Intracortical EEG",
-            "Metabolic changes",
-            "Mismatch negativity (MMN)",
-            "N1",
-            "Neural oscillations",
-            "P3a",
-            "P50",
-            "startle and PPI"
-          ]
-        },
-        {
-          "name": "Behavior",
-          "elements": [
-            "Perceptual identification",
-            "Perceptual learning",
-            "Perceptual priming",
-            "Spatial localization",
-            "Stimulus detection"
-          ]
-        },
-        {
-          "name": "Self-Report",
-          "elements": [
-            "Auditory hallucinations",
-            "Hyperacusis"
-          ]
-        },
-        {
-          "name": "Paradigms",
-          "elements": [
-            "Action-Perception loops",
-            "Auditory masking",
-            "auditory scene perception (e.g., streaming)",
-            "Bistability",
-            "Categorization",
-            "Cross-modal interactions",
-            "Detection of speech in noise",
-            "Deviance detection",
-            "Gating",
-            "inhibitory control",
-            "Manipulation of ISI and/or intensity",
-            "McGurk (multisensory)",
-            "novelty/oddball detection",
-            "Object perception",
-            "Regularity and change detection",
-            "same-different tasks",
-            "self-monitoring",
-            "tone detection (e.g., JND tasks)",
-            "Tone matching"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "cognitive-systems-li-class-generic-container-perception-li-class-generic-container-olfactory-somatosensory-multimodal-perception-paradigms-manipulation-of-isi-and-or-intensity-smell-identification-li-class-generic-container",
-      "domain": "Cognitive Systems <li class=\"generic-container\"",
-      "construct": "Perception <li class=\"generic-container\"",
-      "subconstruct": "Olfactory/Somatosensory/Multimodal/Perception Paradigms Manipulation of ISI and/or intensity smell identification <li class=\"generic-container\"",
-      "units": [
-        {
-          "name": "Paradigms",
-          "elements": [
-            "Manipulation of ISI and/or intensity",
-            "smell identification"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "cognitive-systems-li-class-generic-container-declarative-memory-molecules-cholinergic-glutamatergic-noradrenergic-opioid-cells-glia-granule-cells-inhibitory-and-excitatory-interneurons-pyramidal-cells-circuits-extrinsic-hippocampal-circuitry-intrinsic-hippocampal-circuitry-pfc-and-ppc-interactions-with-multiple-association-cortices-physiology-ampa-related-synaptic-plasticity-conjunction-codes-frontal-temporal-coordinated-oscillations-ltp-ltd-nmda-related-synaptic-plasticity-place-cell-activity-subsequent-memory-effect-fmri-erp-up-down-states-behavior-discrimination-familiarity-learning-recall-recognition-self-report-cognitive-assessment-interview-paradigms-acquired-equivalence-delayed-recall-list-and-story-learning-paired-associate-learning-transitive-inference-li-class-generic-container",
-      "domain": "Cognitive Systems <li class=\"generic-container\"",
-      "construct": "Declarative Memory Molecules Cholinergic Glutamatergic Noradrenergic Opioid Cells Glia Granule cells Inhibitory and excitatory interneurons Pyramidal cells Circuits Extrinsic hippocampal circuitry Intrinsic hippocampal circuitry PFC and PPC interactions with multiple association cortices Physiology AMPA-related synaptic plasticity conjunction codes frontal/temporal coordinated oscillations LTP/LTD NMDA-related synaptic plasticity place cell activity subsequent memory effect (fMRI, ERP) up/down states Behavior Discrimination Familiarity Learning Recall Recognition Self-Report Cognitive Assessment Interview Paradigms acquired equivalence delayed recall list and story learning Paired associate learning transitive inference <li class=\"generic-container\"",
-      "units": [
-        {
-          "name": "Molecules",
-          "elements": [
-            "Cholinergic",
-            "Glutamatergic",
-            "Noradrenergic",
-            "Opioid"
-          ]
-        },
-        {
-          "name": "Cells",
-          "elements": [
-            "Glia",
-            "Granule cells",
-            "Inhibitory and excitatory interneurons",
-            "Pyramidal cells"
-          ]
-        },
-        {
-          "name": "Circuits",
-          "elements": [
-            "Extrinsic hippocampal circuitry",
-            "Intrinsic hippocampal circuitry",
-            "PFC and PPC interactions with multiple association cortices"
-          ]
-        },
-        {
-          "name": "Physiology",
-          "elements": [
-            "AMPA-related synaptic plasticity",
-            "conjunction codes",
-            "frontal/temporal coordinated oscillations",
-            "LTP/LTD",
-            "NMDA-related synaptic plasticity",
-            "place cell activity",
-            "subsequent memory effect (fMRI, ERP)",
-            "up/down states"
-          ]
-        },
-        {
-          "name": "Behavior",
-          "elements": [
-            "Discrimination",
-            "Familiarity",
-            "Learning",
-            "Recall",
-            "Recognition"
-          ]
-        },
-        {
-          "name": "Self-Report",
-          "elements": [
-            "Cognitive Assessment Interview"
-          ]
-        },
-        {
-          "name": "Paradigms",
-          "elements": [
-            "acquired equivalence",
-            "delayed recall",
-            "list and story learning",
-            "Paired associate learning",
-            "transitive inference"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "cognitive-systems-li-class-generic-container-language-circuits-inferior-frontal-cortex-inferior-parietal-cortex-inferior-temporal-cortex-lateral-superior-and-middle-temporal-cortices-overlap-with-memory-motor-sensory-and-emotional-circuits-physiology-anterior-negativities-n400-p600-late-positivities-behavior-coherent-discourse-coherent-sentences-production-and-comprehension-of-words-self-report-cognitive-assessment-interview-paradigms-language-production-linguistic-corpus-based-analyses-of-language-output-naming-language-comprehension-ability-to-answer-questions-about-the-content-of-sentences-and-discourse-ability-to-distinguish-between-coherent-and-incoherent-sentences-and-discourse-detection-and-classification-of-semantic-relationships-between-words-listening-and-reading-times-to-critical-words-and-regions-in-linguistic-input-patterns-of-eye-movements-in-eye-tracking-paradigms-or-motor-movements-in-mouse-tracking-paradigms-to-critical-words-and-regions-in-linguistic-input-patterns-of-eye-movements-to-non-verbal-visual-stimuli-during-spoken-language-comprehension-the-visual-world-paradigm-experimental-manipulations-manipulations-of-different-types-of-coherence-and-cohesion-between-clauses-in-discourse-manipulations-of-different-types-of-relationships-between-individual-words-in-priming-paradigms-manipulations-of-predictability-and-acceptability-at-different-levels-of-representation-in-a-linguistic-input-manipulations-of-relationships-between-language-and-non-verbal-behaviors-li-class-generic-container",
-      "domain": "Cognitive Systems <li class=\"generic-container\"",
-      "construct": "Language Circuits Inferior frontal cortex Inferior parietal cortex Inferior temporal cortex Lateral superior and middle temporal cortices Overlap with memory, motor, sensory, and emotional circuits Physiology anterior negativities N400 P600/late positivities Behavior Coherent discourse Coherent sentences Production and comprehension of words Self-Report Cognitive Assessment Interview Paradigms Language Production Linguistic corpus-based analyses of language output Naming Language Comprehension Ability to answer questions about the content of sentences and discourse Ability to distinguish between coherent and incoherent sentences and discourse Detection and classification of semantic relationships between words Listening and reading times to critical words and regions in linguistic input Patterns of eye movements (in eye tracking paradigms) or motor movements (in mouse tracking paradigms) to critical words and regions in linguistic input Patterns of eye movements to non-verbal visual stimuli during spoken language comprehension (the visual world paradigm) Experimental Manipulations Manipulations of different types of coherence and cohesion between clauses in discourse Manipulations of different types of relationships between individual words in priming paradigms Manipulations of predictability and acceptability, at different levels of representation, in a linguistic input Manipulations of relationships between language and non-verbal behaviors <li class=\"generic-container\"",
-      "units": [
-        {
-          "name": "Circuits",
-          "elements": [
-            "Inferior frontal cortex",
-            "Inferior parietal cortex",
-            "Inferior temporal cortex",
-            "Lateral superior and middle temporal cortices",
-            "Overlap with memory, motor, sensory, and emotional circuits"
-          ]
-        },
-        {
-          "name": "Physiology",
-          "elements": [
-            "anterior negativities",
-            "N400",
-            "P600/late positivities"
-          ]
-        },
-        {
-          "name": "Behavior",
-          "elements": [
-            "Coherent discourse",
-            "Coherent sentences",
-            "Production and comprehension of words"
-          ]
-        },
-        {
-          "name": "Self-Report",
-          "elements": [
-            "Cognitive Assessment Interview"
-          ]
-        },
-        {
-          "name": "Paradigms",
-          "elements": [
-            "Linguistic corpus-based analyses of language output",
-            "Naming",
-            "Ability to answer questions about the content of sentences and discourse",
-            "Ability to distinguish between coherent and incoherent sentences and discourse",
-            "Detection and classification of semantic relationships between words",
-            "Listening and reading times to critical words and regions in linguistic input",
-            "Patterns of eye movements (in eye tracking paradigms) or motor movements (in mouse tracking paradigms) to critical words and regions in linguistic input",
-            "Patterns of eye movements to non-verbal visual stimuli during spoken language comprehension (the visual world paradigm)",
-            "Manipulations of different types of coherence and cohesion between clauses in discourse",
-            "Manipulations of different types of relationships between individual words in priming paradigms",
-            "Manipulations of predictability and acceptability, at different levels of representation, in a linguistic input",
-            "Manipulations of relationships between language and non-verbal behaviors"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "cognitive-systems-li-class-generic-container-cognitive-control-li-class-generic-container",
-      "domain": "Cognitive Systems <li class=\"generic-container\"",
-      "construct": "Cognitive Control <li class=\"generic-container\"",
+      "id": "negative-valence-systems-sustained-threat",
+      "domain": "Negative Valence Systems",
+      "construct": "Sustained Threat",
       "units": []
     },
     {
-      "id": "cognitive-systems-li-class-generic-container-cognitive-control-li-class-generic-container-goal-selection-updating-representation-and-maintenance-goal-selection-circuits-frontopolar-anterior-lpfc-ba10-inhibition-of-dmn-self-report-brief-gioa-paradigms-badre-tasks-koechlin-paradigm-task-switching-updating-representation-and-maintenance-molecules-ach-gaba-glutamate-norepinephrine-cells-pv-pyramidal-cells-circuits-dlpfc-ppc-thalamocortical-physiology-gamma-synchrony-pupilometry-behavior-distractibility-off-task-behaviors-self-report-brief-gioa-cognitive-failures-questionnaire-sans-saps-panss-paradigms-ax-paradigms-cued-stimulus-response-reversal-tasks-task-switching-tower-tasks-li-class-generic-container",
-      "domain": "Cognitive Systems <li class=\"generic-container\"",
-      "construct": "Cognitive Control <li class=\"generic-container\"",
-      "subconstruct": "Goal Selection; Updating, Representation, and Maintenance Goal Selection Circuits Frontopolar/Anterior LPFC (BA10) Inhibition of DMN Self-Report BRIEF (Gioa) Paradigms Badre tasks Koechlin paradigm Task switching Updating, Representation, and Maintenance Molecules ACH GABA Glutamate Norepinephrine Cells PV Pyramidal cells Circuits DLPFC PPC Thalamocortical Physiology Gamma synchrony Pupilometry Behavior Distractibility Off-task behaviors Self-Report BRIEF (Gioa) Cognitive Failures Questionnaire SANS/SAPS/PANSS Paradigms AX paradigms Cued stimulus-response reversal tasks Task switching Tower tasks <li class=\"generic-container\"",
+      "id": "negative-valence-systems-loss",
+      "domain": "Negative Valence Systems",
+      "construct": "Loss",
+      "units": []
+    },
+    {
+      "id": "negative-valence-systems-frustrative-nonreward",
+      "domain": "Negative Valence Systems",
+      "construct": "Frustrative Nonreward",
+      "units": []
+    },
+    {
+      "id": "positive-valence-systems-reward-responsiveness",
+      "domain": "Positive Valence Systems",
+      "construct": "Reward Responsiveness",
+      "units": []
+    },
+    {
+      "id": "positive-valence-systems-reward-responsiveness-reward-anticipation",
+      "domain": "Positive Valence Systems",
+      "construct": "Reward Responsiveness",
+      "subconstruct": "Reward Anticipation",
+      "units": []
+    },
+    {
+      "id": "positive-valence-systems-reward-responsiveness-initial-response-to-reward",
+      "domain": "Positive Valence Systems",
+      "construct": "Reward Responsiveness",
+      "subconstruct": "Initial Response to Reward",
+      "units": []
+    },
+    {
+      "id": "positive-valence-systems-reward-responsiveness-reward-satiation",
+      "domain": "Positive Valence Systems",
+      "construct": "Reward Responsiveness",
+      "subconstruct": "Reward Satiation",
+      "units": []
+    },
+    {
+      "id": "positive-valence-systems-reward-learning",
+      "domain": "Positive Valence Systems",
+      "construct": "Reward Learning",
+      "units": []
+    },
+    {
+      "id": "positive-valence-systems-reward-learning-probabilistic-and-reinforcement-learning",
+      "domain": "Positive Valence Systems",
+      "construct": "Reward Learning",
+      "subconstruct": "Probabilistic and Reinforcement Learning",
+      "units": []
+    },
+    {
+      "id": "positive-valence-systems-reward-learning-reward-prediction-error",
+      "domain": "Positive Valence Systems",
+      "construct": "Reward Learning",
+      "subconstruct": "Reward Prediction Error",
+      "units": []
+    },
+    {
+      "id": "positive-valence-systems-reward-learning-habit",
+      "domain": "Positive Valence Systems",
+      "construct": "Reward Learning",
+      "subconstruct": "Habit",
+      "units": []
+    },
+    {
+      "id": "positive-valence-systems-reward-valuation",
+      "domain": "Positive Valence Systems",
+      "construct": "Reward Valuation",
+      "units": []
+    },
+    {
+      "id": "positive-valence-systems-reward-valuation-reward-probability",
+      "domain": "Positive Valence Systems",
+      "construct": "Reward Valuation",
+      "subconstruct": "Reward (Probability)",
+      "units": []
+    },
+    {
+      "id": "positive-valence-systems-reward-valuation-delay",
+      "domain": "Positive Valence Systems",
+      "construct": "Reward Valuation",
+      "subconstruct": "Delay",
+      "units": []
+    },
+    {
+      "id": "positive-valence-systems-reward-valuation-effort",
+      "domain": "Positive Valence Systems",
+      "construct": "Reward Valuation",
+      "subconstruct": "Effort",
+      "units": []
+    },
+    {
+      "id": "cognitive-systems-attention",
+      "domain": "Cognitive Systems",
+      "construct": "Attention",
+      "units": []
+    },
+    {
+      "id": "cognitive-systems-perception",
+      "domain": "Cognitive Systems",
+      "construct": "Perception",
+      "units": []
+    },
+    {
+      "id": "cognitive-systems-perception-visual-perception",
+      "domain": "Cognitive Systems",
+      "construct": "Perception",
+      "subconstruct": "Visual Perception",
+      "units": []
+    },
+    {
+      "id": "cognitive-systems-perception-auditory-perception",
+      "domain": "Cognitive Systems",
+      "construct": "Perception",
+      "subconstruct": "Auditory Perception",
+      "units": []
+    },
+    {
+      "id": "cognitive-systems-perception-olfactory-somatosensory-multimodal-perception",
+      "domain": "Cognitive Systems",
+      "construct": "Perception",
+      "subconstruct": "Olfactory/Somatosensory/Multimodal Perception",
+      "units": []
+    },
+    {
+      "id": "cognitive-systems-declarative-memory",
+      "domain": "Cognitive Systems",
+      "construct": "Declarative Memory",
+      "units": []
+    },
+    {
+      "id": "cognitive-systems-language",
+      "domain": "Cognitive Systems",
+      "construct": "Language",
+      "units": []
+    },
+    {
+      "id": "cognitive-systems-cognitive-control",
+      "domain": "Cognitive Systems",
+      "construct": "Cognitive Control",
+      "units": []
+    },
+    {
+      "id": "cognitive-systems-cognitive-control-goal-selection-updating-representation-and-maintenance",
+      "domain": "Cognitive Systems",
+      "construct": "Cognitive Control",
+      "subconstruct": "Goal Selection, Updating, Representation, and Maintenance",
       "units": [
         {
           "name": "Circuits",
@@ -1221,7 +193,7 @@
         {
           "name": "Molecules",
           "elements": [
-            "ACH",
+            "Dopamine",
             "GABA",
             "Glutamate",
             "Norepinephrine"
@@ -1230,15 +202,14 @@
         {
           "name": "Cells",
           "elements": [
-            "PV",
             "Pyramidal cells"
           ]
         },
         {
           "name": "Circuits",
           "elements": [
-            "DLPFC",
-            "PPC",
+            "Dorsolateral Prefrontal Cortex",
+            "Posterior Parietal Cortex",
             "Thalamocortical"
           ]
         },
@@ -1276,15 +247,15 @@
       ]
     },
     {
-      "id": "cognitive-systems-li-class-generic-container-cognitive-control-li-class-generic-container-response-selection-inhibition-suppression-response-selection-molecules-ach-gaba-glutamate-norepinephrine-cells-pv-pyramidal-cells-circuits-dlpfc-ppc-vlpfc-physiology-gamma-theta-behavior-impulsive-behaviors-self-report-brief-gioa-sans-saps-panss-paradigms-flanker-simon-stroop-inhibition-suppression-molecules-acetylcholine-dopamine-gaba-glutamate-norepinephrine-cells-pyramidal-cells-circuits-ba6-8-fef-ppc-pre-sma-ventrofronto-striatal-physiology-alpha-pupilometry-short-interval-cortical-inhibition-tms-behavior-distractibility-impulsive-behaviors-off-task-behaviors-self-report-adhd-rating-scale-dupaul-atq-cbq-effortful-control-brief-gioa-conners-impulsivity-scale-paradigms-antisaccade-conflicting-and-contralateral-motor-response-task-countermanding-go-nogo-motor-persistence-paradigms-e-g-nepsy-statue-task-stimulus-resp-incompat-stop-signal-reaction-time-li-class-generic-container",
-      "domain": "Cognitive Systems <li class=\"generic-container\"",
-      "construct": "Cognitive Control <li class=\"generic-container\"",
-      "subconstruct": "Response Selection; Inhibition/Suppression Response Selection Molecules ACH GABA Glutamate Norepinephrine Cells PV Pyramidal cells Circuits DLPFC PPC VLPFC Physiology Gamma Theta Behavior Impulsive behaviors Self-Report BRIEF (Gioa) SANS/SAPS/PANSS Paradigms Flanker Simon Stroop Inhibition/Suppression Molecules Acetylcholine Dopamine GABA Glutamate Norepinephrine Cells Pyramidal cells Circuits BA6/8 (FEF) PPC Pre-SMA Ventrofronto-striatal Physiology Alpha Pupilometry Short interval cortical inhibition (TMS) Behavior Distractibility Impulsive behaviors Off-task behaviors Self-Report ADHD Rating Scale (Dupaul) ATQ/CBQ Effortful Control BRIEF (Gioa) Conners impulsivity scale Paradigms Antisaccade Conflicting and contralateral motor response task Countermanding Go/Nogo Motor persistence paradigms (e.g. NEPSY statue task) Stimulus-Resp Incompat Stop-Signal Reaction Time <li class=\"generic-container\"",
+      "id": "cognitive-systems-cognitive-control-response-selection-inhibition-suppression",
+      "domain": "Cognitive Systems",
+      "construct": "Cognitive Control",
+      "subconstruct": "Response Selection/Inhibition/Suppression",
       "units": [
         {
           "name": "Molecules",
           "elements": [
-            "ACH",
+            "Dopamine",
             "GABA",
             "Glutamate",
             "Norepinephrine"
@@ -1293,23 +264,22 @@
         {
           "name": "Cells",
           "elements": [
-            "PV",
             "Pyramidal cells"
           ]
         },
         {
           "name": "Circuits",
           "elements": [
-            "DLPFC",
-            "PPC",
+            "Dorsolateral Prefrontal Cortex",
+            "Posterior Parietal Cortex",
             "VLPFC"
           ]
         },
         {
           "name": "Physiology",
           "elements": [
-            "Gamma",
-            "Theta"
+            "EEG Gamma Rhythms",
+            "EEG Theta Rhythms"
           ]
         },
         {
@@ -1353,8 +323,8 @@
           "name": "Circuits",
           "elements": [
             "BA6/8 (FEF)",
-            "PPC",
-            "Pre-SMA",
+            "Posterior Parietal Cortex",
+            "Pre-Supplementary Motor Area",
             "Ventrofronto-striatal"
           ]
         },
@@ -1398,1148 +368,209 @@
       ]
     },
     {
-      "id": "cognitive-systems-li-class-generic-container-cognitive-control-li-class-generic-container-performance-monitoring-molecules-5ht-dopamine-circuits-acc-pre-sma-insula-physiology-ern-n2-n450-behavior-post-error-or-post-conflict-adjustments-in-performance-self-report-ybocs-total-score-paradigms-flanker-simon-stroop-li-class-generic-container",
-      "domain": "Cognitive Systems <li class=\"generic-container\"",
-      "construct": "Cognitive Control <li class=\"generic-container\"",
-      "subconstruct": "Performance Monitoring Molecules 5HT Dopamine Circuits ACC / pre-SMA Insula Physiology ERN N2 N450 Behavior Post-error or post-conflict adjustments in performance Self-Report YBOCS total score Paradigms Flanker Simon Stroop <li class=\"generic-container\"",
-      "units": [
-        {
-          "name": "Molecules",
-          "elements": [
-            "5HT",
-            "Dopamine"
-          ]
-        },
-        {
-          "name": "Circuits",
-          "elements": [
-            "ACC / pre-SMA Insula"
-          ]
-        },
-        {
-          "name": "Physiology",
-          "elements": [
-            "ERN",
-            "N2",
-            "N450"
-          ]
-        },
-        {
-          "name": "Behavior",
-          "elements": [
-            "Post-error or post-conflict adjustments in performance"
-          ]
-        },
-        {
-          "name": "Self-Report",
-          "elements": [
-            "YBOCS total score"
-          ]
-        },
-        {
-          "name": "Paradigms",
-          "elements": [
-            "Flanker",
-            "Simon",
-            "Stroop"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "cognitive-systems-li-class-generic-container-working-memory-li-class-generic-container",
-      "domain": "Cognitive Systems <li class=\"generic-container\"",
-      "construct": "Working Memory <li class=\"generic-container\"",
+      "id": "cognitive-systems-cognitive-control-performance-monitoring",
+      "domain": "Cognitive Systems",
+      "construct": "Cognitive Control",
+      "subconstruct": "Performance Monitoring",
       "units": []
     },
     {
-      "id": "cognitive-systems-li-class-generic-container-working-memory-li-class-generic-container-active-maintenance-molecules-d1-dopamine-gaba-glutamate-nmda-cells-distinct-types-of-inhibitory-neurons-pyramidal-cells-circuits-inferior-parietal-pfc-parietal-cingulate-dorsal-thalamus-dorsal-striatum-vlpfc-physiology-delta-gamma-waves-theta-waves-paradigms-ax-cpt-dpx-change-detection-tasks-complex-span-tasks-delayed-match-to-non-sample-delayed-match-to-sample-keep-track-task-letter-memory-running-memory-letter-number-sequencing-n-back-self-ordered-pointing-sequence-encoding-and-reproduction-simple-span-tasks-sternberg-item-recognition-li-class-generic-container",
-      "domain": "Cognitive Systems <li class=\"generic-container\"",
-      "construct": "Working Memory <li class=\"generic-container\"",
-      "subconstruct": "Active Maintenance Molecules D1 Dopamine GABA Glutamate NMDA Cells Distinct types of inhibitory neurons Pyramidal cells Circuits Inferior Parietal PFC-parietal-cingulate-dorsal thalamus-dorsal striatum VLPFC Physiology Delta Gamma waves Theta waves Paradigms AX-CPT/DPX Change detection tasks Complex Span tasks delayed match to non sample delayed match to sample keep track task Letter memory/running memory Letter Number Sequencing N-back Self-Ordered Pointing sequence encoding and reproduction Simple Span Tasks Sternberg Item Recognition <li class=\"generic-container\"",
-      "units": [
-        {
-          "name": "Molecules",
-          "elements": [
-            "D1",
-            "Dopamine",
-            "GABA",
-            "Glutamate",
-            "NMDA"
-          ]
-        },
-        {
-          "name": "Cells",
-          "elements": [
-            "Distinct types of inhibitory neurons",
-            "Pyramidal cells"
-          ]
-        },
-        {
-          "name": "Circuits",
-          "elements": [
-            "Inferior Parietal",
-            "PFC-parietal-cingulate-dorsal thalamus-dorsal striatum",
-            "VLPFC"
-          ]
-        },
-        {
-          "name": "Physiology",
-          "elements": [
-            "Delta",
-            "Gamma waves",
-            "Theta waves"
-          ]
-        },
-        {
-          "name": "Paradigms",
-          "elements": [
-            "AX-CPT/DPX",
-            "Change detection tasks",
-            "Complex Span tasks",
-            "delayed match to non sample",
-            "delayed match to sample",
-            "keep track task",
-            "Letter memory/running memory",
-            "Letter Number Sequencing",
-            "N-back",
-            "Self-Ordered Pointing",
-            "sequence encoding and reproduction",
-            "Simple Span Tasks",
-            "Sternberg Item Recognition"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "cognitive-systems-li-class-generic-container-working-memory-li-class-generic-container-flexible-updating-molecules-d2-dopamine-gaba-glutamate-cells-medium-spiny-neurons-basal-ganglia-circuits-dlpfc-dorsal-striatum-md-pfc-parietal-cingulate-dorsal-thalamus-dorsal-striatum-va-thalamus-physiology-delta-gamma-waves-theta-waves-paradigms-ax-cpt-dpx-complex-span-tasks-keep-track-task-letter-memory-running-memory-letter-number-sequencing-n-back-self-ordered-pointing-sternberg-item-recognition-li-class-generic-container",
-      "domain": "Cognitive Systems <li class=\"generic-container\"",
-      "construct": "Working Memory <li class=\"generic-container\"",
-      "subconstruct": "Flexible Updating Molecules D2 Dopamine GABA Glutamate Cells Medium Spiny Neurons (basal ganglia) Circuits DLPFC dorsal striatum MD PFC-parietal-cingulate-dorsal thalamus-dorsal striatum VA thalamus Physiology Delta Gamma waves Theta waves Paradigms AX-CPT/DPX Complex Span tasks keep track task Letter memory/running memory Letter Number Sequencing N-back Self-Ordered Pointing Sternberg Item Recognition <li class=\"generic-container\"",
-      "units": [
-        {
-          "name": "Molecules",
-          "elements": [
-            "D2",
-            "Dopamine",
-            "GABA",
-            "Glutamate"
-          ]
-        },
-        {
-          "name": "Cells",
-          "elements": [
-            "Medium Spiny Neurons (basal ganglia)"
-          ]
-        },
-        {
-          "name": "Circuits",
-          "elements": [
-            "DLPFC",
-            "dorsal striatum",
-            "MD",
-            "PFC-parietal-cingulate-dorsal thalamus-dorsal striatum",
-            "VA thalamus"
-          ]
-        },
-        {
-          "name": "Physiology",
-          "elements": [
-            "Delta",
-            "Gamma waves",
-            "Theta waves"
-          ]
-        },
-        {
-          "name": "Paradigms",
-          "elements": [
-            "AX-CPT/DPX",
-            "Complex Span tasks",
-            "keep track task",
-            "Letter memory/running memory",
-            "Letter Number Sequencing",
-            "N-back",
-            "Self-Ordered Pointing",
-            "Sternberg Item Recognition"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "cognitive-systems-li-class-generic-container-working-memory-li-class-generic-container-limited-capacity-molecules-d1-d2-dopamine-gaba-glutamate-circuits-dlpfc-dorsal-parietal-inferior-parietal-md-pfc-parietal-cingulate-dorsal-thalamus-dorsal-striatum-va-thalamus-vlpfc-physiology-delta-gamma-waves-theta-waves-paradigms-ax-cpt-dpx-change-detection-tasks-complex-span-tasks-delayed-match-to-non-sample-delayed-match-to-sample-keep-track-task-letter-memory-running-memory-letter-number-sequencing-n-back-self-ordered-pointing-sequence-encoding-and-reproduction-simple-span-tasks-sternberg-item-recognition-li-class-generic-container",
-      "domain": "Cognitive Systems <li class=\"generic-container\"",
-      "construct": "Working Memory <li class=\"generic-container\"",
-      "subconstruct": "Limited Capacity Molecules D1 D2 Dopamine GABA Glutamate Circuits DLPFC Dorsal Parietal Inferior Parietal MD PFC-parietal-cingulate-dorsal thalamus-dorsal striatum VA thalamus VLPFC Physiology Delta Gamma waves Theta waves Paradigms AX-CPT/DPX Change detection tasks Complex Span tasks delayed match to non sample delayed match to sample keep track task Letter memory/running memory Letter Number Sequencing N-back Self-Ordered Pointing sequence encoding and reproduction Simple Span Tasks Sternberg Item Recognition <li class=\"generic-container\"",
-      "units": [
-        {
-          "name": "Molecules",
-          "elements": [
-            "D1",
-            "D2",
-            "Dopamine",
-            "GABA",
-            "Glutamate"
-          ]
-        },
-        {
-          "name": "Circuits",
-          "elements": [
-            "DLPFC",
-            "Dorsal Parietal",
-            "Inferior Parietal",
-            "MD",
-            "PFC-parietal-cingulate-dorsal thalamus-dorsal striatum",
-            "VA thalamus",
-            "VLPFC"
-          ]
-        },
-        {
-          "name": "Physiology",
-          "elements": [
-            "Delta",
-            "Gamma waves",
-            "Theta waves"
-          ]
-        },
-        {
-          "name": "Paradigms",
-          "elements": [
-            "AX-CPT/DPX",
-            "Change detection tasks",
-            "Complex Span tasks",
-            "delayed match to non sample",
-            "delayed match to sample",
-            "keep track task",
-            "Letter memory/running memory",
-            "Letter Number Sequencing",
-            "N-back",
-            "Self-Ordered Pointing",
-            "sequence encoding and reproduction",
-            "Simple Span Tasks",
-            "Sternberg Item Recognition"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "cognitive-systems-li-class-generic-container-working-memory-li-class-generic-container-interference-control-molecules-d1-d2-dopamine-gaba-glutamate-cells-calbindin-calretinin-distinct-types-of-inhibitory-neurons-parvalbumin-circuits-dlpfc-pfc-parietal-cingulate-dorsal-thalamus-dorsal-striatum-physiology-delta-gamma-waves-theta-waves-paradigms-complex-span-tasks-delayed-match-to-non-sample-delayed-match-to-sample-keep-track-task-letter-memory-running-memory-letter-number-sequencing-n-back-self-ordered-pointing-simple-span-tasks-sternberg-item-recognition-li-class-generic-container",
-      "domain": "Cognitive Systems <li class=\"generic-container\"",
-      "construct": "Working Memory <li class=\"generic-container\"",
-      "subconstruct": "Interference Control Molecules D1 D2 Dopamine GABA Glutamate Cells Calbindin Calretinin Distinct types of inhibitory neurons Parvalbumin Circuits DLPFC PFC-parietal-cingulate-dorsal thalamus-dorsal striatum Physiology Delta Gamma waves Theta waves Paradigms Complex Span tasks delayed match to non sample delayed match to sample keep track task Letter memory/running memory Letter Number Sequencing N-back Self-Ordered Pointing Simple Span Tasks Sternberg Item Recognition <li class=\"generic-container\"",
-      "units": [
-        {
-          "name": "Molecules",
-          "elements": [
-            "D1",
-            "D2",
-            "Dopamine",
-            "GABA",
-            "Glutamate"
-          ]
-        },
-        {
-          "name": "Cells",
-          "elements": [
-            "Calbindin",
-            "Calretinin",
-            "Distinct types of inhibitory neurons",
-            "Parvalbumin"
-          ]
-        },
-        {
-          "name": "Circuits",
-          "elements": [
-            "DLPFC",
-            "PFC-parietal-cingulate-dorsal thalamus-dorsal striatum"
-          ]
-        },
-        {
-          "name": "Physiology",
-          "elements": [
-            "Delta",
-            "Gamma waves",
-            "Theta waves"
-          ]
-        },
-        {
-          "name": "Paradigms",
-          "elements": [
-            "Complex Span tasks",
-            "delayed match to non sample",
-            "delayed match to sample",
-            "keep track task",
-            "Letter memory/running memory",
-            "Letter Number Sequencing",
-            "N-back",
-            "Self-Ordered Pointing",
-            "Simple Span Tasks",
-            "Sternberg Item Recognition"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "social-processes-li-class-generic-container-affiliation-and-attachment-molecules-3crf-crfr2-d1-dopamine-kor-mu-opioid-receptor-oxytocin-oxytocin-receptor-vasopressin-vasopressin-1a-receptor-cells-magnocellular-ot-circuits-amygdala-bnst-ff-gyrus-nacc-ofc-pvn-vmpfc-vta-nacc-vp-amygdala-physiology-activation-of-sympathetic-activity-hpa-axis-activation-hpa-down-regulation-immune-markers-immune-responses-ldquo-sickness-rdquo-sex-steroid-changes-vagal-tone-vagal-withdrawal-behavior-attachment-formation-maintaining-proximity-preference-for-individual-attachment-maintenance-distress-upon-separation-self-report-adult-attachment-interview-attachment-questionnaire-for-children-scale-attachment-style-interview-bartholomew-and-shaver-bereavement-scales-experience-in-close-relationships-scale-inventory-of-parent-and-peer-attachment-scale-multidimensional-scale-of-perceived-social-support-parental-bonding-instrument-qsort-parent-attachment-interview-social-anhedonia-scale-social-subscales-of-depression-paradigms-cyberball-one-armed-bandit-task-li-class-generic-container",
-      "domain": "Social Processes <li class=\"generic-container\"",
-      "construct": "Affiliation and Attachment Molecules 3CRF CRFR2 D1 Dopamine KOR Mu opioid receptor Oxytocin oxytocin receptor Vasopressin vasopressin 1a receptor Cells Magnocellular OT Circuits Amygdala BNST FF gyrus NAcc OFC PVN VMPFC VTA- NAcc- VP-amygdala Physiology activation of sympathetic activity HPA axis activation HPA down-regulation Immune markers immune responses (&ldquo;sickness&rdquo;) Sex steroid changes Vagal tone vagal withdrawal Behavior Attachment Formation Maintaining proximity Preference for individual Attachment Maintenance Distress upon separation Self-Report Adult Attachment Interview Attachment Questionnaire for Children Scale Attachment Style interview Bartholomew and Shaver Bereavement scales Experience in Close Relationships Scale Inventory of Parent and Peer Attachment Scale Multidimensional Scale of Perceived Social Support Parental Bonding Instrument QSORT Parent Attachment interview Social Anhedonia scale Social subscales of depression Paradigms Cyberball One-armed Bandit Task <li class=\"generic-container\"",
-      "units": [
-        {
-          "name": "Molecules",
-          "elements": [
-            "3CRF",
-            "CRFR2",
-            "D1",
-            "Dopamine",
-            "KOR",
-            "Mu opioid receptor",
-            "Oxytocin",
-            "oxytocin receptor",
-            "Vasopressin",
-            "vasopressin 1a receptor"
-          ]
-        },
-        {
-          "name": "Cells",
-          "elements": [
-            "Magnocellular OT"
-          ]
-        },
-        {
-          "name": "Circuits",
-          "elements": [
-            "Amygdala",
-            "BNST",
-            "FF gyrus",
-            "NAcc",
-            "OFC",
-            "PVN",
-            "VMPFC",
-            "VTA- NAcc- VP-amygdala"
-          ]
-        },
-        {
-          "name": "Physiology",
-          "elements": [
-            "activation of sympathetic activity",
-            "HPA axis activation",
-            "HPA down-regulation",
-            "Immune markers",
-            "immune responses (&ldquo;sickness&rdquo;)",
-            "Sex steroid changes",
-            "Vagal tone",
-            "vagal withdrawal"
-          ]
-        },
-        {
-          "name": "Behavior",
-          "elements": [
-            "Maintaining proximity",
-            "Preference for individual",
-            "Distress upon separation"
-          ]
-        },
-        {
-          "name": "Self-Report",
-          "elements": [
-            "Adult Attachment Interview",
-            "Attachment Questionnaire for Children Scale",
-            "Attachment Style interview",
-            "Bartholomew and Shaver",
-            "Bereavement scales",
-            "Experience in Close Relationships Scale",
-            "Inventory of Parent and Peer Attachment Scale",
-            "Multidimensional Scale of Perceived Social Support",
-            "Parental Bonding Instrument",
-            "QSORT Parent Attachment interview",
-            "Social Anhedonia scale",
-            "Social subscales of depression"
-          ]
-        },
-        {
-          "name": "Paradigms",
-          "elements": [
-            "Cyberball",
-            "One-armed Bandit Task"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "social-processes-li-class-generic-container-social-communication-li-class-generic-container",
-      "domain": "Social Processes <li class=\"generic-container\"",
-      "construct": "Social Communication <li class=\"generic-container\"",
+      "id": "cognitive-systems-working-memory",
+      "domain": "Cognitive Systems",
+      "construct": "Working Memory",
       "units": []
     },
     {
-      "id": "social-processes-li-class-generic-container-social-communication-li-class-generic-container-reception-of-facial-communication-molecules-dopamine-fmrp-gaba-oxytocin-serotonin-testosterone-vasopressin-cells-face-selective-neurons-mirror-neurons-circuits-amygdala-brainstem-ifg-ins-amygdala-vs-ofc-acc-amygdala-striatum-resting-state-networks-v1-ffa-sts-amygdala-v1-ffa-sts-vs-physiology-ecog-frontal-brain-asymmetry-facial-emg-hr-bp-respiration-local-cerebral-blood-flow-changes-n170-n250-network-dynamics-pupil-dilation-scr-startle-reflex-behavior-behavioral-observation-coding-systems-eye-gaze-detection-identification-of-emotion-implicit-mimicry-scanning-patterns-self-report-arousal-ratings-face-dimensional-rating-scales-paradigms-gaze-cuing-penn-emotion-recognition-er-40-li-class-generic-container",
-      "domain": "Social Processes <li class=\"generic-container\"",
-      "construct": "Social Communication <li class=\"generic-container\"",
-      "subconstruct": "Reception of Facial Communication Molecules Dopamine FMRP GABA Oxytocin Serotonin Testosterone Vasopressin Cells Face selective neurons Mirror neurons Circuits amygdala-brainstem IFG-INS-amygdala/VS OFC-ACC-amygdala-striatum Resting state networks V1-FFA-STS-amygdala V1-FFA-STS-VS Physiology ECoG frontal brain asymmetry Facial EMG HR/BP/respiration Local cerebral blood flow changes N170 N250 Network dynamics Pupil dilation SCR Startle reflex Behavior Behavioral observation/coding systems Eye gaze detection Identification of emotion Implicit mimicry Scanning patterns Self-Report Arousal ratings Face dimensional rating scales Paradigms Gaze Cuing Penn Emotion Recognition (ER-40) <li class=\"generic-container\"",
-      "units": [
-        {
-          "name": "Molecules",
-          "elements": [
-            "Dopamine",
-            "FMRP",
-            "GABA",
-            "Oxytocin",
-            "Serotonin",
-            "Testosterone",
-            "Vasopressin"
-          ]
-        },
-        {
-          "name": "Cells",
-          "elements": [
-            "Face selective neurons",
-            "Mirror neurons"
-          ]
-        },
-        {
-          "name": "Circuits",
-          "elements": [
-            "amygdala-brainstem",
-            "IFG-INS-amygdala/VS",
-            "OFC-ACC-amygdala-striatum",
-            "Resting state networks",
-            "V1-FFA-STS-amygdala",
-            "V1-FFA-STS-VS"
-          ]
-        },
-        {
-          "name": "Physiology",
-          "elements": [
-            "ECoG frontal brain asymmetry",
-            "Facial EMG",
-            "HR/BP/respiration",
-            "Local cerebral blood flow changes",
-            "N170",
-            "N250",
-            "Network dynamics",
-            "Pupil dilation",
-            "SCR",
-            "Startle reflex"
-          ]
-        },
-        {
-          "name": "Behavior",
-          "elements": [
-            "Behavioral observation/coding systems",
-            "Eye gaze detection",
-            "Identification of emotion",
-            "Implicit mimicry",
-            "Scanning patterns"
-          ]
-        },
-        {
-          "name": "Self-Report",
-          "elements": [
-            "Arousal ratings",
-            "Face dimensional rating scales"
-          ]
-        },
-        {
-          "name": "Paradigms",
-          "elements": [
-            "Gaze Cuing",
-            "Penn Emotion Recognition (ER-40)"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "social-processes-li-class-generic-container-social-communication-li-class-generic-container-production-of-facial-communication-molecules-ap-contactin-circuits-eye-movements-ppc-sc-snc-sef-fef-cb-facial-expression-regions-including-pag-ac-physiology-facial-emg-hr-variability-nirs-photoplethysmography-skin-color-measure-of-capillary-dilation-temperature-pupil-dilation-sc-tear-production-behavior-behavioral-observation-coding-systems-eye-gaze-aversion-contact-facial-affect-production-head-turning-imitation-of-facial-gestures-joint-attention-reciprocal-emotional-expression-reciprocal-eye-contact-self-report-berkeley-expressivity-questionnaire-li-class-generic-container",
-      "domain": "Social Processes <li class=\"generic-container\"",
-      "construct": "Social Communication <li class=\"generic-container\"",
-      "subconstruct": "Production of Facial Communication Molecules AP Contactin Circuits Eye Movements PPC-SC-SNc-SEF-FEF-CB Facial Expression Regions including PAG, AC Physiology Facial EMG HR variability NIRS Photoplethysmography (skin color measure of capillary dilation; temperature) Pupil dilation SC Tear production Behavior Behavioral observation/coding systems Eye gaze aversion/contact Facial affect production Head turning Imitation of facial gestures Joint attention Reciprocal emotional expression Reciprocal eye contact Self-Report Berkeley Expressivity Questionnaire <li class=\"generic-container\"",
-      "units": [
-        {
-          "name": "Molecules",
-          "elements": [
-            "AP",
-            "Contactin"
-          ]
-        },
-        {
-          "name": "Circuits",
-          "elements": [
-            "PPC-SC-SNc-SEF-FEF-CB",
-            "Regions including PAG, AC"
-          ]
-        },
-        {
-          "name": "Physiology",
-          "elements": [
-            "Facial EMG",
-            "HR variability",
-            "NIRS",
-            "Photoplethysmography (skin color measure of capillary dilation; temperature)",
-            "Pupil dilation",
-            "SC",
-            "Tear production"
-          ]
-        },
-        {
-          "name": "Behavior",
-          "elements": [
-            "Behavioral observation/coding systems",
-            "Eye gaze aversion/contact",
-            "Facial affect production",
-            "Head turning",
-            "Imitation of facial gestures",
-            "Joint attention",
-            "Reciprocal emotional expression",
-            "Reciprocal eye contact"
-          ]
-        },
-        {
-          "name": "Self-Report",
-          "elements": [
-            "Berkeley Expressivity Questionnaire"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "social-processes-li-class-generic-container-social-communication-li-class-generic-container-reception-of-non-facial-communication-molecules-oxytocin-vasopressin-circuits-a1-rstg-mpfc-sts-vlpfc-physiology-eeg-features-e-g-evoked-gamma-local-cerebral-blood-flow-changes-network-dynamics-behavior-comprehension-of-emotional-prosody-comprehension-of-non-verbal-gestures-humor-comprehension-irony-sarcasm-comprehension-metaphor-comprehension-self-report-social-responsiveness-scale-paradigms-multimodal-social-paradigms-li-class-generic-container",
-      "domain": "Social Processes <li class=\"generic-container\"",
-      "construct": "Social Communication <li class=\"generic-container\"",
-      "subconstruct": "Reception of Non-Facial Communication Molecules Oxytocin Vasopressin Circuits A1-RSTG MPFC STS VLPFC Physiology EEG features e.g., evoked gamma Local cerebral blood flow changes Network dynamics Behavior Comprehension of emotional prosody Comprehension of non-verbal gestures Humor comprehension Irony/sarcasm comprehension Metaphor comprehension Self-Report Social Responsiveness Scale Paradigms Multimodal Social Paradigms <li class=\"generic-container\"",
-      "units": [
-        {
-          "name": "Molecules",
-          "elements": [
-            "Oxytocin",
-            "Vasopressin"
-          ]
-        },
-        {
-          "name": "Circuits",
-          "elements": [
-            "A1-RSTG",
-            "MPFC",
-            "STS",
-            "VLPFC"
-          ]
-        },
-        {
-          "name": "Physiology",
-          "elements": [
-            "EEG features e.g., evoked gamma",
-            "Local cerebral blood flow changes",
-            "Network dynamics"
-          ]
-        },
-        {
-          "name": "Behavior",
-          "elements": [
-            "Comprehension of emotional prosody",
-            "Comprehension of non-verbal gestures",
-            "Humor comprehension",
-            "Irony/sarcasm comprehension",
-            "Metaphor comprehension"
-          ]
-        },
-        {
-          "name": "Self-Report",
-          "elements": [
-            "Social Responsiveness Scale"
-          ]
-        },
-        {
-          "name": "Paradigms",
-          "elements": [
-            "Multimodal Social Paradigms"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "social-processes-li-class-generic-container-social-communication-li-class-generic-container-production-of-non-facial-communication-circuits-r-ifg-rstg-songbird-circuits-behavior-crying-laughing-gestural-postural-expressions-interactive-play-response-to-distress-separation-distress-speech-affective-prosody-vocalizations-self-report-social-responsiveness-scale-paradigms-multimodal-social-paradigms-li-class-generic-container",
-      "domain": "Social Processes <li class=\"generic-container\"",
-      "construct": "Social Communication <li class=\"generic-container\"",
-      "subconstruct": "Production of Non-Facial Communication Circuits R-IFG-RSTG Songbird circuits Behavior Crying/laughing Gestural/postural expressions Interactive play Response to distress/separation distress Speech (affective) prosody Vocalizations Self-Report Social Responsiveness Scale Paradigms Multimodal Social Paradigms <li class=\"generic-container\"",
-      "units": [
-        {
-          "name": "Circuits",
-          "elements": [
-            "R-IFG-RSTG",
-            "Songbird circuits"
-          ]
-        },
-        {
-          "name": "Behavior",
-          "elements": [
-            "Crying/laughing",
-            "Gestural/postural expressions",
-            "Interactive play",
-            "Response to distress/separation distress",
-            "Speech (affective) prosody",
-            "Vocalizations"
-          ]
-        },
-        {
-          "name": "Self-Report",
-          "elements": [
-            "Social Responsiveness Scale"
-          ]
-        },
-        {
-          "name": "Paradigms",
-          "elements": [
-            "Multimodal Social Paradigms"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "social-processes-li-class-generic-container-perception-and-understanding-of-self-li-class-generic-container",
-      "domain": "Social Processes <li class=\"generic-container\"",
-      "construct": "Perception and Understanding of Self <li class=\"generic-container\"",
+      "id": "cognitive-systems-working-memory-active-maintenance",
+      "domain": "Cognitive Systems",
+      "construct": "Working Memory",
+      "subconstruct": "Active Maintenance",
       "units": []
     },
     {
-      "id": "social-processes-li-class-generic-container-perception-and-understanding-of-self-li-class-generic-container-agency-circuits-right-insula-right-inferior-frontal-right-parietal-sma-somatosensory-premotor-physiology-scalp-motor-potentials-behavior-delusions-of-control-evidence-that-one-understands-ownership-of-one-rsquo-s-own-body-parts-or-action-thoughts-behaviors-hallucinations-self-report-perceptual-aberration-scale-li-class-generic-container",
-      "domain": "Social Processes <li class=\"generic-container\"",
-      "construct": "Perception and Understanding of Self <li class=\"generic-container\"",
-      "subconstruct": "Agency Circuits Right insula-right inferior frontal Right parietal SMA-somatosensory-premotor Physiology Scalp Motor Potentials Behavior Delusions of control Evidence that one understands ownership of one&rsquo;s own body parts or action (thoughts/behaviors) Hallucinations Self-Report Perceptual Aberration Scale <li class=\"generic-container\"",
-      "units": [
-        {
-          "name": "Circuits",
-          "elements": [
-            "Right insula-right inferior frontal",
-            "Right parietal",
-            "SMA-somatosensory-premotor"
-          ]
-        },
-        {
-          "name": "Physiology",
-          "elements": [
-            "Scalp Motor Potentials"
-          ]
-        },
-        {
-          "name": "Behavior",
-          "elements": [
-            "Delusions of control",
-            "Evidence that one understands ownership of one&rsquo;s own body parts or action (thoughts/behaviors)",
-            "Hallucinations"
-          ]
-        },
-        {
-          "name": "Self-Report",
-          "elements": [
-            "Perceptual Aberration Scale"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "social-processes-li-class-generic-container-perception-and-understanding-of-self-li-class-generic-container-self-knowledge-cells-von-economo-neurons-circuits-left-inferior-frontal-cortex-mpfc-posterior-cingulate-precuneus-ventral-anterior-cingulate-valence-specific-physiology-p300s-to-self-relevant-stimuli-behavior-developmentally-appropriate-perception-of-one-rsquo-s-competences-skills-abilities-beliefs-intentions-desires-and-or-emotional-states-self-report-levels-of-emotional-awareness-private-self-consciousness-self-components-of-attributional-styles-questionnaire-self-monitoring-scale-toronto-alexithymia-scale-paradigms-self-referential-memory-paradigm-li-class-generic-container",
-      "domain": "Social Processes <li class=\"generic-container\"",
-      "construct": "Perception and Understanding of Self <li class=\"generic-container\"",
-      "subconstruct": "Self-Knowledge Cells Von Economo neurons Circuits left inferior frontal cortex MPFC posterior cingulate/precuneus ventral anterior cingulate (valence specific) Physiology P300s to self-relevant stimuli Behavior Developmentally appropriate perception of one&rsquo;s competences, skills, abilities beliefs, intentions, desires, and/or emotional states Self-Report Levels of Emotional Awareness Private Self-Consciousness Self Components of Attributional Styles Questionnaire Self-monitoring scale Toronto Alexithymia scale Paradigms Self-Referential Memory Paradigm <li class=\"generic-container\"",
-      "units": [
-        {
-          "name": "Cells",
-          "elements": [
-            "Von Economo neurons"
-          ]
-        },
-        {
-          "name": "Circuits",
-          "elements": [
-            "left inferior frontal cortex",
-            "MPFC",
-            "posterior cingulate/precuneus",
-            "ventral anterior cingulate (valence specific)"
-          ]
-        },
-        {
-          "name": "Physiology",
-          "elements": [
-            "P300s to self-relevant stimuli"
-          ]
-        },
-        {
-          "name": "Behavior",
-          "elements": [
-            "Developmentally appropriate perception of one&rsquo;s competences, skills, abilities beliefs, intentions, desires, and/or emotional states"
-          ]
-        },
-        {
-          "name": "Self-Report",
-          "elements": [
-            "Levels of Emotional Awareness",
-            "Private Self-Consciousness",
-            "Self Components of Attributional Styles Questionnaire",
-            "Self-monitoring scale",
-            "Toronto Alexithymia scale"
-          ]
-        },
-        {
-          "name": "Paradigms",
-          "elements": [
-            "Self-Referential Memory Paradigm"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "social-processes-li-class-generic-container-perception-and-understanding-of-others-li-class-generic-container",
-      "domain": "Social Processes <li class=\"generic-container\"",
-      "construct": "Perception and Understanding of Others <li class=\"generic-container\"",
+      "id": "cognitive-systems-working-memory-flexible-updating",
+      "domain": "Cognitive Systems",
+      "construct": "Working Memory",
+      "subconstruct": "Flexible Updating",
       "units": []
     },
     {
-      "id": "social-processes-li-class-generic-container-perception-and-understanding-of-others-li-class-generic-container-animacy-perception-circuits-extrastriate-body-area-fusiform-face-area-occipital-face-area-sts-physiology-mu-suppression-behavior-ability-to-appropriately-attribute-animacy-to-other-agents-paradigms-point-light-displays-of-biological-motion-li-class-generic-container",
-      "domain": "Social Processes <li class=\"generic-container\"",
-      "construct": "Perception and Understanding of Others <li class=\"generic-container\"",
-      "subconstruct": "Animacy Perception Circuits extrastriate body area fusiform face area occipital face area STS Physiology MU Suppression Behavior Ability to appropriately attribute animacy to other agents Paradigms Point Light Displays of Biological Motion <li class=\"generic-container\"",
-      "units": [
-        {
-          "name": "Circuits",
-          "elements": [
-            "extrastriate body area",
-            "fusiform face area",
-            "occipital face area",
-            "STS"
-          ]
-        },
-        {
-          "name": "Physiology",
-          "elements": [
-            "MU Suppression"
-          ]
-        },
-        {
-          "name": "Behavior",
-          "elements": [
-            "Ability to appropriately attribute animacy to other agents"
-          ]
-        },
-        {
-          "name": "Paradigms",
-          "elements": [
-            "Point Light Displays of Biological Motion"
-          ]
-        }
-      ]
+      "id": "cognitive-systems-working-memory-limited-capacity",
+      "domain": "Cognitive Systems",
+      "construct": "Working Memory",
+      "subconstruct": "Limited Capacity",
+      "units": []
     },
     {
-      "id": "social-processes-li-class-generic-container-perception-and-understanding-of-others-li-class-generic-container-action-perception-cells-mirror-neurons-circuits-inferior-parietal-sts-ventral-dorsal-premotor-physiology-cortico-spinal-facilitation-tms-mu-suppression-behavior-ability-to-identify-what-actions-an-agent-is-executing-gaze-following-imitation-mimicry-self-report-balanced-emotional-empathy-scale-empathy-quotient-perspective-taking-and-empathic-concern-subscales-of-the-interpersonal-reactivity-index-paradigms-how-why-task-li-class-generic-container",
-      "domain": "Social Processes <li class=\"generic-container\"",
-      "construct": "Perception and Understanding of Others <li class=\"generic-container\"",
-      "subconstruct": "Action Perception Cells Mirror neurons Circuits Inferior Parietal STS ventral/dorsal premotor Physiology cortico-spinal facilitation (TMS) MU Suppression Behavior Ability to identify what actions an agent is executing Gaze following Imitation Mimicry Self-Report Balanced Emotional Empathy Scale Empathy Quotient Perspective Taking and Empathic Concern subscales of the Interpersonal Reactivity Index Paradigms How/Why Task <li class=\"generic-container\"",
-      "units": [
-        {
-          "name": "Cells",
-          "elements": [
-            "Mirror neurons"
-          ]
-        },
-        {
-          "name": "Circuits",
-          "elements": [
-            "Inferior Parietal",
-            "STS",
-            "ventral/dorsal premotor"
-          ]
-        },
-        {
-          "name": "Physiology",
-          "elements": [
-            "cortico-spinal facilitation (TMS)",
-            "MU Suppression"
-          ]
-        },
-        {
-          "name": "Behavior",
-          "elements": [
-            "Ability to identify what actions an agent is executing",
-            "Gaze following",
-            "Imitation",
-            "Mimicry"
-          ]
-        },
-        {
-          "name": "Self-Report",
-          "elements": [
-            "Balanced Emotional Empathy Scale",
-            "Empathy Quotient",
-            "Perspective Taking and Empathic Concern subscales of the Interpersonal Reactivity Index"
-          ]
-        },
-        {
-          "name": "Paradigms",
-          "elements": [
-            "How/Why Task"
-          ]
-        }
-      ]
+      "id": "cognitive-systems-working-memory-interference-control",
+      "domain": "Cognitive Systems",
+      "construct": "Working Memory",
+      "subconstruct": "Interference Control",
+      "units": []
     },
     {
-      "id": "social-processes-li-class-generic-container-perception-and-understanding-of-others-li-class-generic-container-understanding-mental-states-molecules-oxytocin-vasopressin-circuits-mpfc-precuneus-sts-temporal-pole-tpj-behavior-developmentally-appropriate-interpretations-of-other-intentions-goals-and-beliefs-self-report-balanced-emotional-empathy-scale-empathy-quotient-other-components-of-attributional-styles-questionnaires-perspective-taking-and-empathic-concern-subscales-of-the-interpersonal-reactivity-index-paradigms-hinting-task-reading-the-mind-in-the-eyes-li-class-generic-container",
-      "domain": "Social Processes <li class=\"generic-container\"",
-      "construct": "Perception and Understanding of Others <li class=\"generic-container\"",
-      "subconstruct": "Understanding Mental States Molecules Oxytocin Vasopressin Circuits MPFC precuneus STS temporal pole TPJ Behavior Developmentally appropriate interpretations of other intentions, goals and beliefs Self-Report Balanced Emotional Empathy Scale Empathy Quotient Other components of Attributional Styles Questionnaires Perspective Taking and Empathic Concern subscales of the Interpersonal Reactivity Index Paradigms Hinting Task Reading the Mind in the Eyes <li class=\"generic-container\"",
-      "units": [
-        {
-          "name": "Molecules",
-          "elements": [
-            "Oxytocin",
-            "Vasopressin"
-          ]
-        },
-        {
-          "name": "Circuits",
-          "elements": [
-            "MPFC",
-            "precuneus",
-            "STS",
-            "temporal pole",
-            "TPJ"
-          ]
-        },
-        {
-          "name": "Behavior",
-          "elements": [
-            "Developmentally appropriate interpretations of other intentions, goals and beliefs"
-          ]
-        },
-        {
-          "name": "Self-Report",
-          "elements": [
-            "Balanced Emotional Empathy Scale",
-            "Empathy Quotient",
-            "Other components of Attributional Styles Questionnaires",
-            "Perspective Taking and Empathic Concern subscales of the Interpersonal Reactivity Index"
-          ]
-        },
-        {
-          "name": "Paradigms",
-          "elements": [
-            "Hinting Task",
-            "Reading the Mind in the Eyes"
-          ]
-        }
-      ]
+      "id": "social-processes-affiliation-and-attachment",
+      "domain": "Social Processes",
+      "construct": "Affiliation and Attachment",
+      "units": []
     },
     {
-      "id": "arousal-and-regulatory-systems-li-class-generic-container-arousal-molecules-acetylcholine-crf-cytokines-dopamine-gaba-ghrelin-glutamate-histamine-hypocretin-orexin-leptin-neuropeptide-y-norepinephrine-opioid-oxytocin-serotonin-vasopressin-cells-basal-forebrain-nuclei-central-nucleus-amygdala-dorsal-raphe-lateral-perifornical-and-dorsomedial-hypothalamus-ldt-locus-coeruleus-ppt-tuberomammillary-nucleus-ventral-tegmental-area-circuits-basal-forebrain-nuclei-to-cortical-circuits-brainstem-monoaminergic-and-cholinergic-projections-to-basal-forebrain-central-amygdala-to-monoaminergic-and-basal-forebrain-cholinergic-nuclei-cholinergic-and-monoaminergic-nuclei-projections-to-thalamic-and-cortical-circadian-and-sleep-related-circuits-modulate-arousal-and-are-modulated-by-arousal-cortical-circuits-such-as-fronto-insular-and-dorsal-anterior-cingulate-hypothalamic-to-thalamic-and-cortical-circuits-projections-to-midbrain-and-pontine-monoaminergic-and-cholinergic-nuclei-reciprocal-hypothalamic-reciprocal-nts-central-n-amygdala-reciprocoal-cholinergic-and-monoaminergic-projection-physiology-eeg-emg-erp-fmri-neural-activity-sex-specific-differences-in-arousal-autonomic-blood-pressure-breathing-galvanic-skin-response-heart-rate-pupil-size-hpa-axis-acth-crf-glucocorticoids-behavior-affective-states-agitation-cognition-emotional-reactivity-eye-blink-motivated-behavior-motor-activity-sensory-reactivity-startle-waking-self-report-adacl-poms-arousal-subscale-self-assessment-mannequin-paradigms-cardiac-pre-ejection-period-electrodermal-responding-heart-rate-variability-hrv-psychomotor-vigilance-task-pupillometry-li-class-generic-container",
-      "domain": "Arousal and Regulatory Systems <li class=\"generic-container\"",
-      "construct": "Arousal Molecules Acetylcholine CRF Cytokines Dopamine GABA Ghrelin Glutamate Histamine Hypocretin/Orexin Leptin Neuropeptide Y Norepinephrine Opioid Oxytocin Serotonin Vasopressin Cells Basal Forebrain Nuclei Central Nucleus Amygdala Dorsal Raphe Lateral, perifornical, and dorsomedial hypothalamus LDT Locus Coeruleus PPT Tuberomammillary Nucleus Ventral Tegmental Area Circuits Basal forebrain nuclei to cortical circuits Brainstem monoaminergic and cholinergic projections to basal forebrain Central Amygdala to monoaminergic and basal forebrain cholinergic nuclei Cholinergic and monoaminergic nuclei projections to thalamic and cortical Circadian and Sleep-related circuits modulate arousal and are modulated by arousal Cortical circuits such as fronto-insular and dorsal anterior cingulate Hypothalamic to thalamic and cortical circuits Projections to midbrain and pontine monoaminergic and cholinergic nuclei Reciprocal hypothalamic Reciprocal NTS-Central N. Amygdala Reciprocoal cholinergic and monoaminergic projection Physiology EEG EMG ERP fMRI Neural activity Sex-Specific differences in arousal Autonomic Blood pressure Breathing Galvanic skin response Heart Rate Pupil size HPA axis ACTH CRF Glucocorticoids Behavior Affective states Agitation Cognition Emotional Reactivity Eye Blink Motivated Behavior Motor Activity Sensory Reactivity Startle Waking Self-Report ADACL POMS arousal subscale Self-assessment Mannequin Paradigms Cardiac Pre-ejection Period Electrodermal Responding Heart rate variability (HRV) Psychomotor Vigilance Task Pupillometry <li class=\"generic-container\"",
-      "units": [
-        {
-          "name": "Molecules",
-          "elements": [
-            "Acetylcholine",
-            "CRF",
-            "Cytokines",
-            "Dopamine",
-            "GABA",
-            "Ghrelin",
-            "Glutamate",
-            "Histamine",
-            "Hypocretin/Orexin",
-            "Leptin",
-            "Neuropeptide Y",
-            "Norepinephrine",
-            "Opioid",
-            "Oxytocin",
-            "Serotonin",
-            "Vasopressin"
-          ]
-        },
-        {
-          "name": "Cells",
-          "elements": [
-            "Basal Forebrain Nuclei",
-            "Central Nucleus Amygdala",
-            "Dorsal Raphe",
-            "Lateral, perifornical, and dorsomedial hypothalamus",
-            "LDT",
-            "Locus Coeruleus",
-            "PPT",
-            "Tuberomammillary Nucleus",
-            "Ventral Tegmental Area"
-          ]
-        },
-        {
-          "name": "Circuits",
-          "elements": [
-            "Basal forebrain nuclei to cortical circuits",
-            "Brainstem monoaminergic and cholinergic projections to basal forebrain",
-            "Central Amygdala to monoaminergic and basal forebrain cholinergic nuclei",
-            "Cholinergic and monoaminergic nuclei projections to thalamic and cortical",
-            "Circadian and Sleep-related circuits modulate arousal and are modulated by arousal",
-            "Cortical circuits such as fronto-insular and dorsal anterior cingulate",
-            "Hypothalamic to thalamic and cortical circuits",
-            "Projections to midbrain and pontine monoaminergic and cholinergic nuclei",
-            "Reciprocal hypothalamic",
-            "Reciprocal NTS-Central N. Amygdala",
-            "Reciprocoal cholinergic and monoaminergic projection"
-          ]
-        },
-        {
-          "name": "Physiology",
-          "elements": [
-            "EEG",
-            "EMG",
-            "ERP",
-            "fMRI",
-            "Neural activity",
-            "Sex-Specific differences in arousal",
-            "Blood pressure",
-            "Breathing",
-            "Galvanic skin response",
-            "Heart Rate",
-            "Pupil size",
-            "ACTH",
-            "CRF",
-            "Glucocorticoids"
-          ]
-        },
-        {
-          "name": "Behavior",
-          "elements": [
-            "Affective states",
-            "Agitation",
-            "Cognition",
-            "Emotional Reactivity",
-            "Eye Blink",
-            "Motivated Behavior",
-            "Motor Activity",
-            "Sensory Reactivity",
-            "Startle",
-            "Waking"
-          ]
-        },
-        {
-          "name": "Self-Report",
-          "elements": [
-            "ADACL",
-            "POMS arousal subscale",
-            "Self-assessment Mannequin"
-          ]
-        },
-        {
-          "name": "Paradigms",
-          "elements": [
-            "Cardiac Pre-ejection Period",
-            "Electrodermal Responding",
-            "Heart rate variability (HRV)",
-            "Psychomotor Vigilance Task",
-            "Pupillometry"
-          ]
-        }
-      ]
+      "id": "social-processes-social-communication",
+      "domain": "Social Processes",
+      "construct": "Social Communication",
+      "units": []
     },
     {
-      "id": "arousal-and-regulatory-systems-li-class-generic-container-circadian-rhythms-molecules-input-5ht-dopamine-gaba-glutamate-melanopsin-npy-pacap-substance-p-scn-synchronizing-and-modulating-agents-avp-calbindin-camp-cgmp-no-steroid-hormones-vip-output-avp-cortisol-gaba-melatonin-vip-cells-fibroblasts-iprgc-medium-spiny-neurons-pars-tuberalis-cells-pineal-cells-rods-and-cones-scn-ldquo-clock-rdquo-cells-circuits-input-raphe-to-scn-projection-retinal-cells-retino-hypothalamic-tract-retinogeniculate-tract-output-basolateral-amygdala-hippocampus-central-extended-amygdala-central-nucleus-of-the-amygdala-bed-nucleus-of-the-stria-terminalis-hpa-axis-hypothalamic-neuroendocrine-cell-groups-hypothalamic-orexin-projections-pvn-dmh-subparaventricular-zone-pvt-scn-pvn-scg-pineal-sympathetic-parasympathetic-nervous-system-intrinsic-to-scn-suprachiasmatic-nucleus-scn-core-shell-seasonal-scn-pvn-scg-pineal-physiology-gene-expression-neural-activity-neural-transmitters-behavior-drive-regulated-behaviors-locomotor-activity-masking-neurobehavioral-functions-sleep-rated-and-waking-behaviors-sleep-wake-self-report-diary-based-measures-of-daily-regularity-rhythmicity-e-g-social-rhythm-metric-morningness-eveningness-questionnaire-munich-chronotype-questionnaire-phase-diurnal-preference-chronotype-e-g-horne-ostberg-ctq-sleepiness-alertness-well-being-mood-paradigms-dim-light-melatonin-onset-dlmo-phase-estimate-longitudinal-actigraphy-genetic-approaches-ndash-genome-wide-association-study-candidate-gene-epigenomics-circadian-genomics-temporal-gene-expression-mutagenesis-gene-targeting-quantitative-trait-loci-li-class-generic-container",
-      "domain": "Arousal and Regulatory Systems <li class=\"generic-container\"",
-      "construct": "Circadian Rhythms Molecules Input 5HT Dopamine GABA Glutamate Melanopsin NPY PACAP Substance P SCN Synchronizing and Modulating Agents AVP Calbindin cAMP cGMP NO Steroid hormones VIP Output AVP Cortisol GABA Melatonin VIP Cells Fibroblasts ipRGC medium spiny neurons Pars tuberalis cells Pineal cells rods and cones SCN &ldquo;clock&rdquo; cells Circuits Input Raphe to SCN projection Retinal cells Retino-hypothalamic tract Retinogeniculate tract Output Basolateral amygdala/ Hippocampus Central extended amygdala (central nucleus of the amygdala / Bed nucleus of the stria terminalis) HPA axis Hypothalamic neuroendocrine cell groups Hypothalamic orexin projections PVN, DMH, subparaventricular zone, PVT SCN/PVN/SCG/pineal Sympathetic / parasympathetic nervous system Intrinsic to SCN Suprachiasmatic nucleus (SCN) core/shell Seasonal SCN/PVN/SCG/pineal Physiology Gene expression Neural activity Neural transmitters Behavior Drive-regulated behaviors Locomotor activity Masking Neurobehavioral functions Sleep-rated and waking behaviors Sleep-wake Self-Report Diary-based measures of daily regularity/ rhythmicity (e.g., Social Rhythm Metric) Morningness-Eveningness Questionnaire Munich Chronotype Questionnaire Phase, diurnal preference, chronotype (e.g., Horne-Ostberg, CTQ) Sleepiness, alertness, well-being, mood Paradigms Dim Light Melatonin Onset (DLMO, phase estimate) Longitudinal Actigraphy Genetic Approaches &ndash; genome-wide association study, candidate gene, epigenomics, circadian genomics (temporal gene expression), mutagenesis, gene targeting, quantitative trait loci. <li class=\"generic-container\"",
-      "units": [
-        {
-          "name": "Molecules",
-          "elements": [
-            "5HT",
-            "Dopamine",
-            "GABA",
-            "Glutamate",
-            "Melanopsin",
-            "NPY",
-            "PACAP",
-            "Substance P",
-            "AVP",
-            "Calbindin",
-            "cAMP",
-            "cGMP",
-            "NO",
-            "Steroid hormones",
-            "VIP",
-            "AVP",
-            "Cortisol",
-            "GABA",
-            "Melatonin",
-            "VIP"
-          ]
-        },
-        {
-          "name": "Cells",
-          "elements": [
-            "Fibroblasts",
-            "ipRGC",
-            "medium spiny neurons",
-            "Pars tuberalis cells",
-            "Pineal cells",
-            "rods and cones",
-            "SCN &ldquo;clock&rdquo; cells"
-          ]
-        },
-        {
-          "name": "Circuits",
-          "elements": [
-            "Raphe to SCN projection",
-            "Retinal cells",
-            "Retino-hypothalamic tract",
-            "Retinogeniculate tract",
-            "Basolateral amygdala/ Hippocampus",
-            "Central extended amygdala (central nucleus of the amygdala / Bed nucleus of the stria terminalis)",
-            "HPA axis",
-            "Hypothalamic neuroendocrine cell groups",
-            "Hypothalamic orexin projections",
-            "PVN, DMH, subparaventricular zone, PVT",
-            "SCN/PVN/SCG/pineal",
-            "Sympathetic / parasympathetic nervous system",
-            "Suprachiasmatic nucleus (SCN) core/shell",
-            "SCN/PVN/SCG/pineal"
-          ]
-        },
-        {
-          "name": "Physiology",
-          "elements": [
-            "Gene expression",
-            "Neural activity",
-            "Neural transmitters"
-          ]
-        },
-        {
-          "name": "Behavior",
-          "elements": [
-            "Drive-regulated behaviors",
-            "Locomotor activity",
-            "Masking",
-            "Neurobehavioral functions",
-            "Sleep-rated and waking behaviors",
-            "Sleep-wake"
-          ]
-        },
-        {
-          "name": "Self-Report",
-          "elements": [
-            "Diary-based measures of daily regularity/ rhythmicity (e.g., Social Rhythm Metric)",
-            "Morningness-Eveningness Questionnaire",
-            "Munich Chronotype Questionnaire",
-            "Phase, diurnal preference, chronotype (e.g., Horne-Ostberg, CTQ)",
-            "Sleepiness, alertness, well-being, mood"
-          ]
-        },
-        {
-          "name": "Paradigms",
-          "elements": [
-            "Dim Light Melatonin Onset (DLMO, phase estimate)",
-            "Longitudinal Actigraphy"
-          ]
-        }
-      ]
+      "id": "social-processes-social-communication-reception-of-facial-communication",
+      "domain": "Social Processes",
+      "construct": "Social Communication",
+      "subconstruct": "Reception of Facial Communication",
+      "units": []
     },
     {
-      "id": "arousal-and-regulatory-systems-li-class-generic-container-sleep-wakefulness-molecules-acetylcholine-adenosine-crf-cytokines-dopamine-gaba-galanin-glutamate-histamine-hypocretin-orexin-norepinephrine-npy-serotonin-vasopressin-cells-anterior-hypothalamus-and-basal-forebrain-brainstem-e-g-lc-raphe-ldt-ppt-vta-lateral-and-perifornical-hypothalamus-posterior-hypothalamus-tmn-thalamus-median-thalamic-nuclei-reticular-nucleus-circuits-sleep-nrem-forebrain-basal-forebrain-and-anterior-hypothalamus-projections-to-arousal-promoting-cell-groups-thalamocortical-rem-brainstem-mesopontine-nuclei-wakefulness-arousal-and-circadian-rhythms-circuits-also-subserve-wakefulness-physiology-brain-metabolic-activity-capacity-for-wakefulness-under-low-stimulation-eeg-sleep-spindles-eeg-slow-waves-eeg-theta-rhythms-emg-eog-nrem-sleep-and-rem-sleep-physiologic-measures-of-sleepiness-homeostatic-sleep-drive-during-waking-sex-specific-sleep-physiology-sleep-hormones-sleep-latency-temporal-and-topographic-organization-of-homeostatic-sleep-drive-during-sleep-temporal-and-topographic-organization-of-sleep-dynamics-wakefulness-behavior-co-sleeping-intermediate-admixed-sleep-wake-states-motor-behaviors-during-sleep-rest-activity-patterns-sensory-arousal-threshold-sex-specific-sleep-behaviors-sleep-sleep-deprivation-and-satiation-sleep-inertia-sleep-timing-and-variability-sleep-dependent-neurobehavioral-functions-wakefulness-self-report-alertness-dream-reports-fatigue-insomnia-severity-index-sleep-quality-restoration-quantity-sleep-timing-sleep-modulated-symptoms-sleepiness-specific-sleep-symptoms-paradigms-finger-tapping-motor-sequence-task-latency-to-persistent-sleep-multiple-sleep-latency-testing-non-rem-sleep-eeg-slow-wave-activity-sleep-spindles-total-sleep-time-wake-time-after-sleep-onset-disclaimer-we-link-to-external-websites-for-informational-purposes-only-but-we-do-not-endorse-or-guarantee-their-accuracy-once-you-leave-our-site-you-will-be-subject-to-the-new-website-s-privacy-policy-read-nimh-s-full-external-linking-policy-for-more-information-nimh-resources-health-topics-nbsp-brochures-and-fact-sheets-nbsp-contact-us-nbsp-informaci-n-en-espa-ol-policies-and-notices-privacy-policy-nbsp-website-policies-nbsp-foia-nbsp-a-href-site-info-accessibili",
-      "domain": "Arousal and Regulatory Systems <li class=\"generic-container\"",
-      "construct": "Sleep-Wakefulness Molecules Acetylcholine Adenosine CRF Cytokines Dopamine GABA Galanin Glutamate Histamine Hypocretin/Orexin Norepinephrine NPY Serotonin Vasopressin Cells Anterior hypothalamus and basal forebrain Brainstem (e.g., LC, Raphe, LDT/PPT, VTA) Lateral and perifornical hypothalamus Posterior hypothalamus (TMN) Thalamus (median thalamic nuclei, reticular nucleus) Circuits Sleep NREM (Forebrain) Basal forebrain and anterior hypothalamus projections to arousal promoting cell groups Thalamocortical REM (Brainstem) Mesopontine nuclei Wakefulness Arousal and Circadian Rhythms circuits also subserve wakefulness. Physiology Brain metabolic activity Capacity for wakefulness under low stimulation EEG sleep spindles EEG slow waves EEG theta rhythms EMG EOG NREM sleep and REM sleep Physiologic measures of sleepiness, homeostatic sleep drive during waking Sex-specific sleep physiology sleep hormones sleep latency Temporal and topographic organization of homeostatic sleep drive during sleep Temporal and topographic organization of sleep dynamics wakefulness Behavior Co-sleeping Intermediate/ admixed sleep-wake states Motor behaviors during sleep Rest-activity patterns Sensory arousal threshold Sex-specific sleep behaviors Sleep Sleep deprivation and satiation Sleep inertia Sleep timing and variability Sleep-dependent neurobehavioral functions Wakefulness Self-Report Alertness Dream reports Fatigue Insomnia Severity Index Sleep quality, restoration, quantity Sleep timing Sleep-modulated symptoms sleepiness Specific sleep symptoms Paradigms Finger Tapping Motor Sequence Task Latency to persistent sleep Multiple sleep latency testing Non-REM Sleep EEG slow wave activity Sleep Spindles Total sleep time Wake time after sleep onset Disclaimer We link to external websites for informational purposes only, but we do not endorse or guarantee their accuracy. Once you leave our site, you will be subject to the new website’s privacy policy. Read NIMH’s full external linking policy for more information. NIMH Resources Health Topics &nbsp; Brochures and Fact Sheets &nbsp; Contact Us &nbsp; Información en español Policies and Notices Privacy Policy &nbsp; Website Policies &nbsp; FOIA &nbsp; <a href=\"/site-info/accessibili",
-      "units": [
-        {
-          "name": "Molecules",
-          "elements": [
-            "Acetylcholine",
-            "Adenosine",
-            "CRF",
-            "Cytokines",
-            "Dopamine",
-            "GABA",
-            "Galanin",
-            "Glutamate",
-            "Histamine",
-            "Hypocretin/Orexin",
-            "Norepinephrine",
-            "NPY",
-            "Serotonin",
-            "Vasopressin"
-          ]
-        },
-        {
-          "name": "Cells",
-          "elements": [
-            "Anterior hypothalamus and basal forebrain",
-            "Brainstem (e.g., LC, Raphe, LDT/PPT, VTA)",
-            "Lateral and perifornical hypothalamus",
-            "Posterior hypothalamus (TMN)",
-            "Thalamus (median thalamic nuclei, reticular nucleus)"
-          ]
-        },
-        {
-          "name": "Circuits",
-          "elements": [
-            "Basal forebrain and anterior hypothalamus projections to arousal promoting cell groups",
-            "Thalamocortical",
-            "Mesopontine nuclei"
-          ]
-        },
-        {
-          "name": "Physiology",
-          "elements": [
-            "Brain metabolic activity",
-            "Capacity for wakefulness under low stimulation",
-            "EEG sleep spindles",
-            "EEG slow waves",
-            "EEG theta rhythms",
-            "EMG",
-            "EOG",
-            "NREM sleep and REM sleep",
-            "Physiologic measures of sleepiness, homeostatic sleep drive during waking",
-            "Sex-specific sleep physiology",
-            "sleep hormones",
-            "sleep latency",
-            "Temporal and topographic organization of homeostatic sleep drive during sleep",
-            "Temporal and topographic organization of sleep dynamics",
-            "wakefulness"
-          ]
-        },
-        {
-          "name": "Behavior",
-          "elements": [
-            "Co-sleeping",
-            "Intermediate/ admixed sleep-wake states",
-            "Motor behaviors during sleep",
-            "Rest-activity patterns",
-            "Sensory arousal threshold",
-            "Sex-specific sleep behaviors",
-            "Sleep",
-            "Sleep deprivation and satiation",
-            "Sleep inertia",
-            "Sleep timing and variability",
-            "Sleep-dependent neurobehavioral functions",
-            "Wakefulness"
-          ]
-        },
-        {
-          "name": "Self-Report",
-          "elements": [
-            "Alertness",
-            "Dream reports",
-            "Fatigue",
-            "Insomnia Severity Index",
-            "Sleep quality, restoration, quantity",
-            "Sleep timing",
-            "Sleep-modulated symptoms",
-            "sleepiness",
-            "Specific sleep symptoms"
-          ]
-        },
-        {
-          "name": "Paradigms",
-          "elements": [
-            "Finger Tapping Motor Sequence Task",
-            "Latency to persistent sleep",
-            "Multiple sleep latency testing",
-            "Non-REM Sleep EEG slow wave activity",
-            "Sleep Spindles",
-            "Total sleep time",
-            "Wake time after sleep onset"
-          ]
-        }
-      ]
+      "id": "social-processes-social-communication-production-of-facial-communication",
+      "domain": "Social Processes",
+      "construct": "Social Communication",
+      "subconstruct": "Production of Facial Communication",
+      "units": []
+    },
+    {
+      "id": "social-processes-social-communication-reception-of-non-facial-communication",
+      "domain": "Social Processes",
+      "construct": "Social Communication",
+      "subconstruct": "Reception of Non-Facial Communication",
+      "units": []
+    },
+    {
+      "id": "social-processes-social-communication-production-of-non-facial-communication",
+      "domain": "Social Processes",
+      "construct": "Social Communication",
+      "subconstruct": "Production of Non-Facial Communication",
+      "units": []
+    },
+    {
+      "id": "social-processes-perception-and-understanding-of-self",
+      "domain": "Social Processes",
+      "construct": "Perception and Understanding of Self",
+      "units": []
+    },
+    {
+      "id": "social-processes-perception-and-understanding-of-self-agency",
+      "domain": "Social Processes",
+      "construct": "Perception and Understanding of Self",
+      "subconstruct": "Agency",
+      "units": []
+    },
+    {
+      "id": "social-processes-perception-and-understanding-of-self-self-knowledge",
+      "domain": "Social Processes",
+      "construct": "Perception and Understanding of Self",
+      "subconstruct": "Self-Knowledge",
+      "units": []
+    },
+    {
+      "id": "social-processes-perception-and-understanding-of-others",
+      "domain": "Social Processes",
+      "construct": "Perception and Understanding of Others",
+      "units": []
+    },
+    {
+      "id": "social-processes-perception-and-understanding-of-others-animacy-perception",
+      "domain": "Social Processes",
+      "construct": "Perception and Understanding of Others",
+      "subconstruct": "Animacy Perception",
+      "units": []
+    },
+    {
+      "id": "social-processes-perception-and-understanding-of-others-action-perception",
+      "domain": "Social Processes",
+      "construct": "Perception and Understanding of Others",
+      "subconstruct": "Action Perception",
+      "units": []
+    },
+    {
+      "id": "social-processes-perception-and-understanding-of-others-understanding-mental-states",
+      "domain": "Social Processes",
+      "construct": "Perception and Understanding of Others",
+      "subconstruct": "Understanding Mental States",
+      "units": []
+    },
+    {
+      "id": "arousal-and-regulatory-systems-arousal",
+      "domain": "Arousal and Regulatory Systems",
+      "construct": "Arousal",
+      "units": []
+    },
+    {
+      "id": "arousal-and-regulatory-systems-circadian-rhythms",
+      "domain": "Arousal and Regulatory Systems",
+      "construct": "Circadian Rhythms",
+      "units": []
+    },
+    {
+      "id": "arousal-and-regulatory-systems-sleep-wakefulness",
+      "domain": "Arousal and Regulatory Systems",
+      "construct": "Sleep-Wakefulness",
+      "units": []
+    },
+    {
+      "id": "sensorimotor-systems-motor-actions",
+      "domain": "Sensorimotor Systems",
+      "construct": "Motor Actions",
+      "units": []
+    },
+    {
+      "id": "sensorimotor-systems-motor-actions-action-planning-and-selection",
+      "domain": "Sensorimotor Systems",
+      "construct": "Motor Actions",
+      "subconstruct": "Action Planning and Selection",
+      "units": []
+    },
+    {
+      "id": "sensorimotor-systems-motor-actions-sensorimotor-dynamics",
+      "domain": "Sensorimotor Systems",
+      "construct": "Motor Actions",
+      "subconstruct": "Sensorimotor Dynamics",
+      "units": []
+    },
+    {
+      "id": "sensorimotor-systems-motor-actions-initiation",
+      "domain": "Sensorimotor Systems",
+      "construct": "Motor Actions",
+      "subconstruct": "Initiation",
+      "units": []
+    },
+    {
+      "id": "sensorimotor-systems-motor-actions-execution",
+      "domain": "Sensorimotor Systems",
+      "construct": "Motor Actions",
+      "subconstruct": "Execution",
+      "units": []
+    },
+    {
+      "id": "sensorimotor-systems-motor-actions-inhibition-and-termination",
+      "domain": "Sensorimotor Systems",
+      "construct": "Motor Actions",
+      "subconstruct": "Inhibition and Termination",
+      "units": []
+    },
+    {
+      "id": "sensorimotor-systems-agency-and-ownership",
+      "domain": "Sensorimotor Systems",
+      "construct": "Agency and Ownership",
+      "units": []
+    },
+    {
+      "id": "sensorimotor-systems-habit-sensorimotor",
+      "domain": "Sensorimotor Systems",
+      "construct": "Habit (Sensorimotor)",
+      "units": []
+    },
+    {
+      "id": "sensorimotor-systems-innate-motor-patterns",
+      "domain": "Sensorimotor Systems",
+      "construct": "Innate Motor Patterns",
+      "units": []
     }
   ]
 }
