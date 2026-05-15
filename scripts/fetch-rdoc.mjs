@@ -108,7 +108,9 @@ function parseUnits(html) {
       const el = stripTags(em[1]).trim();
       if (el) elements.push(el);
     }
-    units.push({ name: unitName, elements });
+    if (!units.some((u) => u.name === unitName)) {
+      units.push({ name: unitName, elements });
+    }
   }
   return units;
 }

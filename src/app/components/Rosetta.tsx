@@ -50,7 +50,9 @@ interface StoredRosettaSession {
     singleOmapResult: { results: OmapResult[]; searchTerms: string[] } | null;
     singleRdocResult: { results: RdocResult[]; searchTerms: string[] } | null;
     csvRows: string[];
-    batchState: Record<string, RowState>;
+    ndaBatchState: Record<string, RowState>;
+    omapBatchState: Record<string, RowState>;
+    rdocBatchState: Record<string, RowState>;
     selections: Record<string, RosettaResult>;
     omapSelections: Record<string, OmapResult>;
     rdocSelections: Record<string, RdocResult>;
@@ -80,20 +82,24 @@ function trimRdocResult(r: RdocResult): RdocResult {
     };
 }
 
+function trimRdocBatchState(bs: Record<string, RowState>): Record<string, RowState> {
+    return Object.fromEntries(
+        Object.entries(bs).map(([k, v]) => [
+            k,
+            v.rdocResults ? { ...v, rdocResults: v.rdocResults.map(trimRdocResult) } : v,
+        ])
+    );
+}
+
 function saveRosettaSession(session: StoredRosettaSession) {
     const trimmed: StoredRosettaSession = {
         ...session,
         singleRdocResult: session.singleRdocResult
             ? { ...session.singleRdocResult, results: session.singleRdocResult.results.map(trimRdocResult) }
             : null,
-        batchState: Object.fromEntries(
-            Object.entries(session.batchState).map(([k, v]) => [
-                k,
-                v.rdocResults
-                    ? { ...v, rdocResults: v.rdocResults.map(trimRdocResult) }
-                    : v,
-            ])
-        ),
+        ndaBatchState: session.ndaBatchState,
+        omapBatchState: session.omapBatchState,
+        rdocBatchState: trimRdocBatchState(session.rdocBatchState),
         rdocSelections: Object.fromEntries(
             Object.entries(session.rdocSelections).map(([k, v]) => [k, trimRdocResult(v)])
         ),
@@ -426,9 +432,11 @@ export default function Rosetta({
     const [singleOmapResult, setSingleOmapResult] = useState<{ results: OmapResult[]; searchTerms: string[] } | null>(null);
     const [singleRdocResult, setSingleRdocResult] = useState<{ results: RdocResult[]; searchTerms: string[] } | null>(null);
 
-    // CSV batch state
+    // CSV batch state — one per source mode for clean separation
     const [csvRows, setCsvRows] = useState<string[]>([]);
-    const [batchState, setBatchState] = useState<Record<number, RowState>>({});
+    const [ndaBatchState, setNdaBatchState] = useState<Record<number, RowState>>({});
+    const [omapBatchState, setOmapBatchState] = useState<Record<number, RowState>>({});
+    const [rdocBatchState, setRdocBatchState] = useState<Record<number, RowState>>({});
     const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
     const [batchProcessing, setBatchProcessing] = useState(false);
     const [selections, setSelections] = useState<Record<number, RosettaResult>>({});
@@ -439,6 +447,10 @@ export default function Rosetta({
     const [mounted, setMounted] = useState(false);
     const [showClearModal, setShowClearModal] = useState(false);
 
+    // Derived: active batch state and its setter for the current source mode
+    const activeBatchState = sourceMode === "nda" ? ndaBatchState : sourceMode === "omap" ? omapBatchState : rdocBatchState;
+    const setActiveBatchState = sourceMode === "nda" ? setNdaBatchState : sourceMode === "omap" ? setOmapBatchState : setRdocBatchState;
+
     const clearAll = useCallback(() => {
         setQuery("");
         setSingleResult(null);
@@ -446,7 +458,9 @@ export default function Rosetta({
         setSingleRdocResult(null);
         setSingleError(null);
         setCsvRows([]);
-        setBatchState({});
+        setNdaBatchState({});
+        setOmapBatchState({});
+        setRdocBatchState({});
         setExpandedRows(new Set());
         setSelections({});
         setOmapSelections({});
@@ -473,9 +487,12 @@ export default function Rosetta({
         if (session.singleOmapResult) setSingleOmapResult(session.singleOmapResult);
         if (session.singleRdocResult) setSingleRdocResult(session.singleRdocResult);
         if (session.csvRows?.length > 0) setCsvRows(session.csvRows);
-        if (session.batchState && Object.keys(session.batchState).length > 0) {
-            setBatchState(session.batchState as Record<number, RowState>);
-        }
+        if (session.ndaBatchState && Object.keys(session.ndaBatchState).length > 0)
+            setNdaBatchState(session.ndaBatchState as Record<number, RowState>);
+        if (session.omapBatchState && Object.keys(session.omapBatchState).length > 0)
+            setOmapBatchState(session.omapBatchState as Record<number, RowState>);
+        if (session.rdocBatchState && Object.keys(session.rdocBatchState).length > 0)
+            setRdocBatchState(session.rdocBatchState as Record<number, RowState>);
         if (session.selections && Object.keys(session.selections).length > 0) {
             setSelections(session.selections as Record<number, RosettaResult>);
         }
@@ -496,17 +513,18 @@ export default function Rosetta({
     // Persist session to localStorage on relevant state changes
     useEffect(() => {
         if (!mounted) return;
-        const cleanBatchState = Object.fromEntries(
-            Object.entries(batchState).filter(([, v]) => v.status === "done" || v.status === "error")
-        );
+        const cleanBS = (bs: Record<number, RowState>) =>
+            Object.fromEntries(Object.entries(bs).filter(([, v]) => v.status === "done" || v.status === "error"));
         saveRosettaSession({
             mode, query, singleResult, singleOmapResult, singleRdocResult, csvRows,
-            batchState: cleanBatchState,
+            ndaBatchState: cleanBS(ndaBatchState),
+            omapBatchState: cleanBS(omapBatchState),
+            rdocBatchState: cleanBS(rdocBatchState),
             selections: selections as Record<string, RosettaResult>,
             omapSelections: omapSelections as Record<string, OmapResult>,
             rdocSelections: rdocSelections as Record<string, RdocResult>,
         });
-    }, [mounted, mode, query, singleResult, singleOmapResult, singleRdocResult, csvRows, batchState, selections, omapSelections, rdocSelections]);
+    }, [mounted, mode, query, singleResult, singleOmapResult, singleRdocResult, csvRows, ndaBatchState, omapBatchState, rdocBatchState, selections, omapSelections, rdocSelections]);
 
     const filterNdaResults = (results: RosettaResult[]): RosettaResult[] => {
         const dbSet = new Set(databaseStructures.map((s) => s.toLowerCase()));
@@ -601,7 +619,9 @@ export default function Rosetta({
             const startIdx =
                 rows.length > 0 && /^description$/i.test(rows[0]) ? 1 : 0;
             setCsvRows(rows.slice(startIdx, 100)); // cap at 100 rows
-            setBatchState({});
+            setNdaBatchState({});
+            setOmapBatchState({});
+            setRdocBatchState({});
             setExpandedRows(new Set());
         };
         reader.readAsText(file);
@@ -724,15 +744,15 @@ export default function Rosetta({
 
     const handleBatchProcess = async () => {
         if (csvRows.length === 0 || batchProcessing) return;
+        // Capture mode at start — navigation is locked during processing
+        const mode = sourceMode;
+        const setBS = mode === "nda" ? setNdaBatchState : mode === "omap" ? setOmapBatchState : setRdocBatchState;
         setBatchProcessing(true);
-        if (sourceMode === "omap") setOmapSelections({});
-        else if (sourceMode === "rdoc") setRdocSelections({});
+        if (mode === "omap") setOmapSelections({});
+        else if (mode === "rdoc") setRdocSelections({});
         else setSelections({});
-        setBatchState(
-            Object.fromEntries(
-                csvRows.map((_, i) => [i, { status: "loading" as const }]),
-            ),
-        );
+        setBS(Object.fromEntries(csvRows.map((_, i) => [i, { status: "loading" as const }])));
+        setExpandedRows(new Set());
         const CONCURRENCY = 1;
         for (let start = 0; start < csvRows.length; start += CONCURRENCY) {
             const chunk = csvRows.slice(start, start + CONCURRENCY);
@@ -740,17 +760,17 @@ export default function Rosetta({
                 chunk.map(async (row, j) => {
                     const i = start + j;
                     try {
-                        if (sourceMode === "omap") {
+                        if (mode === "omap") {
                             const data = await runOmapSearchClient(row);
-                            setBatchState((prev) => ({
+                            setBS((prev) => ({
                                 ...prev,
                                 [i]: { status: "done", omapResults: data.results, searchTerms: data.searchTerms },
                             }));
                             if (i === 0 && data.results.length > 0)
                                 setExpandedRows((prev) => new Set([...prev, i]));
-                        } else if (sourceMode === "rdoc") {
+                        } else if (mode === "rdoc") {
                             const data = await runRdocSearchClient(row);
-                            setBatchState((prev) => ({
+                            setBS((prev) => ({
                                 ...prev,
                                 [i]: { status: "done", rdocResults: data.results, searchTerms: data.searchTerms },
                             }));
@@ -758,7 +778,7 @@ export default function Rosetta({
                                 setExpandedRows((prev) => new Set([...prev, i]));
                         } else {
                             const data = await runNdaSearch(row);
-                            setBatchState((prev) => ({
+                            setBS((prev) => ({
                                 ...prev,
                                 [i]: { status: "done", rawResults: data.results, searchTerms: data.searchTerms },
                             }));
@@ -766,7 +786,7 @@ export default function Rosetta({
                                 setExpandedRows((prev) => new Set([...prev, i]));
                         }
                     } catch {
-                        setBatchState((prev) => ({
+                        setBS((prev) => ({
                             ...prev,
                             [i]: { status: "error", error: "Search failed" },
                         }));
@@ -789,51 +809,54 @@ export default function Rosetta({
     const loadMoreRow = async (i: number) => {
         const row = csvRows[i];
         if (!row) return;
-        setBatchState((prev) => ({ ...prev, [i]: { ...prev[i], status: "loading" } }));
-        if (sourceMode === "rdoc") {
-            const existing = batchState[i]?.rdocResults ?? [];
+        const mode = sourceMode;
+        const setBS = mode === "nda" ? setNdaBatchState : mode === "omap" ? setOmapBatchState : setRdocBatchState;
+        const currentBS = mode === "nda" ? ndaBatchState : mode === "omap" ? omapBatchState : rdocBatchState;
+        setBS((prev) => ({ ...prev, [i]: { ...prev[i], status: "loading" } }));
+        if (mode === "rdoc") {
+            const existing = currentBS[i]?.rdocResults ?? [];
             const excludeIds = existing.map((r) => r.construct.id);
             try {
                 const data = await runRdocSearchClient(row, excludeIds);
-                setBatchState((prev) => ({
+                setBS((prev) => ({
                     ...prev,
                     [i]: { status: "done", rdocResults: [...existing, ...data.results], searchTerms: prev[i]?.searchTerms ?? data.searchTerms },
                 }));
             } catch {
-                setBatchState((prev) => ({
+                setBS((prev) => ({
                     ...prev,
                     [i]: { status: "done", rdocResults: existing, searchTerms: prev[i]?.searchTerms },
                 }));
             }
             return;
         }
-        if (sourceMode === "omap") {
-            const existing = batchState[i]?.omapResults ?? [];
+        if (mode === "omap") {
+            const existing = currentBS[i]?.omapResults ?? [];
             const excludeIds = existing.map((r) => r.conceptId);
             try {
                 const data = await runOmapSearchClient(row, excludeIds);
-                setBatchState((prev) => ({
+                setBS((prev) => ({
                     ...prev,
                     [i]: { status: "done", omapResults: [...existing, ...data.results], searchTerms: prev[i]?.searchTerms ?? data.searchTerms },
                 }));
             } catch {
-                setBatchState((prev) => ({
+                setBS((prev) => ({
                     ...prev,
                     [i]: { status: "done", omapResults: existing, searchTerms: prev[i]?.searchTerms },
                 }));
             }
             return;
         }
-        const existing = batchState[i]?.rawResults ?? [];
+        const existing = currentBS[i]?.rawResults ?? [];
         const exclude = existing.map((r) => r.name);
         try {
             const data = await runNdaSearch(row, exclude);
-            setBatchState((prev) => ({
+            setBS((prev) => ({
                 ...prev,
                 [i]: { status: "done", rawResults: [...existing, ...data.results], searchTerms: prev[i]?.searchTerms ?? data.searchTerms },
             }));
         } catch {
-            setBatchState((prev) => ({
+            setBS((prev) => ({
                 ...prev,
                 [i]: { status: "done", rawResults: existing, searchTerms: prev[i]?.searchTerms },
             }));
@@ -843,30 +866,32 @@ export default function Rosetta({
     const reSearchRow = async (i: number) => {
         const row = csvRows[i];
         if (!row) return;
-        setBatchState((prev) => ({ ...prev, [i]: { status: "loading" } }));
+        const mode = sourceMode;
+        const setBS = mode === "nda" ? setNdaBatchState : mode === "omap" ? setOmapBatchState : setRdocBatchState;
+        setBS((prev) => ({ ...prev, [i]: { status: "loading" } }));
         setExpandedRows((prev) => new Set([...prev, i]));
         try {
-            if (sourceMode === "omap") {
+            if (mode === "omap") {
                 const data = await runOmapSearchClient(row);
-                setBatchState((prev) => ({
+                setBS((prev) => ({
                     ...prev,
                     [i]: { status: "done", omapResults: data.results, searchTerms: data.searchTerms },
                 }));
-            } else if (sourceMode === "rdoc") {
+            } else if (mode === "rdoc") {
                 const data = await runRdocSearchClient(row);
-                setBatchState((prev) => ({
+                setBS((prev) => ({
                     ...prev,
                     [i]: { status: "done", rdocResults: data.results, searchTerms: data.searchTerms },
                 }));
             } else {
                 const data = await runNdaSearch(row);
-                setBatchState((prev) => ({
+                setBS((prev) => ({
                     ...prev,
                     [i]: { status: "done", rawResults: data.results, searchTerms: data.searchTerms },
                 }));
             }
         } catch {
-            setBatchState((prev) => ({
+            setBS((prev) => ({
                 ...prev,
                 [i]: { status: "error", error: "Search failed" },
             }));
@@ -903,39 +928,33 @@ export default function Rosetta({
                 </p>
                 {/* NDA / OMOP / RDoC source toggle */}
                 <div className="flex items-start gap-3 mt-3">
-                    <button
-                        onClick={() => setSourceMode("nda")}
-                        className={`flex flex-col items-start px-3 py-2 rounded-lg border text-left transition-colors ${
-                            sourceMode === "nda"
-                                ? "border-indigo-400 bg-indigo-50 text-indigo-700"
-                                : "border-gray-200 bg-white text-gray-500 hover:border-gray-300 hover:bg-gray-50"
-                        }`}
-                    >
-                        <span className="text-xs font-semibold">NDA</span>
-                        <span className="text-xs text-gray-400 mt-0.5 font-normal">NIMH Data Archive elements</span>
-                    </button>
-                    <button
-                        onClick={() => setSourceMode("omap")}
-                        className={`flex flex-col items-start px-3 py-2 rounded-lg border text-left transition-colors ${
-                            sourceMode === "omap"
-                                ? "border-indigo-400 bg-indigo-50 text-indigo-700"
-                                : "border-gray-200 bg-white text-gray-500 hover:border-gray-300 hover:bg-gray-50"
-                        }`}
-                    >
-                        <span className="text-xs font-semibold">OMOP</span>
-                        <span className="text-xs text-gray-400 mt-0.5 font-normal">OHDSI standard vocabulary (SNOMED, LOINC)</span>
-                    </button>
-                    <button
-                        onClick={() => setSourceMode("rdoc")}
-                        className={`flex flex-col items-start px-3 py-2 rounded-lg border text-left transition-colors ${
-                            sourceMode === "rdoc"
-                                ? "border-indigo-400 bg-indigo-50 text-indigo-700"
-                                : "border-gray-200 bg-white text-gray-500 hover:border-gray-300 hover:bg-gray-50"
-                        }`}
-                    >
-                        <span className="text-xs font-semibold">RDoC</span>
-                        <span className="text-xs text-gray-400 mt-0.5 font-normal">NIMH Research Domain Criteria</span>
-                    </button>
+                    {(["nda", "omap", "rdoc"] as const).map((m) => {
+                        const labels: Record<typeof m, { short: string; sub: string }> = {
+                            nda:  { short: "NDA",  sub: "NIMH Data Archive elements" },
+                            omap: { short: "OMOP", sub: "OHDSI standard vocabulary (SNOMED, LOINC)" },
+                            rdoc: { short: "RDoC", sub: "NIMH Research Domain Criteria" },
+                        };
+                        return (
+                            <button
+                                key={m}
+                                onClick={() => setSourceMode(m)}
+                                disabled={batchProcessing}
+                                title={batchProcessing ? "Cannot switch source while batch is running" : undefined}
+                                className={`flex flex-col items-start px-3 py-2 rounded-lg border text-left transition-colors ${
+                                    batchProcessing
+                                        ? "opacity-50 cursor-not-allowed"
+                                        : ""
+                                } ${
+                                    sourceMode === m
+                                        ? "border-indigo-400 bg-indigo-50 text-indigo-700"
+                                        : "border-gray-200 bg-white text-gray-500 hover:border-gray-300 hover:bg-gray-50"
+                                }`}
+                            >
+                                <span className="text-xs font-semibold">{labels[m].short}</span>
+                                <span className="text-xs text-gray-400 mt-0.5 font-normal">{labels[m].sub}</span>
+                            </button>
+                        );
+                    })}
                 </div>
                 {/* <div className="-mb-8">
                     <label className="flex items-center space-x-3 cursor-pointer">
@@ -981,7 +1000,11 @@ export default function Rosetta({
             <div className="flex gap-2 border-b border-gray-200 pb-0">
                 <button
                     onClick={() => setMode("search")}
+                    disabled={batchProcessing}
+                    title={batchProcessing ? "Cannot switch mode while batch is running" : undefined}
                     className={`pb-3 px-1 border-b-2 font-medium text-sm transition-colors ${
+                        batchProcessing ? "opacity-50 cursor-not-allowed" : ""
+                    } ${
                         mode === "search"
                             ? "border-indigo-500 text-indigo-600"
                             : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
@@ -994,7 +1017,11 @@ export default function Rosetta({
                 </button>
                 <button
                     onClick={() => setMode("csv")}
+                    disabled={batchProcessing}
+                    title={batchProcessing ? "Cannot switch mode while batch is running" : undefined}
                     className={`pb-3 px-1 border-b-2 font-medium text-sm transition-colors ${
+                        batchProcessing ? "opacity-50 cursor-not-allowed" : ""
+                    } ${
                         mode === "csv"
                             ? "border-indigo-500 text-indigo-600"
                             : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
@@ -1204,9 +1231,13 @@ export default function Rosetta({
                                     <button
                                         onClick={() => {
                                             setCsvRows([]);
-                                            setBatchState({});
+                                            setNdaBatchState({});
+                                            setOmapBatchState({});
+                                            setRdocBatchState({});
                                             setExpandedRows(new Set());
                                             setSelections({});
+                                            setOmapSelections({});
+                                            setRdocSelections({});
                                             if (fileInputRef.current)
                                                 fileInputRef.current.value = "";
                                         }}
@@ -1277,7 +1308,7 @@ export default function Rosetta({
                                             );
                                         }
                                         lastGroupKey = hasSelection ? groupKey : undefined;
-                                        const state = batchState[i];
+                                        const state = activeBatchState[i];
                                         const isExpanded = expandedRows.has(i);
                                         const allResults = sourceMode === "nda"
                                             ? filterNdaResults(state?.rawResults ?? [])
@@ -1439,7 +1470,7 @@ export default function Rosetta({
                                                                                     const next = new Set(prev);
                                                                                     next.delete(i);
                                                                                     const nextIdx = i + 1;
-                                                                                    if (nextIdx < csvRows.length && batchState[nextIdx]?.status === "done")
+                                                                                    if (nextIdx < csvRows.length && activeBatchState[nextIdx]?.status === "done")
                                                                                         next.add(nextIdx);
                                                                                     return next;
                                                                                 });
@@ -1462,7 +1493,7 @@ export default function Rosetta({
                                                                                     const next = new Set(prev);
                                                                                     next.delete(i);
                                                                                     const nextIdx = i + 1;
-                                                                                    if (nextIdx < csvRows.length && batchState[nextIdx]?.status === "done")
+                                                                                    if (nextIdx < csvRows.length && activeBatchState[nextIdx]?.status === "done")
                                                                                         next.add(nextIdx);
                                                                                     return next;
                                                                                 });
@@ -1514,7 +1545,7 @@ export default function Rosetta({
                                                                                                         const next = new Set(prev);
                                                                                                         next.delete(i);
                                                                                                         const nextIdx = i + 1;
-                                                                                                        if (nextIdx < csvRows.length && batchState[nextIdx]?.status === "done")
+                                                                                                        if (nextIdx < csvRows.length && activeBatchState[nextIdx]?.status === "done")
                                                                                                             next.add(nextIdx);
                                                                                                         return next;
                                                                                                     });
@@ -1540,7 +1571,7 @@ export default function Rosetta({
 
                             {/* Export toolbar */}
                             {!batchProcessing &&
-                                Object.keys(batchState).length > 0 && (
+                                Object.keys(activeBatchState).length > 0 && (
                                     <div className="flex items-center justify-between pt-3 border-t border-gray-200 mt-2">
                                         <p className="text-sm text-gray-500">
                                             {Object.keys(sourceMode === "omap" ? omapSelections : sourceMode === "rdoc" ? rdocSelections : selections).length} of{" "}
