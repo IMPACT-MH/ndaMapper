@@ -423,8 +423,8 @@ export default function Rosetta({
         if (!trimmed) return;
         setIsSearching(true);
         setSingleError(null);
-        setSingleResult(null);
-        setSingleOmapResult(null);
+        if (sourceMode === "omap") setSingleOmapResult(null);
+        else setSingleResult(null);
         try {
             if (sourceMode === "omap") {
                 const data = await runOmapSearchClient(trimmed);
@@ -542,8 +542,8 @@ export default function Rosetta({
     const handleBatchProcess = async () => {
         if (csvRows.length === 0 || batchProcessing) return;
         setBatchProcessing(true);
-        setSelections({});
-        setOmapSelections({});
+        if (sourceMode === "omap") setOmapSelections({});
+        else setSelections({});
         setBatchState(
             Object.fromEntries(
                 csvRows.map((_, i) => [i, { status: "loading" as const }]),
