@@ -24,7 +24,8 @@ import { SuggestionsMessage } from "./SuggestionsMessage";
 import { MockReadyMessage } from "./MockReadyMessage";
 import { HarmonizeMessage } from "./HarmonizeMessage";
 import { ElementHarmonizeMessage } from "./ElementHarmonizeMessage";
-import { Trash2 } from "lucide-react";
+import { PrintableReport } from "./PrintableReport";
+import { Trash2, FileDown } from "lucide-react";
 
 function detectIntent(q: string): "structures" | "elements" {
     const lower = q.toLowerCase();
@@ -131,6 +132,7 @@ export default function ResearchAssistant({
     >([]);
 
     const [showClearModal, setShowClearModal] = useState(false);
+    const [showReport, setShowReport] = useState(false);
     const [elementProgress, setElementProgress] = useState<string>("");
 
     const clearChat = useCallback(() => {
@@ -888,14 +890,25 @@ export default function ResearchAssistant({
                         </p>
                     </div>
                     {chatMessages.length > 0 && (
-                        <button
-                            onClick={() => setShowClearModal(true)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-200"
-                            title="Clear all results"
-                        >
-                            <Trash2 className="w-4 h-4" />
-                            Clear
-                        </button>
+                        <div className="flex gap-1">
+                            <button
+                                onClick={() => setShowReport(true)}
+                                disabled={isLoading}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-500 hover:text-purple-700 hover:bg-purple-50 rounded-lg transition-colors border border-transparent hover:border-purple-200 disabled:opacity-50"
+                                title="Export conversation as PDF report"
+                            >
+                                <FileDown className="w-4 h-4" />
+                                Download PDF
+                            </button>
+                            <button
+                                onClick={() => setShowClearModal(true)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-200"
+                                title="Clear all results"
+                            >
+                                <Trash2 className="w-4 h-4" />
+                                Clear
+                            </button>
+                        </div>
                     )}
                 </div>
                 {databaseConnectionError && (
@@ -1179,6 +1192,18 @@ export default function ResearchAssistant({
                     </p>
                 )}
             </div>
+
+            {/* PDF report print view */}
+            {showReport && (
+                <PrintableReport
+                    messages={chatMessages}
+                    mockDatasets={mockDatasets}
+                    mergedDatasets={mergedDatasets}
+                    databaseFilterEnabled={databaseFilterEnabled}
+                    structureCount={databaseStructures.length}
+                    onDone={() => setShowReport(false)}
+                />
+            )}
         </div>
     );
 }

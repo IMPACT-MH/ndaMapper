@@ -1,15 +1,33 @@
 "use client";
 
+import React from "react";
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     ScatterChart, Scatter,
 } from "recharts";
 import type { ChartConfig, MockDataset } from "@/types";
 
-export function ChartPanel({ charts, datasets }: { charts: ChartConfig[]; datasets: MockDataset[] }) {
+export function ChartPanel({
+    charts,
+    datasets,
+    fixedWidth,
+}: {
+    charts: ChartConfig[];
+    datasets: MockDataset[];
+    fixedWidth?: number;
+}) {
     if (charts.length === 0) return null;
 
     const allRows = datasets.flatMap((ds) => ds.rows);
+
+    // ResponsiveContainer measures the DOM and renders blank inside hidden
+    // print portals, so the report passes an explicit width instead.
+    const Container = ({ children }: { children: React.ReactElement<{ width?: number; height?: number }> }) =>
+        fixedWidth ? (
+            React.cloneElement(children, { width: fixedWidth, height: 220 })
+        ) : (
+            <ResponsiveContainer width="100%" height={220}>{children}</ResponsiveContainer>
+        );
 
     return (
         <div className="space-y-6">
@@ -26,9 +44,9 @@ export function ChartPanel({ charts, datasets }: { charts: ChartConfig[]; datase
                         .slice(0, 15)
                         .map(([name, value]) => ({ name, value }));
                     return (
-                        <div key={chart.id}>
+                        <div key={chart.id} className="print-avoid-break">
                             <h4 className="font-medium text-gray-700 text-sm mb-2">{chart.title}</h4>
-                            <ResponsiveContainer width="100%" height={220}>
+                            <Container>
                                 <BarChart data={barData}>
                                     <CartesianGrid strokeDasharray="3 3" />
                                     <XAxis dataKey="name" tick={{ fontSize: 11 }} />
@@ -36,7 +54,7 @@ export function ChartPanel({ charts, datasets }: { charts: ChartConfig[]; datase
                                     <Tooltip />
                                     <Bar dataKey="value" fill="#7c3aed" />
                                 </BarChart>
-                            </ResponsiveContainer>
+                            </Container>
                         </div>
                     );
                 }
@@ -59,9 +77,9 @@ export function ChartPanel({ charts, datasets }: { charts: ChartConfig[]; datase
                         hist[idx].count++;
                     }
                     return (
-                        <div key={chart.id}>
+                        <div key={chart.id} className="print-avoid-break">
                             <h4 className="font-medium text-gray-700 text-sm mb-2">{chart.title}</h4>
-                            <ResponsiveContainer width="100%" height={220}>
+                            <Container>
                                 <BarChart data={hist}>
                                     <CartesianGrid strokeDasharray="3 3" />
                                     <XAxis dataKey="range" tick={{ fontSize: 10 }} />
@@ -69,7 +87,7 @@ export function ChartPanel({ charts, datasets }: { charts: ChartConfig[]; datase
                                     <Tooltip />
                                     <Bar dataKey="count" fill="#0ea5e9" />
                                 </BarChart>
-                            </ResponsiveContainer>
+                            </Container>
                         </div>
                     );
                 }
@@ -80,9 +98,9 @@ export function ChartPanel({ charts, datasets }: { charts: ChartConfig[]; datase
                         .filter((p) => !isNaN(p.x) && !isNaN(p.y) && p.x > -700 && p.y > -700)
                         .slice(0, 100);
                     return (
-                        <div key={chart.id}>
+                        <div key={chart.id} className="print-avoid-break">
                             <h4 className="font-medium text-gray-700 text-sm mb-2">{chart.title}</h4>
-                            <ResponsiveContainer width="100%" height={220}>
+                            <Container>
                                 <ScatterChart>
                                     <CartesianGrid strokeDasharray="3 3" />
                                     <XAxis dataKey="x" name={chart.xField} tick={{ fontSize: 11 }} />
@@ -90,7 +108,7 @@ export function ChartPanel({ charts, datasets }: { charts: ChartConfig[]; datase
                                     <Tooltip cursor={{ strokeDasharray: "3 3" }} />
                                     <Scatter data={scatterData} fill="#7c3aed" />
                                 </ScatterChart>
-                            </ResponsiveContainer>
+                            </Container>
                         </div>
                     );
                 }

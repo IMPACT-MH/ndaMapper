@@ -22,6 +22,7 @@ export function useSpringSimulation<TNode extends { id: string }>(
         paddingX?: number;
         paddingY?: number;
         maxSteps?: number;
+        instant?: boolean;
     } = {}
 ): Positioned<TNode>[] {
     const {
@@ -32,6 +33,7 @@ export function useSpringSimulation<TNode extends { id: string }>(
         paddingX = 40,
         paddingY = 20,
         maxSteps = 150,
+        instant = false,
     } = options;
 
     const [positions, setPositions] = useState<Positioned<TNode>[]>([]);
@@ -48,8 +50,7 @@ export function useSpringSimulation<TNode extends { id: string }>(
 
         let step = 0;
 
-        function tick() {
-            if (step >= maxSteps) { setPositions([...sim]); return; }
+        function runStep() {
             step++;
             const alpha = 1 - step / maxSteps;
 
@@ -86,7 +87,17 @@ export function useSpringSimulation<TNode extends { id: string }>(
                 n.x = Math.max(paddingX, Math.min(width - paddingX, n.x + n.vx));
                 n.y = Math.max(paddingY, Math.min(height - paddingY, n.y + n.vy));
             }
+        }
 
+        if (instant) {
+            while (step < maxSteps) runStep();
+            setPositions([...sim]);
+            return;
+        }
+
+        function tick() {
+            if (step >= maxSteps) { setPositions([...sim]); return; }
+            runStep();
             setPositions([...sim]);
             animRef.current = requestAnimationFrame(tick);
         }

@@ -30,3 +30,41 @@ body {
         transform: translateY(0);
     }
 }
+
+/* PDF report (Research Assistant) */
+#ra-print-root {
+    display: none;
+}
+
+@media print {
+    body.ra-printing > *:not(#ra-print-root) {
+        display: none !important;
+    }
+    #ra-print-root {
+        display: block !important;
+        background: white;
+    }
+    #ra-print-root * {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+    #ra-print-root .print-avoid-break {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+    #ra-print-root tr {
+        break-inside: avoid;
+    }
+    #ra-print-root table {
+        font-size: 10px;
+    }
+    #ra-print-root td,
+    #ra-print-root th {
+        white-space: normal;
+        word-break: break-word;
+    }
+    @page {
+        size: letter portrait;
+        margin: 14mm;
+    }
+}

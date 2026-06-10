@@ -38,7 +38,7 @@ function computeBlob(
     return { cx, cy, rx, ry };
 }
 
-export function NetworkDiagram({ graph }: { graph: NetworkGraph }) {
+export function NetworkDiagram({ graph, printMode = false }: { graph: NetworkGraph; printMode?: boolean }) {
     const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
     const [clickedNodeId, setClickedNodeId] = useState<string | null>(null);
     const [clickedEdgeIdx, setClickedEdgeIdx] = useState<number | null>(null);
@@ -69,6 +69,7 @@ export function NetworkDiagram({ graph }: { graph: NetworkGraph }) {
 
     const positions = useSpringSimulation(graph.nodes, simEdges, {
         width: WIDTH, height: HEIGHT, repulsion: 4000, idealLength: 280, paddingX: 44, paddingY: 24,
+        instant: printMode,
     });
 
     const posMap = useMemo(
@@ -312,24 +313,39 @@ export function NetworkDiagram({ graph }: { graph: NetworkGraph }) {
 
             {/* Blob toggles + legend */}
             <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 justify-center text-xs">
-                <button
-                    onClick={() => setShowSiteBlobs((v) => !v)}
-                    className={`flex items-center gap-1 px-2 py-0.5 rounded-full border transition-colors ${
-                        showSiteBlobs ? "bg-amber-50 border-amber-300 text-amber-700" : "border-gray-200 text-gray-400"
-                    }`}
-                >
-                    <span className="w-3 h-3 rounded-full inline-block bg-amber-400 opacity-70" />
-                    sites
-                </button>
-                <button
-                    onClick={() => setShowDtBlobs((v) => !v)}
-                    className={`flex items-center gap-1 px-2 py-0.5 rounded-full border transition-colors ${
-                        showDtBlobs ? "bg-blue-50 border-blue-300 text-blue-700" : "border-gray-200 text-gray-400"
-                    }`}
-                >
-                    <span className="w-3 h-3 rounded-full inline-block bg-blue-400 opacity-70" style={{ border: "1px dashed #2563eb" }} />
-                    data types
-                </button>
+                {printMode ? (
+                    <>
+                        <span className="flex items-center gap-1 text-amber-700">
+                            <span className="w-3 h-3 rounded-full inline-block bg-amber-400 opacity-70" />
+                            sites
+                        </span>
+                        <span className="flex items-center gap-1 text-blue-700">
+                            <span className="w-3 h-3 rounded-full inline-block bg-blue-400 opacity-70" style={{ border: "1px dashed #2563eb" }} />
+                            data types
+                        </span>
+                    </>
+                ) : (
+                    <>
+                        <button
+                            onClick={() => setShowSiteBlobs((v) => !v)}
+                            className={`flex items-center gap-1 px-2 py-0.5 rounded-full border transition-colors ${
+                                showSiteBlobs ? "bg-amber-50 border-amber-300 text-amber-700" : "border-gray-200 text-gray-400"
+                            }`}
+                        >
+                            <span className="w-3 h-3 rounded-full inline-block bg-amber-400 opacity-70" />
+                            sites
+                        </button>
+                        <button
+                            onClick={() => setShowDtBlobs((v) => !v)}
+                            className={`flex items-center gap-1 px-2 py-0.5 rounded-full border transition-colors ${
+                                showDtBlobs ? "bg-blue-50 border-blue-300 text-blue-700" : "border-gray-200 text-gray-400"
+                            }`}
+                        >
+                            <span className="w-3 h-3 rounded-full inline-block bg-blue-400 opacity-70" style={{ border: "1px dashed #2563eb" }} />
+                            data types
+                        </button>
+                    </>
+                )}
                 <span className="flex items-center gap-1 font-medium text-gray-400 ml-1">overlap:</span>
                 {([["≥25%", 0.3], ["8–25%", 0.12], ["<8%", 0]] as [string, number][]).map(([label, j]) => (
                     <span key={label} className="flex items-center gap-1 text-gray-500">

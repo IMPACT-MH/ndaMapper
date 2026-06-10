@@ -22,12 +22,15 @@ export interface DiagramSelection {
 export function ElementRelationDiagram({
     graph,
     onSelectionChange,
+    printMode = false,
 }: {
     graph: ElementRelationGraph;
     onSelectionChange?: (selection: DiagramSelection) => void;
+    printMode?: boolean;
 }) {
     const positions = useSpringSimulation(graph.nodes, graph.edges, {
         width: WIDTH, height: HEIGHT, repulsion: 900, idealLength: 130, paddingX: 44, paddingY: 24,
+        instant: printMode,
     });
     const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
     const [hoveredEdgeIdx, setHoveredEdgeIdx] = useState<number | null>(null);
