@@ -13,6 +13,7 @@ import {
 import CSVValidator from "./CSVValidator";
 import DownloadStructureButton from "./DownloadStructureButton";
 import DownloadTemplateButton from "./DownloadTemplateButton";
+import PubMedSearchPanel from "./PubMedSearchPanel";
 import useScrollDirection from "./useScrollDirection";
 import type { DataStructure, DataElement, CustomTag } from "@/types";
 import type React from "react";
@@ -974,6 +975,13 @@ const DataStructureSearch = ({
                                 </table>
                               </div>
                             )}
+
+                            {/* PubMed Search Panel */}
+                            <PubMedSearchPanel
+                              dataElements={dataElements}
+                              selectedStructure={selectedStructure}
+                              isOpen={false}
+                            />
                           </div>
                         )}
                       </div>
