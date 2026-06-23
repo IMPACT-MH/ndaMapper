@@ -124,7 +124,7 @@ const PubMedSearchPanel = ({
     } finally {
       setLoading(false);
     }
-  }, [selectedStructure, customCategories, customDataTypes]);
+  }, [selectedStructure, customCategories, customDataTypes, dataElements.length]);
 
   // Clear stale results when structure changes
   useEffect(() => {
@@ -329,9 +329,9 @@ const PubMedSearchPanel = ({
             </div>
           )}
 
-          {!loading && results.length === 0 && !error && (
+          {!loading && results.length === 0 && !error && searchQuery !== null && (
             <div className="text-sm text-gray-500 italic">
-              Click "Search PubMed" to find related literature
+              No results found.
             </div>
           )}
         </div>
