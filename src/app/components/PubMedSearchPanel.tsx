@@ -192,24 +192,13 @@ const PubMedSearchPanel = ({
             <p className="text-xs text-gray-500 italic">{selectedStructure.description}</p>
           )}
 
-          {/* Search Button */}
-          <button
-            onClick={() => { setShownCount(5); handleSearch(5); }}
-            disabled={loading}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 transition-colors"
-          >
-            {loading ? (
-              <>
-                <Loader size={18} className="animate-spin" />
-                Searching...
-              </>
-            ) : (
-              <>
-                <ExternalLink size={18} />
-                Search PubMed
-              </>
-            )}
-          </button>
+          {/* Loading indicator */}
+          {loading && (
+            <div className="flex items-center gap-2 text-sm text-gray-500">
+              <Loader size={16} className="animate-spin" />
+              Searching PubMed…
+            </div>
+          )}
 
           {/* Error Display */}
           {error && (
