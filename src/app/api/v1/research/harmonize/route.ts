@@ -4,10 +4,7 @@ import { createErrorResponse, createOptionsResponse, CORS_HEADERS } from "@/lib/
 import { generateHarmonizedDataset } from "@/lib/mockDataGenerator";
 import type { HarmonizeRequest, HarmonizeResponse, ConstructGroup, DataElement } from "@/types";
 
-// Fields present in every NDA structure via ndar_subject01 — not meaningful for cross-instrument relations
-const NDAR_SUBJECT01_FIELDS = new Set([
-  "subjectkey", "src_subject_id", "interview_age", "interview_date", "sex",
-]);
+import { NDAR_SUBJECT01_FIELDS } from "@/utils/ndaConstants";
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   if (!process.env.ANTHROPIC_API_KEY) {

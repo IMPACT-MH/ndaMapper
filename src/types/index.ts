@@ -22,6 +22,7 @@ export interface DataElement {
 export interface DataStructure {
   shortName: string;
   title: string;
+  description?: string;
   categories?: string[];
   dataType?: string;
   dataTypes?: string[];

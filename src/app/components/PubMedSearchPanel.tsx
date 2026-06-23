@@ -1,8 +1,7 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   FileText,
-  Link as LinkIcon,
   Loader,
   ChevronDown,
   ChevronUp,
@@ -10,17 +9,37 @@ import {
 } from "lucide-react";
 import type { DataElement } from "@/types";
 
+const EDITION_WORDS = "first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|eleventh|twelfth|thirteenth|fourteenth|fifteenth";
+
+function cleanStructureTitle(name: string): string {
+  let text = name;
+  text = text.replace(/\([^)]*\)/g, " ");          // strip (WMS-IV)
+  text = text.replace(/\[[^\]]*\]/g, " ");          // strip [...]
+  // strip "Fourth Edition", "4th Edition", "Edition 4", "4th ed"
+  text = text.replace(new RegExp(`\\b(?:\\d+(?:st|nd|rd|th)|${EDITION_WORDS})\\s+edition\\b`, "gi"), " ");
+  text = text.replace(new RegExp(`\\bedition\\s+(?:\\d+(?:st|nd|rd|th)?|${EDITION_WORDS})\\b`, "gi"), " ");
+  text = text.replace(/\b\d+(?:st|nd|rd|th)\s+ed\b/gi, " ");
+  // remove standalone all-caps tokens (acronyms like WMS, IV)
+  text = text.split(/\s+/).filter((t) => !(t.length >= 2 && t === t.toUpperCase() && /^[A-Z]+$/.test(t))).join(" ");
+  text = text.replace(/[^A-Za-z0-9 \-]/g, " ");    // strip punctuation
+  return text.replace(/\s+/g, " ").trim();
+}
+
 interface PubMedRecord {
   pmid: string;
   title: string;
   abstract: string;
   url: string;
   matched_terms: string[];
+  authors: string[];
 }
 
 interface PubMedSearchPanelProps {
   dataElements: DataElement[];
-  selectedStructure?: { title?: string; shortName?: string } | null;
+  selectedStructure?: { title?: string; shortName?: string; description?: string } | null;
+  customCategories?: string[];
+  customDataTypes?: string[];
+  tagsLoaded?: boolean;
   isOpen?: boolean;
   onToggle?: (open: boolean) => void;
 }
@@ -28,25 +47,24 @@ interface PubMedSearchPanelProps {
 const PubMedSearchPanel = ({
   dataElements,
   selectedStructure,
+  customCategories = [],
+  customDataTypes = [],
+  tagsLoaded = false,
   isOpen = false,
   onToggle,
 }: PubMedSearchPanelProps) => {
-  const [searchType, setSearchType] = useState<"acronyms" | "terms" | "combined">(
-    "combined"
-  );
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<PubMedRecord[]>([]);
+  const [totalCount, setTotalCount] = useState<number | null>(null);
+  const [shownCount, setShownCount] = useState(5);
+  const [searchQuery, setSearchQuery] = useState<string | null>(null);
+  const [searchMeta, setSearchMeta] = useState<{ categories: string[]; dataTypes: string[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [expandedResults, setExpandedResults] = useState<Set<string>>(new Set());
   const [isExpanded, setIsExpanded] = useState(isOpen);
+  const lastAutoSearchedRef = useRef<string | null>(null);
 
-  const extractElementDescriptions = (): string[] => {
-    return dataElements
-      .map((el) => el.description)
-      .filter((desc) => desc && desc.trim());
-  };
-
-  const handleSearch = async () => {
+  const handleSearch = useCallback(async (maxResults = 5) => {
     if (!dataElements.length) {
       setError("No data elements available for search");
       return;
@@ -55,9 +73,25 @@ const PubMedSearchPanel = ({
     setLoading(true);
     setError(null);
     setResults([]);
+    setTotalCount(null);
+    setSearchQuery(null);
+    setSearchMeta(null);
 
     try {
-      const descriptions = extractElementDescriptions();
+      setSearchMeta({ categories: customCategories, dataTypes: customDataTypes });
+
+      const queryTerms = [
+        selectedStructure?.title ? cleanStructureTitle(selectedStructure.title) : null,
+        ...customCategories,
+      ].filter((d): d is string => Boolean(d?.trim()));
+
+      const directQuery = queryTerms
+        .map((t) => `"${t.replace(/"/g, "")}"`)
+        .join(" AND ");
+
+      const descriptions = selectedStructure?.description
+        ? [selectedStructure.description]
+        : [];
 
       const response = await fetch("/api/v1/research/pubmed", {
         method: "POST",
@@ -65,9 +99,9 @@ const PubMedSearchPanel = ({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          query: directQuery,
           descriptions,
-          searchType,
-          maxResults: 5,
+          maxResults,
         }),
       });
 
@@ -77,9 +111,12 @@ const PubMedSearchPanel = ({
 
       const data = (await response.json()) as {
         results: PubMedRecord[];
+        totalCount: number;
         query: string;
       };
       setResults(data.results);
+      setTotalCount(data.totalCount);
+      setSearchQuery(data.query);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Failed to search PubMed"
@@ -87,7 +124,28 @@ const PubMedSearchPanel = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedStructure, customCategories, customDataTypes]);
+
+  // Clear stale results when structure changes
+  useEffect(() => {
+    setResults([]);
+    setTotalCount(null);
+    setShownCount(5);
+    setError(null);
+    setSearchQuery(null);
+    setSearchMeta(null);
+    setIsExpanded(false);
+  }, [selectedStructure?.shortName]);
+
+  // Auto-search once both elements and IMPACT-MH tags are loaded for a new structure
+  useEffect(() => {
+    const key = selectedStructure?.shortName;
+    if (key && dataElements.length > 0 && tagsLoaded && key !== lastAutoSearchedRef.current) {
+      lastAutoSearchedRef.current = key;
+      setIsExpanded(true);
+      handleSearch(5);
+    }
+  }, [selectedStructure?.shortName, dataElements.length, tagsLoaded, handleSearch]);
 
   const toggleResultExpanded = (pmid: string) => {
     const newExpanded = new Set(expandedResults);
@@ -130,26 +188,13 @@ const PubMedSearchPanel = ({
 
       {isExpanded && (
         <div className="px-4 py-4 space-y-4 border-t border-gray-200">
-          {/* Search Type Selection */}
-          <div className="flex gap-2 flex-wrap">
-            {(["combined", "acronyms", "terms"] as const).map((type) => (
-              <button
-                key={type}
-                onClick={() => setSearchType(type)}
-                className={`px-3 py-2 rounded text-sm font-medium transition-colors ${
-                  searchType === type
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                }`}
-              >
-                {type.charAt(0).toUpperCase() + type.slice(1)}
-              </button>
-            ))}
-          </div>
+          {selectedStructure?.description && (
+            <p className="text-xs text-gray-500 italic">{selectedStructure.description}</p>
+          )}
 
           {/* Search Button */}
           <button
-            onClick={handleSearch}
+            onClick={() => { setShownCount(5); handleSearch(5); }}
             disabled={loading}
             className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 transition-colors"
           >
@@ -160,7 +205,7 @@ const PubMedSearchPanel = ({
               </>
             ) : (
               <>
-                <LinkIcon size={18} />
+                <ExternalLink size={18} />
                 Search PubMed
               </>
             )}
@@ -173,11 +218,44 @@ const PubMedSearchPanel = ({
             </div>
           )}
 
+          {/* Query debug + PubMed link */}
+          {searchQuery && (
+            <div className="p-2 bg-gray-100 rounded text-xs font-mono text-gray-600 space-y-1">
+              {searchMeta && (
+                <div className="flex gap-3 flex-wrap font-sans text-gray-500">
+                  <span>
+                    <span className="font-semibold text-gray-600">Categories: </span>
+                    {searchMeta.categories.length ? searchMeta.categories.join(", ") : <em>none</em>}
+                  </span>
+                  <span>
+                    <span className="font-semibold text-gray-600">Data Types: </span>
+                    {searchMeta.dataTypes.length ? searchMeta.dataTypes.join(", ") : <em>none</em>}
+                  </span>
+                </div>
+              )}
+              <div className="flex items-start justify-between gap-2 break-all">
+                <span><span className="font-semibold text-gray-700">Query: </span>{searchQuery}</span>
+                <a
+                  href={`https://pubmed.ncbi.nlm.nih.gov/?term=${encodeURIComponent(searchQuery)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-shrink-0 inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 font-sans font-medium whitespace-nowrap"
+                >
+                  Open in PubMed
+                  <ExternalLink size={12} />
+                </a>
+              </div>
+            </div>
+          )}
+
           {/* Results */}
           {results.length > 0 && (
             <div className="space-y-3">
               <div className="text-sm font-semibold text-gray-700">
-                Found {results.length} results
+                Top {results.length} results
+                {totalCount !== null && (
+                  <span className="font-normal text-gray-500"> of {totalCount.toLocaleString()} total</span>
+                )}
               </div>
               {results.map((record) => (
                 <div
@@ -212,6 +290,11 @@ const PubMedSearchPanel = ({
                           )}
                         </div>
                       )}
+                      {record.authors.length > 0 && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          {record.authors.join(", ")}
+                        </p>
+                      )}
                     </div>
                     <div className="ml-2 flex-shrink-0">
                       {expandedResults.has(record.pmid) ? (
@@ -240,6 +323,20 @@ const PubMedSearchPanel = ({
                   )}
                 </div>
               ))}
+
+              {totalCount !== null && results.length < totalCount && (
+                <button
+                  onClick={() => {
+                    const next = shownCount + 5;
+                    setShownCount(next);
+                    handleSearch(next);
+                  }}
+                  disabled={loading}
+                  className="w-full py-2 text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded border border-blue-200 transition-colors disabled:opacity-50"
+                >
+                  {loading ? "Loading…" : `Show more (${totalCount.toLocaleString()} total)`}
+                </button>
+              )}
             </div>
           )}
 

@@ -89,6 +89,9 @@ const DataStructureSearch = ({
   const [structureDataTypeTags, setStructureDataTypeTags] = useState<
     Record<string, CustomTag[]>
   >({});
+  const [structureTagsLoaded, setStructureTagsLoaded] = useState<
+    Record<string, boolean>
+  >({});
   const [isCsvValidatorOpen, setIsCsvValidatorOpen] = useState(false);
   const [isCurrentFilterCustomTag, setIsCurrentFilterCustomTag] =
     useState(false);
@@ -309,8 +312,17 @@ const DataStructureSearch = ({
           ...prev,
           [selectedStructure.shortName]: dataTypeTags,
         }));
+        setStructureTagsLoaded((prev) => ({
+          ...prev,
+          [selectedStructure.shortName]: true,
+        }));
       } catch (err) {
         console.error("Error fetching tags:", err);
+        // Mark loaded even on error so auto-search isn't blocked indefinitely
+        setStructureTagsLoaded((prev) => ({
+          ...prev,
+          [selectedStructure.shortName]: true,
+        }));
       }
     };
 
@@ -395,6 +407,7 @@ const DataStructureSearch = ({
                 placeholder="Search for a data structure..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") handleStructureSearch(searchTerm); }}
               />
               <Search className="absolute left-4 top-4 text-gray-400" size={20} />
               {searchTerm && (
@@ -591,6 +604,11 @@ const DataStructureSearch = ({
                               {selectedStructure.title}
                             </h1>
                           </div>
+                          {selectedStructure.description && (
+                            <p className="mt-1 text-sm text-gray-500">
+                              {selectedStructure.description}
+                            </p>
+                          )}
                           {(() => {
                             const dbStructure =
                               dataStructuresMap[selectedStructure.shortName] ||
@@ -862,6 +880,28 @@ const DataStructureSearch = ({
                           </p>
                         )}
 
+                        {/* PubMed Search Panel */}
+                        {selectedStructure && (
+                          <div className="bg-white rounded-lg shadow mt-6 overflow-hidden">
+                            <PubMedSearchPanel
+                              dataElements={dataElements}
+                              selectedStructure={selectedStructure}
+                              customCategories={
+                                structureTags[selectedStructure.shortName]?.map((t) => t.name) ??
+                                selectedStructure.categories ??
+                                []
+                              }
+                              customDataTypes={
+                                structureDataTypeTags[selectedStructure.shortName]?.map((t) => t.name) ??
+                                (selectedStructure.dataType ? [selectedStructure.dataType] : undefined) ??
+                                selectedStructure.dataTypes ??
+                                []
+                              }
+                              tagsLoaded={!!structureTagsLoaded[selectedStructure.shortName]}
+                            />
+                          </div>
+                        )}
+
                         {/* Data Elements */}
                         {selectedStructure && (
                           <div className="bg-white rounded-lg shadow p-6 mt-6">
@@ -976,12 +1016,6 @@ const DataStructureSearch = ({
                               </div>
                             )}
 
-                            {/* PubMed Search Panel */}
-                            <PubMedSearchPanel
-                              dataElements={dataElements}
-                              selectedStructure={selectedStructure}
-                              isOpen={false}
-                            />
                           </div>
                         )}
                       </div>

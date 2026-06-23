@@ -9,6 +9,7 @@ interface PubMedRecord {
   abstract: string;
   url: string;
   matched_terms: string[];
+  authors: string[];
 }
 
 const REMOVE_TERMS = [
@@ -210,12 +211,16 @@ function buildPubMedQueryFromDescriptions(
 }
 
 function buildOrQuery(terms: string[]): string {
-  return terms.map((term) => `"${term.replace(/"/g, "")}"`).join(" OR ");
+  return terms.map((term) => `"${term.replace(/"/g, "")}"`).join(" AND ");
+}
+
+function buildOrGroup(terms: string[]): string {
+  return `(${terms.map((term) => `"${term.replace(/"/g, "")}"`).join(" OR ")})`;
 }
 
 function queryTermsFromQuery(query: string): string[] {
   return query
-    .split(" OR ")
+    .split(" AND ")
     .map((part) => part.trim())
     .map((part) => {
       if (part.startsWith('"') && part.endsWith('"')) {
@@ -247,25 +252,37 @@ function parseXmlRecords(xmlText: string, query: string): PubMedRecord[] {
       const pmid = pmidMatch ? pmidMatch[1] : "";
       if (!pmid) return;
 
-      // Extract Title
-      const titleMatch = article.match(
-        /<ArticleTitle>([^<]*)<\/ArticleTitle>/
-      );
-      const title = titleMatch ? titleMatch[1] : "";
+      // Extract Title — use [\s\S]*? to match across nested tags (e.g. <i>, <sup>),
+      // then strip inner tags. [^<]* would silently return "" for any formatted title.
+      const titleMatch = article.match(/<ArticleTitle>([\s\S]*?)<\/ArticleTitle>/);
+      const title = titleMatch
+        ? decodeXmlEntities(titleMatch[1].replace(/<[^>]+>/g, "")).trim()
+        : "";
 
-      // Extract Abstract
+      // Extract Abstract — same nested-tag handling
       const abstractMatches = article.matchAll(
-        /<AbstractText[^>]*>([^<]*)<\/AbstractText>/g
+        /<AbstractText[^>]*>([\s\S]*?)<\/AbstractText>/g
       );
       const abstractParts: string[] = [];
       for (const match of abstractMatches) {
-        if (match[1]) abstractParts.push(match[1]);
+        const text = decodeXmlEntities(match[1].replace(/<[^>]+>/g, "")).trim();
+        if (text) abstractParts.push(text);
       }
       const abstract =
         abstractParts.join("\n").trim() || "No abstract available.";
 
       // Build article URL
       const url = `https://pubmed.ncbi.nlm.nih.gov/${pmid}/`;
+
+      // Extract authors — each <Author> has <LastName> and optionally <Initials>
+      const authorMatches = article.matchAll(/<Author[^>]*>([\s\S]*?)<\/Author>/g);
+      const authors: string[] = [];
+      for (const match of authorMatches) {
+        const block = match[1];
+        const lastName = block.match(/<LastName>([\s\S]*?)<\/LastName>/)?.[1]?.trim() ?? "";
+        const initials = block.match(/<Initials>([\s\S]*?)<\/Initials>/)?.[1]?.trim() ?? "";
+        if (lastName) authors.push(initials ? `${lastName} ${initials}` : lastName);
+      }
 
       // Find matched terms
       const content = `${title}\n${abstract}`.toLowerCase();
@@ -278,6 +295,7 @@ function parseXmlRecords(xmlText: string, query: string): PubMedRecord[] {
         title,
         abstract,
         url,
+        authors,
         matched_terms: matchedTerms,
       });
     });
@@ -288,18 +306,31 @@ function parseXmlRecords(xmlText: string, query: string): PubMedRecord[] {
   return records;
 }
 
+function decodeXmlEntities(text: string): string {
+  return text
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&apos;/g, "'")
+    .replace(/&quot;/g, '"');
+}
+
 async function fetchPubMedRecords(
   query: string,
   maxResults: number = 5
-): Promise<PubMedRecord[]> {
-  if (!query) return [];
+): Promise<{ records: PubMedRecord[]; totalCount: number }> {
+  if (!query) return { records: [], totalCount: 0 };
 
   try {
+    // sort=relevance matches PubMed.gov "Best Match" behaviour; without it
+    // esearch defaults to date order and a broad OR query surfaces recent
+    // off-topic papers ahead of genuinely relevant ones.
     const searchParams = new URLSearchParams({
       db: "pubmed",
       term: query,
       retmode: "json",
       retmax: String(maxResults),
+      sort: "relevance",
     });
 
     const searchResponse = await fetch(`${ESEARCH_URL}?${searchParams}`, {
@@ -311,11 +342,12 @@ async function fetchPubMedRecords(
     }
 
     const searchData = (await searchResponse.json()) as {
-      esearchresult: { idlist: string[] };
+      esearchresult: { idlist: string[]; count: string };
     };
     const ids = searchData.esearchresult.idlist || [];
+    const totalCount = parseInt(searchData.esearchresult.count ?? "0", 10);
 
-    if (!ids.length) return [];
+    if (!ids.length) return { records: [], totalCount };
 
     const fetchParams = new URLSearchParams({
       db: "pubmed",
@@ -334,10 +366,10 @@ async function fetchPubMedRecords(
     const xmlText = await fetchResponse.text();
     const records = parseXmlRecords(xmlText, query);
 
-    return records;
+    return { records, totalCount };
   } catch (error) {
     console.error("Error fetching PubMed records:", error);
-    return [];
+    return { records: [], totalCount: 0 };
   }
 }
 
@@ -353,7 +385,13 @@ export async function POST(request: NextRequest) {
 
     let finalQuery = "";
 
-    if (descriptions.length > 0) {
+    if (query && descriptions.length > 0) {
+      // Hybrid: title+category AND chain plus description terms OR'd together
+      const { terms } = buildPubMedQueryFromDescriptions(descriptions);
+      finalQuery = terms.length > 0
+        ? `${query} AND ${buildOrGroup(terms)}`
+        : query;
+    } else if (descriptions.length > 0) {
       const { acronyms, terms, allTerms } =
         buildPubMedQueryFromDescriptions(descriptions);
 
@@ -375,11 +413,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const records = await fetchPubMedRecords(finalQuery, maxResults);
+    const { records, totalCount } = await fetchPubMedRecords(finalQuery, maxResults);
 
     return NextResponse.json({
       query: finalQuery,
       results: records,
+      totalCount,
       searchType,
     });
   } catch (error) {

@@ -1,9 +1,6 @@
 import "server-only";
 import type { DataStructure, NetworkGraph, NetworkNode, NetworkEdge } from "@/types";
-
-const NDAR_SUBJECT01_FIELDS = new Set([
-  "subjectkey", "src_subject_id", "interview_age", "interview_date", "sex",
-]);
+import { NDAR_SUBJECT01_FIELDS } from "@/utils/ndaConstants";
 
 export function buildNetworkGraph(structures: DataStructure[]): NetworkGraph {
   const nodes: NetworkNode[] = [];
