@@ -7,7 +7,6 @@ import {
   ChevronUp,
   ExternalLink,
 } from "lucide-react";
-import type { DataElement } from "@/types";
 
 const EDITION_WORDS = "first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|eleventh|twelfth|thirteenth|fourteenth|fifteenth";
 
@@ -35,7 +34,6 @@ interface PubMedRecord {
 }
 
 interface PubMedSearchPanelProps {
-  dataElements: DataElement[];
   selectedStructure?: { title?: string; shortName?: string; description?: string } | null;
   customCategories?: string[];
   customDataTypes?: string[];
@@ -45,7 +43,6 @@ interface PubMedSearchPanelProps {
 }
 
 const PubMedSearchPanel = ({
-  dataElements,
   selectedStructure,
   customCategories = [],
   customDataTypes = [],
@@ -58,15 +55,18 @@ const PubMedSearchPanel = ({
   const [totalCount, setTotalCount] = useState<number | null>(null);
   const [shownCount, setShownCount] = useState(5);
   const [searchQuery, setSearchQuery] = useState<string | null>(null);
-  const [searchMeta, setSearchMeta] = useState<{ categories: string[]; dataTypes: string[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [expandedResults, setExpandedResults] = useState<Set<string>>(new Set());
   const [isExpanded, setIsExpanded] = useState(isOpen);
   const lastAutoSearchedRef = useRef<string | null>(null);
 
   const handleSearch = useCallback(async (maxResults = 5) => {
-    if (!dataElements.length) {
-      setError("No data elements available for search");
+    const cleanedTitle = selectedStructure?.title
+      ? cleanStructureTitle(selectedStructure.title)
+      : null;
+
+    if (!cleanedTitle) {
+      setError("No structure title available for PubMed search");
       return;
     }
 
@@ -75,23 +75,20 @@ const PubMedSearchPanel = ({
     setResults([]);
     setTotalCount(null);
     setSearchQuery(null);
-    setSearchMeta(null);
 
     try {
-      setSearchMeta({ categories: customCategories, dataTypes: customDataTypes });
-
       const queryTerms = [
-        selectedStructure?.title ? cleanStructureTitle(selectedStructure.title) : null,
+        cleanedTitle,
         ...customCategories,
-      ].filter((d): d is string => Boolean(d?.trim()));
+      ]
+        .map((term) => term?.trim())
+        .filter((term): term is string => Boolean(term))
+        .map((term) => term.replace(/"/g, ""))
+        .filter((term, index, all) => all.indexOf(term) === index);
 
       const directQuery = queryTerms
-        .map((t) => `"${t.replace(/"/g, "")}"`)
+        .map((term) => `"${term}"`)
         .join(" AND ");
-
-      const descriptions = selectedStructure?.description
-        ? [selectedStructure.description]
-        : [];
 
       const response = await fetch("/api/v1/research/pubmed", {
         method: "POST",
@@ -100,7 +97,6 @@ const PubMedSearchPanel = ({
         },
         body: JSON.stringify({
           query: directQuery,
-          descriptions,
           maxResults,
         }),
       });
@@ -124,7 +120,7 @@ const PubMedSearchPanel = ({
     } finally {
       setLoading(false);
     }
-  }, [selectedStructure, customCategories, customDataTypes, dataElements.length]);
+  }, [selectedStructure, customCategories, customDataTypes]);
 
   // Clear stale results when structure changes
   useEffect(() => {
@@ -133,19 +129,18 @@ const PubMedSearchPanel = ({
     setShownCount(5);
     setError(null);
     setSearchQuery(null);
-    setSearchMeta(null);
     setIsExpanded(false);
   }, [selectedStructure?.shortName]);
 
   // Auto-search once both elements and IMPACT-MH tags are loaded for a new structure
   useEffect(() => {
     const key = selectedStructure?.shortName;
-    if (key && dataElements.length > 0 && tagsLoaded && key !== lastAutoSearchedRef.current) {
+    if (key && selectedStructure?.title && tagsLoaded && key !== lastAutoSearchedRef.current) {
       lastAutoSearchedRef.current = key;
       setIsExpanded(true);
       handleSearch(5);
     }
-  }, [selectedStructure?.shortName, dataElements.length, tagsLoaded, handleSearch]);
+  }, [selectedStructure?.shortName, selectedStructure?.title, tagsLoaded, handleSearch]);
 
   const toggleResultExpanded = (pmid: string) => {
     const newExpanded = new Set(expandedResults);
@@ -165,7 +160,7 @@ const PubMedSearchPanel = ({
     }
   };
 
-  if (!dataElements.length) {
+  if (!selectedStructure?.title) {
     return null;
   }
 
@@ -210,18 +205,6 @@ const PubMedSearchPanel = ({
           {/* Query debug + PubMed link */}
           {searchQuery && (
             <div className="p-2 bg-gray-100 rounded text-xs font-mono text-gray-600 space-y-1">
-              {searchMeta && (
-                <div className="flex gap-3 flex-wrap font-sans text-gray-500">
-                  <span>
-                    <span className="font-semibold text-gray-600">Categories: </span>
-                    {searchMeta.categories.length ? searchMeta.categories.join(", ") : <em>none</em>}
-                  </span>
-                  <span>
-                    <span className="font-semibold text-gray-600">Data Types: </span>
-                    {searchMeta.dataTypes.length ? searchMeta.dataTypes.join(", ") : <em>none</em>}
-                  </span>
-                </div>
-              )}
               <div className="flex items-start justify-between gap-2 break-all">
                 <span><span className="font-semibold text-gray-700">Query: </span>{searchQuery}</span>
                 <a

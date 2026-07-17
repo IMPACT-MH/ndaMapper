@@ -881,26 +881,39 @@ const DataStructureSearch = ({
                         )}
 
                         {/* PubMed Search Panel */}
-                        {selectedStructure && (
-                          <div className="bg-white rounded-lg shadow mt-6 overflow-hidden">
-                            <PubMedSearchPanel
-                              dataElements={dataElements}
-                              selectedStructure={selectedStructure}
-                              customCategories={
-                                structureTags[selectedStructure.shortName]?.map((t) => t.name) ??
-                                selectedStructure.categories ??
-                                []
-                              }
-                              customDataTypes={
-                                structureDataTypeTags[selectedStructure.shortName]?.map((t) => t.name) ??
-                                (selectedStructure.dataType ? [selectedStructure.dataType] : undefined) ??
-                                selectedStructure.dataTypes ??
-                                []
-                              }
-                              tagsLoaded={!!structureTagsLoaded[selectedStructure.shortName]}
-                            />
-                          </div>
-                        )}
+                        {selectedStructure && (() => {
+                          const customCategoryTags = structureTags[selectedStructure.shortName] || [];
+                          const removedCategoriesForStructure = removedCategories[selectedStructure.shortName] || new Set<string>();
+
+                          const originalCategories = (selectedStructure.categories || []).filter(
+                            (category) => !removedCategoriesForStructure.has(category)
+                          );
+                          const originalCategoryNames = new Set(originalCategories);
+                          const uniqueCustomTags = customCategoryTags.filter(
+                            (tag) => !originalCategoryNames.has(tag.name)
+                          );
+
+                          const displayedCategories = [
+                            ...originalCategories,
+                            ...uniqueCustomTags.map((tag) => tag.name),
+                          ];
+
+                          const customDataTypeTags = structureDataTypeTags[selectedStructure.shortName] || [];
+                          const displayedDataTypes = customDataTypeTags.length > 0
+                            ? customDataTypeTags.map((tag) => tag.name)
+                            : [selectedStructure.dataType, ...(selectedStructure.dataTypes || [])].filter(Boolean) as string[];
+
+                          return (
+                            <div className="bg-white rounded-lg shadow mt-6 overflow-hidden">
+                              <PubMedSearchPanel
+                                selectedStructure={selectedStructure}
+                                customCategories={displayedCategories}
+                                customDataTypes={displayedDataTypes}
+                                tagsLoaded={!!structureTagsLoaded[selectedStructure.shortName]}
+                              />
+                            </div>
+                          );
+                        })()}
 
                         {/* Data Elements */}
                         {selectedStructure && (
