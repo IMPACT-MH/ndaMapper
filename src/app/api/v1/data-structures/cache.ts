@@ -1,7 +1,9 @@
 // Shared in-memory cache for data-structures route
 export let cache: unknown = null;
 export let cacheTimestamp = 0;
-export const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+// Matches the client-side polling interval (see HomePage.tsx / DataCategorySearch.tsx)
+// so polling actually gets fresh data instead of a stale cached copy.
+export const CACHE_DURATION = 60 * 1000; // 60 seconds
 
 export function clearCache(): void {
   cache = null;

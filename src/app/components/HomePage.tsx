@@ -8,8 +8,10 @@ import DataElementSearch from "./DataElementSearch";
 import DataCategorySearch from "./DataCategorySearch";
 import ResearchAssistant from "./ResearchAssistant";
 import Rosetta from "./Rosetta";
+import UploadAssistant from "./UploadAssistant";
 import { IMPACT_API_BASE, DATA_STRUCTURES } from "@/const";
 import type { DataStructure, DataElement, CustomTag } from "@/types";
+import { getNdaPublishedShortNames, isDraftStructure } from "@/lib/ndaPublishedStructures";
 
 // Derive validator state types from DataStructureSearch to stay in sync with CSVValidator's local types
 type _ValidatorStateProp = NonNullable<
@@ -26,6 +28,7 @@ const Tabs = {
     REVERSE_LOOKUP: "reverse-lookup",
     RESEARCH: "research-assistant",
     ROSETTA: "rosetta",
+    UPLOAD: "upload-assistant",
 } as const;
 
 type TabValue = (typeof Tabs)[keyof typeof Tabs];
@@ -182,6 +185,31 @@ const HomePage = () => {
         databaseStructures.length,
     ]);
 
+    // Poll for fresh database data and refetch on tab focus so associations
+    // (e.g. submittedByProjects) don't go stale in an open tab.
+    useEffect(() => {
+        if (!databaseFilterEnabled) return;
+
+        const POLL_INTERVAL_MS = 60 * 1000;
+        const intervalId = setInterval(() => {
+            fetchDatabaseData();
+        }, POLL_INTERVAL_MS);
+
+        const handleFocus = () => {
+            if (document.visibilityState === "visible") {
+                fetchDatabaseData();
+            }
+        };
+        document.addEventListener("visibilitychange", handleFocus);
+        window.addEventListener("focus", handleFocus);
+
+        return () => {
+            clearInterval(intervalId);
+            document.removeEventListener("visibilitychange", handleFocus);
+            window.removeEventListener("focus", handleFocus);
+        };
+    }, [databaseFilterEnabled]);
+
     // Clear element search term when leaving the Element tab so the next
     // navigation always changes initialSearchTerm (mirrors DataStructureSearch behavior)
     useEffect(() => {
@@ -199,12 +227,15 @@ const HomePage = () => {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 30000);
 
-            const response = await fetch(
-                `${IMPACT_API_BASE}${DATA_STRUCTURES}`,
-                {
+            const [response, ndaPublishedShortNames] = await Promise.all([
+                fetch(`${IMPACT_API_BASE}${DATA_STRUCTURES}`, {
                     signal: controller.signal,
-                },
-            );
+                }),
+                getNdaPublishedShortNames().catch((err) => {
+                    console.error("Error fetching NDA published structures:", err);
+                    return null;
+                }),
+            ]);
             clearTimeout(timeoutId);
 
             if (response.ok) {
@@ -220,7 +251,11 @@ const HomePage = () => {
                     const structureNames = Object.keys(data.dataStructures);
                     setDatabaseStructures(structureNames);
 
-                    // Extract error entries (structures that failed NDA metadata fetch)
+                    // Draft = not actually published in NDA's data dictionary,
+                    // not merely "IMPACT-MH's metadata merge errored" (that
+                    // flag isn't a reliable signal — see ndaPublishedStructures.ts).
+                    // If the NDA lookup itself failed, skip flagging anything as
+                    // Draft rather than mislabeling everything.
                     const errorMap: Record<
                         string,
                         {
@@ -230,20 +265,27 @@ const HomePage = () => {
                             dataStructureId: string;
                         }
                     > = {};
-                    Object.entries(data.dataStructures).forEach(
-                        ([key, structure]) => {
-                            if (structure?.error) {
-                                errorMap[key.toLowerCase()] = {
-                                    shortName: key,
-                                    title: key,
-                                    status: "Draft",
-                                    dataStructureId: String(
-                                        structure.dataStructureId ?? "",
-                                    ),
-                                };
-                            }
-                        },
-                    );
+                    if (ndaPublishedShortNames) {
+                        Object.entries(data.dataStructures).forEach(
+                            ([key, structure]) => {
+                                if (
+                                    isDraftStructure(
+                                        structure?.shortName ?? key,
+                                        ndaPublishedShortNames,
+                                    )
+                                ) {
+                                    errorMap[key.toLowerCase()] = {
+                                        shortName: key,
+                                        title: key,
+                                        status: "Draft",
+                                        dataStructureId: String(
+                                            structure.dataStructureId ?? "",
+                                        ),
+                                    };
+                                }
+                            },
+                        );
+                    }
                     setDatabaseErrorStructures(errorMap);
 
                     // Extract all unique sites from submittedByProjects
@@ -1265,6 +1307,16 @@ const HomePage = () => {
                                 >
                                     Research Assistant
                                 </button>
+                                <button
+                                    onClick={() => setActiveTab(Tabs.UPLOAD)}
+                                    className={`whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm ${
+                                        activeTab === Tabs.UPLOAD
+                                            ? "border-teal-500 text-teal-600"
+                                            : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                                    }`}
+                                >
+                                    Upload Assistant
+                                </button>
                             </div>
 
                             {/* NDA Logo */}
@@ -1466,6 +1518,20 @@ const HomePage = () => {
                     databaseElementNames={new Set(databaseElements.keys())}
                     loadingDatabaseStructures={loadingDatabaseStructures}
                     databaseConnectionError={databaseConnectionError}
+                    onElementSearch={(elementName) => {
+                        setDatabaseFilterEnabled(false);
+                        setElementSearchTerm(elementName);
+                        setActiveTab(Tabs.ELEMENT);
+                    }}
+                    onStructureSearch={handleElementDetailStructureSelect}
+                />
+            </div>
+
+            <div className={activeTab === Tabs.UPLOAD ? "block" : "hidden"}>
+                <UploadAssistant
+                    databaseStructures={databaseStructures}
+                    databaseConnectionError={databaseConnectionError}
+                    isVisible={activeTab === Tabs.UPLOAD}
                     onElementSearch={(elementName) => {
                         setDatabaseFilterEnabled(false);
                         setElementSearchTerm(elementName);
