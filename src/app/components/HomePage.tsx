@@ -8,7 +8,6 @@ import DataElementSearch from "./DataElementSearch";
 import DataCategorySearch from "./DataCategorySearch";
 import ResearchAssistant from "./ResearchAssistant";
 import Rosetta from "./Rosetta";
-import UploadAssistant from "./UploadAssistant";
 import { IMPACT_API_BASE, DATA_STRUCTURES } from "@/const";
 import type { DataStructure, DataElement, CustomTag } from "@/types";
 import { getNdaPublishedShortNames, isDraftStructure } from "@/lib/ndaPublishedStructures";
@@ -28,7 +27,6 @@ const Tabs = {
     REVERSE_LOOKUP: "reverse-lookup",
     RESEARCH: "research-assistant",
     ROSETTA: "rosetta",
-    UPLOAD: "upload-assistant",
 } as const;
 
 type TabValue = (typeof Tabs)[keyof typeof Tabs];
@@ -1307,16 +1305,6 @@ const HomePage = () => {
                                 >
                                     Research Assistant
                                 </button>
-                                <button
-                                    onClick={() => setActiveTab(Tabs.UPLOAD)}
-                                    className={`whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm ${
-                                        activeTab === Tabs.UPLOAD
-                                            ? "border-teal-500 text-teal-600"
-                                            : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                                    }`}
-                                >
-                                    Upload Assistant
-                                </button>
                             </div>
 
                             {/* NDA Logo */}
@@ -1518,20 +1506,6 @@ const HomePage = () => {
                     databaseElementNames={new Set(databaseElements.keys())}
                     loadingDatabaseStructures={loadingDatabaseStructures}
                     databaseConnectionError={databaseConnectionError}
-                    onElementSearch={(elementName) => {
-                        setDatabaseFilterEnabled(false);
-                        setElementSearchTerm(elementName);
-                        setActiveTab(Tabs.ELEMENT);
-                    }}
-                    onStructureSearch={handleElementDetailStructureSelect}
-                />
-            </div>
-
-            <div className={activeTab === Tabs.UPLOAD ? "block" : "hidden"}>
-                <UploadAssistant
-                    databaseStructures={databaseStructures}
-                    databaseConnectionError={databaseConnectionError}
-                    isVisible={activeTab === Tabs.UPLOAD}
                     onElementSearch={(elementName) => {
                         setDatabaseFilterEnabled(false);
                         setElementSearchTerm(elementName);
