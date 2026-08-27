@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { IMPACT_API_BASE, DATA_STRUCTURES } from "@/const";
 import { getDataTypeTooltip, DATA_TYPE_DESCRIPTIONS } from "@/utils/dataTypeDescriptions";
+import { isDraftStructure } from "@/lib/ndaPublishedStructures";
 import CategoryTagManagement from "./CategoryTagManagement";
 import AuditTrail from "./AuditTrail";
 import {
@@ -44,7 +45,10 @@ const DataCategorySearch = ({
     databaseConnectionError,
 }) => {
     const [allStructures, setAllStructures] = useState([]);
-    const [dbErrorStructures, setDbErrorStructures] = useState([]);
+    // Raw IMPACT-MH [key, structure] entries; dbErrorStructures (below) is
+    // derived from this once ndaPublishedShortNames is also available, since
+    // the two data sources load independently and in no guaranteed order.
+    const [impactStructureEntries, setImpactStructureEntries] = useState([]);
     const [filteredStructures, setFilteredStructures] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -381,55 +385,45 @@ const DataCategorySearch = ({
         addMatchedItemIfNeeded,
     ]);
 
-    // Add this useEffect to fetch once
-    useEffect(() => {
-        const fetchDataStructures = async () => {
-            setIsLoadingStructures(true);
-            try {
-                const response = await fetch("/api/v1/data-structures");
-                const data = await response.json();
+    const fetchDataStructures = async () => {
+        setIsLoadingStructures(true);
+        try {
+            const response = await fetch("/api/v1/data-structures");
+            const data = await response.json();
 
-                if (data && data.dataStructures) {
-                    // Convert object/array to map keyed by shortName (case-insensitive)
-                    const map = {};
-                    const entries = Array.isArray(data.dataStructures)
-                        ? data.dataStructures.map((s) => [s.shortName || s.name, s])
-                        : Object.entries(data.dataStructures);
+            if (data && data.dataStructures) {
+                // Convert object/array to map keyed by shortName (case-insensitive)
+                const map = {};
+                const entries = Array.isArray(data.dataStructures)
+                    ? data.dataStructures.map((s) => [s.shortName || s.name, s])
+                    : Object.entries(data.dataStructures);
 
-                    entries.forEach(([entryKey, structure]) => {
-                        const key =
-                            structure.shortName?.toLowerCase() ||
-                            structure.name?.toLowerCase() ||
-                            entryKey?.toLowerCase();
-                        if (key) {
-                            map[key] = structure;
-                            // Also store with original case for backwards compatibility
-                            const originalKey = structure.shortName || structure.name || entryKey;
-                            if (originalKey) {
-                                map[originalKey] = structure;
-                            }
+                entries.forEach(([entryKey, structure]) => {
+                    const key =
+                        structure.shortName?.toLowerCase() ||
+                        structure.name?.toLowerCase() ||
+                        entryKey?.toLowerCase();
+                    if (key) {
+                        map[key] = structure;
+                        // Also store with original case for backwards compatibility
+                        const originalKey = structure.shortName || structure.name || entryKey;
+                        if (originalKey) {
+                            map[originalKey] = structure;
                         }
-                    });
-                    setDataStructuresMap(map);
-
-                    const errorStructures = entries
-                        .filter(([, structure]) => structure?.error)
-                        .map(([entryKey]) => ({
-                            shortName: entryKey,
-                            title: entryKey,
-                            status: "Draft",
-                            categories: [],
-                            dataType: null,
-                        }));
-                    setDbErrorStructures(errorStructures);
-                }
-            } catch (err) {
-                console.error("Error fetching data structures:", err);
-            } finally {
-                setIsLoadingStructures(false);
+                    }
+                });
+                setDataStructuresMap(map);
+                setImpactStructureEntries(entries);
             }
-        };
+        } catch (err) {
+            console.error("Error fetching data structures:", err);
+        } finally {
+            setIsLoadingStructures(false);
+        }
+    };
 
+    // Fetch once on mount
+    useEffect(() => {
         fetchDataStructures();
     }, []);
 
@@ -525,6 +519,31 @@ const DataCategorySearch = ({
         fetchAllStructures();
     }, []);
 
+    // Poll for fresh NDA/IMPACT-MH data and refetch on tab focus so site
+    // associations and Draft/Published status don't go stale in an open tab.
+    useEffect(() => {
+        const POLL_INTERVAL_MS = 60 * 1000;
+        const intervalId = setInterval(() => {
+            fetchAllStructures();
+            fetchDataStructures();
+        }, POLL_INTERVAL_MS);
+
+        const handleFocus = () => {
+            if (document.visibilityState === "visible") {
+                fetchAllStructures();
+                fetchDataStructures();
+            }
+        };
+        document.addEventListener("visibilitychange", handleFocus);
+        window.addEventListener("focus", handleFocus);
+
+        return () => {
+            clearInterval(intervalId);
+            document.removeEventListener("visibilitychange", handleFocus);
+            window.removeEventListener("focus", handleFocus);
+        };
+    }, []);
+
     // Fetch all tags on component mount for sidebar filters
     useEffect(() => {
         const fetchAllTags = async () => {
@@ -613,9 +632,7 @@ const DataCategorySearch = ({
         setError(null);
 
         try {
-            const response = await fetch(
-                "https://nda.nih.gov/api/datadictionary/datastructure",
-            );
+            const response = await fetch("/api/v1/nda-structures");
 
             if (!response.ok) {
                 throw new Error(
@@ -756,6 +773,40 @@ const DataCategorySearch = ({
             // Don't throw - just log the error and continue
         }
     };
+
+    // Draft = not actually published in NDA's data dictionary. allStructures
+    // is NDA's own bulk list, so a shortName's presence there is the
+    // ground truth (NDA's public dictionary only ever returns "Published").
+    const ndaPublishedShortNames = useMemo(() => {
+        return new Set(
+            allStructures
+                .map((s) => s.shortName?.toLowerCase())
+                .filter(Boolean),
+        );
+    }, [allStructures]);
+
+    // Draft entries backfilled for IMPACT-MH structures that aren't actually
+    // published in NDA's data dictionary (not merely ones IMPACT-MH's own
+    // metadata-merge errored on — that flag isn't reliable, see
+    // ndaPublishedStructures.ts). Empty until allStructures has loaded at
+    // least once, so we don't briefly mislabel everything as Draft.
+    const dbErrorStructures = useMemo(() => {
+        if (allStructures.length === 0) return [];
+        return impactStructureEntries
+            .filter(([entryKey, structure]) =>
+                isDraftStructure(
+                    structure?.shortName || entryKey,
+                    ndaPublishedShortNames,
+                ),
+            )
+            .map(([entryKey]) => ({
+                shortName: entryKey,
+                title: entryKey,
+                status: "Draft",
+                categories: [],
+                dataType: null,
+            }));
+    }, [impactStructureEntries, ndaPublishedShortNames, allStructures.length]);
 
     const augmentedStructures = useMemo(() => {
         if (dbErrorStructures.length === 0) return allStructures;
@@ -1495,28 +1546,22 @@ const DataCategorySearch = ({
 
     const downloadApiAsCsv = async () => {
         try {
-            // Fetch from both APIs
-            const [impactResponse, ndaResponse] = await Promise.all([
-                fetch(`${IMPACT_API_BASE}${DATA_STRUCTURES}`),
-                fetch("https://nda.nih.gov/api/datadictionary/datastructure"),
-            ]);
+            // NDA data reuses the bulk list already fetched into `allStructures`
+            // (via fetchAllStructures/the /api/v1/nda-structures proxy) instead
+            // of hitting nda.nih.gov directly again here.
+            const impactResponse = await fetch(`${IMPACT_API_BASE}${DATA_STRUCTURES}`);
 
             if (!impactResponse.ok) {
                 throw new Error("Failed to fetch IMPACT-MH data");
             }
-            if (!ndaResponse.ok) {
-                throw new Error("Failed to fetch NDA data");
-            }
 
             const impactData = await impactResponse.json();
-            const ndaData = await ndaResponse.json();
 
             console.log("IMPACT API Response:", impactData);
-            console.log("NDA API Response:", ndaData);
 
             // Create a map of NDA structures for quick lookup
             const ndaStructuresMap = {};
-            ndaData.forEach((ndaStructure) => {
+            allStructures.forEach((ndaStructure) => {
                 ndaStructuresMap[ndaStructure.shortName] = ndaStructure;
             });
 
@@ -2067,11 +2112,9 @@ const DataCategorySearch = ({
         setModalLoading(true);
         setModalError(null);
         try {
-            const response = await fetch(
-                "https://nda.nih.gov/api/datadictionary/datastructure",
-            );
-            if (!response.ok) throw new Error("Failed to fetch dataType");
-            const data = await response.json();
+            // Reuses the bulk NDA list already fetched into `allStructures`
+            // instead of calling nda.nih.gov directly again.
+            const data = allStructures;
 
             console.log("Raw data:", data);
 
@@ -3205,8 +3248,12 @@ const DataCategorySearch = ({
 
                                                                         {/* Status Badge */}
                                                                         {(() => {
-                                                                            const dbEntry = dataStructuresMap[structure.shortName?.toLowerCase()] || dataStructuresMap[structure.shortName];
-                                                                            const effectiveStatus = dbEntry?.error ? "Draft" : structure.status;
+                                                                            const effectiveStatus = isDraftStructure(
+                                                                                structure.shortName,
+                                                                                ndaPublishedShortNames,
+                                                                            )
+                                                                                ? "Draft"
+                                                                                : "Published";
                                                                             return (
                                                                                 <span
                                                                                     className={`text-xs px-2 py-1 rounded ${
