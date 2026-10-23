@@ -925,6 +925,18 @@ const DataStructureSearch = ({
                               <div className="text-center py-4">
                                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
                               </div>
+                            ) : dataElements.length === 0 ? (
+                              selectedStructure.status === "Draft" ? (
+                                <p className="px-4 py-3 rounded bg-yellow-100 text-yellow-700 text-sm">
+                                  Data elements pending: this structure is still
+                                  a Draft in NDA, so its element list hasn&apos;t
+                                  been published yet.
+                                </p>
+                              ) : (
+                                <p className="text-gray-500 text-center py-4">
+                                  No data elements available for this structure.
+                                </p>
+                              )
                             ) : (
                               <div className="overflow-x-auto">
                                 <table className="min-w-full divide-y divide-gray-200">

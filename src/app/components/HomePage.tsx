@@ -1169,16 +1169,21 @@ const HomePage = () => {
 
     const fetchDataElements = async (shortName: string) => {
         setLoadingElements(true);
+        setDataElements([]);
         try {
             const response = await fetch(
                 `https://nda.nih.gov/api/datadictionary/datastructure/${shortName}`,
             );
             if (!response.ok) throw new Error("Failed to fetch data elements");
-            const data = (await response.json()) as {
-                dataElements: DataElement[];
+            // NDA returns 200 with an empty body for Draft structures whose
+            // element list hasn't been published yet
+            const text = await response.text();
+            if (!text.trim()) return;
+            const data = JSON.parse(text) as {
+                dataElements?: DataElement[];
             };
 
-            const sortedElements = data.dataElements.sort(
+            const sortedElements = (data.dataElements ?? []).sort(
                 (a, b) => (a.position ?? 0) - (b.position ?? 0),
             );
 
