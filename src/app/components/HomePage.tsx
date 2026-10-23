@@ -94,15 +94,7 @@ const HomePage = () => {
 
     // Error structures from IMPACT-MH (entries that failed NDA metadata fetch)
     const [databaseErrorStructures, setDatabaseErrorStructures] = useState<
-        Record<
-            string,
-            {
-                shortName: string;
-                title: string;
-                status: string;
-                dataStructureId: string;
-            }
-        >
+        Record<string, DataStructure>
     >({});
 
     // Tags state for custom tag searches
@@ -254,15 +246,7 @@ const HomePage = () => {
                     // flag isn't a reliable signal — see ndaPublishedStructures.ts).
                     // If the NDA lookup itself failed, skip flagging anything as
                     // Draft rather than mislabeling everything.
-                    const errorMap: Record<
-                        string,
-                        {
-                            shortName: string;
-                            title: string;
-                            status: string;
-                            dataStructureId: string;
-                        }
-                    > = {};
+                    const errorMap: Record<string, DataStructure> = {};
                     if (ndaPublishedShortNames) {
                         Object.entries(data.dataStructures).forEach(
                             ([key, structure]) => {
@@ -274,7 +258,12 @@ const HomePage = () => {
                                 ) {
                                     errorMap[key.toLowerCase()] = {
                                         shortName: key,
-                                        title: key,
+                                        title: structure.title || key,
+                                        description: structure.description,
+                                        categories: structure.categories,
+                                        dataType: structure.dataType,
+                                        submittedByProjects:
+                                            structure.submittedByProjects,
                                         status: "Draft",
                                         dataStructureId: String(
                                             structure.dataStructureId ?? "",
@@ -374,27 +363,44 @@ const HomePage = () => {
             binary: 0,
         });
 
-    const handleElementStructureSelect = async (structureName: string) => {
-        setActiveTab(Tabs.STRUCTURE);
-        setSearchTerm(structureName);
-
+    // NDA's public search only returns Published structures, so Drafts are
+    // resolved from the IMPACT-MH Draft map instead
+    const findStructureByShortName = async (
+        shortName: string,
+    ): Promise<DataStructure | null> => {
         try {
             const response = await fetch(
-                `https://nda.nih.gov/api/datadictionary/v2/datastructure?searchTerm=${structureName}`,
+                `https://nda.nih.gov/api/datadictionary/v2/datastructure?searchTerm=${shortName}`,
             );
             if (response.ok) {
                 const fetchedStructures =
                     (await response.json()) as DataStructure[];
                 const exactMatch = fetchedStructures.find(
-                    (s) => s.shortName === structureName,
+                    (s) => s.shortName === shortName,
                 );
-                if (exactMatch) {
-                    handleStructureSelect(exactMatch);
-                }
+                if (exactMatch) return exactMatch;
             }
         } catch (err) {
             console.error("Error fetching structure:", err);
         }
+        return databaseErrorStructures[shortName.toLowerCase()] ?? null;
+    };
+
+    const selectStructureByShortName = async (shortName: string) => {
+        const structure = await findStructureByShortName(shortName);
+        if (structure) {
+            handleStructureSelect(structure);
+        } else {
+            setSelectedStructure(null);
+            setDataElements([]);
+        }
+    };
+
+    const handleElementStructureSelect = async (structureName: string) => {
+        setActiveTab(Tabs.STRUCTURE);
+        setSearchTerm(structureName);
+
+        await selectStructureByShortName(structureName);
     };
 
     const handleElementDetailStructureSelect = async (
@@ -402,46 +408,14 @@ const HomePage = () => {
     ) => {
         setActiveTab(Tabs.STRUCTURE);
 
-        try {
-            const response = await fetch(
-                `https://nda.nih.gov/api/datadictionary/v2/datastructure?searchTerm=${structureName}`,
-            );
-            if (response.ok) {
-                const fetchedStructures =
-                    (await response.json()) as DataStructure[];
-                const exactMatch = fetchedStructures.find(
-                    (s) => s.shortName === structureName,
-                );
-                if (exactMatch) {
-                    handleStructureSelect(exactMatch);
-                }
-            }
-        } catch (err) {
-            console.error("Error fetching structure:", err);
-        }
+        await selectStructureByShortName(structureName);
     };
 
     const handleCategoryStructureSelect = async (structureName: string) => {
         setActiveTab(Tabs.STRUCTURE);
         setSearchTerm(structureName);
 
-        try {
-            const response = await fetch(
-                `https://nda.nih.gov/api/datadictionary/v2/datastructure?searchTerm=${structureName}`,
-            );
-            if (response.ok) {
-                const fetchedStructures =
-                    (await response.json()) as DataStructure[];
-                const exactMatch = fetchedStructures.find(
-                    (s) => s.shortName === structureName,
-                );
-                if (exactMatch) {
-                    handleStructureSelect(exactMatch);
-                }
-            }
-        } catch (err) {
-            console.error("Error fetching structure:", err);
-        }
+        await selectStructureByShortName(structureName);
     };
 
     const handleCsvAnalyzerResult = (
@@ -1440,29 +1414,7 @@ const HomePage = () => {
                         setSearchTerm(shortName);
                         setCsvFile(file);
 
-                        try {
-                            const response = await fetch(
-                                `https://nda.nih.gov/api/datadictionary/v2/datastructure?searchTerm=${shortName}`,
-                            );
-                            if (!response.ok)
-                                throw new Error("Failed to fetch data");
-                            const data =
-                                (await response.json()) as DataStructure[];
-
-                            const structure = data.find(
-                                (s) => s.shortName === shortName,
-                            );
-                            if (structure) {
-                                handleStructureSelect(structure);
-                            }
-                        } catch (err) {
-                            setError(
-                                "Error fetching structure: " +
-                                    (err instanceof Error
-                                        ? err.message
-                                        : String(err)),
-                            );
-                        }
+                        await selectStructureByShortName(shortName);
 
                         setActiveTab(Tabs.STRUCTURE);
                     }}
