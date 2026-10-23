@@ -632,7 +632,7 @@ const DataCategorySearch = ({
         setError(null);
 
         try {
-            const response = await fetch("/api/v1/nda-structures");
+            const response = await fetch("/api/v1/research/nda-structures");
 
             if (!response.ok) {
                 throw new Error(
@@ -1547,7 +1547,7 @@ const DataCategorySearch = ({
     const downloadApiAsCsv = async () => {
         try {
             // NDA data reuses the bulk list already fetched into `allStructures`
-            // (via fetchAllStructures/the /api/v1/nda-structures proxy) instead
+            // (via fetchAllStructures/the /api/v1/research/nda-structures proxy) instead
             // of hitting nda.nih.gov directly again here.
             const impactResponse = await fetch(`${IMPACT_API_BASE}${DATA_STRUCTURES}`);
 

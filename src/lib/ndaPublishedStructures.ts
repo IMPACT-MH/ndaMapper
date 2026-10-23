@@ -14,7 +14,7 @@ let cache: NdaPublishedCache | null = null;
 const CLIENT_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes (server proxy also caches, longer)
 
 export async function fetchNdaStructures(): Promise<DataStructure[]> {
-  const response = await fetch("/api/v1/nda-structures");
+  const response = await fetch("/api/v1/research/nda-structures");
   if (!response.ok) {
     throw new Error(`Failed to fetch NDA structures: ${response.status}`);
   }

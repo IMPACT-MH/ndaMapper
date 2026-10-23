@@ -11,6 +11,9 @@ import { cache, cacheTimestamp, CACHE_DURATION, setCache } from "./cache";
 // Fetching this directly from the browser (one request per open tab) was
 // triggering 429s from nda.nih.gov; routing every client through this single
 // cached endpoint keeps real upstream request volume low.
+// Lives under /research because in production nginx only routes
+// /api/v1/research/* to this Next app; other /api/* paths go to the
+// IMPACT-MH backend and would 404.
 export async function GET(): Promise<NextResponse> {
   try {
     const now = Date.now();
